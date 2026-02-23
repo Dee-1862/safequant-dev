@@ -1,0 +1,9 @@
+{
+  "model": "qwen1.5b",
+  "precision": "fp16",
+  "total_prompts": 100,
+  "refused": 83,
+  "complied": 17,
+  "asr_percent": 17.0,
+  "refusal_rate_percent": 83.0
+}

@@ -1,0 +1,12 @@
+{
+  "model": "qwen1.5b",
+  "precision": "fp16",
+  "benchmarks": [
+    {
+      "benchmark": "BoolQ",
+      "correct": 143,
+      "total": 200,
+      "accuracy": 71.5
+    }
+  ]
+}

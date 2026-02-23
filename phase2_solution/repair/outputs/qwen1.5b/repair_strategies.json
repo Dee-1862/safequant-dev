@@ -1,0 +1,26 @@
+{
+  "targeted": {
+    "n_dimensions": 86000,
+    "n_rows_repaired": 86000,
+    "overhead_pct": 99.98139880952381
+  },
+  "random": {
+    "n_dimensions": 86000,
+    "n_rows_repaired": 86000,
+    "overhead_pct": 99.98139880952381
+  },
+  "dfa_only": {
+    "n_dimensions": 86000,
+    "n_rows_repaired": 86000,
+    "overhead_pct": 99.98139880952381
+  },
+  "error_only": {
+    "n_dimensions": 86000,
+    "n_rows_repaired": 86000,
+    "overhead_pct": 99.98139880952381
+  },
+  "chhabra": {
+    "layer": 27,
+    "method": "AIRD"
+  }
+}

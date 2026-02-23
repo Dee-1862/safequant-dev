@@ -1,0 +1,15 @@
+torch
+transformers>=4.40.0
+accelerate
+bitsandbytes
+datasets
+huggingface_hub
+numpy
+matplotlib
+seaborn
+pandas
+tqdm
+scikit-learn
+jaxtyping
+einops
+
