@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 1 — Select the single best refusal direction.
+SafeQuant Step 1d: Select the single best refusal direction.
 
 For each candidate direction, tests on validation set:
   - Ablate it on harmful prompts -> measure refusal score (should decrease)
@@ -148,9 +148,19 @@ def load_model(model_name, precision):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
-    parser.add_argument("--precision", required=True, choices=["fp16", "nf4"])
-    parser.add_argument("--top_k", type = int, default = 20,help = "Evaluate top-k candidates (for speed)")
+    parser.add_argument(
+        "--model", 
+        required = True, 
+        choices = list(MODELS.keys()))
+    parser.add_argument(
+        "--precision", 
+        required = True, 
+        choices = ["fp16", "nf4"])
+    parser.add_argument(
+        "--top_k", 
+        type = int, 
+        default = 20,
+        help = "Evaluate top-k candidates (for speed)")
     args = parser.parse_args()
     
     model_name = MODELS[args.model]

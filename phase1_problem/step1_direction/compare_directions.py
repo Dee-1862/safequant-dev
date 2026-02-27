@@ -1,11 +1,8 @@
 """
-SafeQuant Phase 1, Step 1 — Compare FP16 vs NF4 refusal directions.
+Step 1c: Compare FP16 vs NF4 refusal directions.
 
-Computes cosine similarity between the best directions extracted from
-FP16 and NF4 models. Also computes per-layer comparison across all
-candidate directions.
-
-This produces Finding 1: The direction is preserved after quantization.
+Computes cosine similarity between the best directions extracted from FP16 and NF4 models. 
+Also computes per-layer comparison across all candidate directions.
 
 Run:
   python phase1_problem/step1_direction/compare_directions.py --model qwen1.5b
@@ -31,7 +28,10 @@ def cosine_sim(a, b):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
+    parser.add_argument(
+        "--model", 
+        required = True, 
+        choices = list(MODELS.keys()))
     args = parser.parse_args()
     
     output_dir = os.path.join(os.path.dirname(__file__), "outputs", args.model)

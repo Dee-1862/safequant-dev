@@ -29,7 +29,6 @@ def main():
     for model_key in MODELS:
         diag_dir = os.path.join("phase2_solution", "diagnosis", "outputs", model_key)
         eval_dir = os.path.join("phase2_solution", "evaluate", "outputs", model_key)
-        cat_dir = os.path.join("phase2_solution", "categorical", "outputs", model_key)
 
         print(f"\n{'='*75}")
         print(f"  MODEL: {model_key}")
@@ -70,16 +69,6 @@ def main():
                 print(f"  {cond:<15} | {asr:>8} | {util:>8} | {str(ovh):>8}")
         else:
             print(f"\n  REPAIR: [not computed]")
-
-        # Categorical
-        cat = load_json(os.path.join(cat_dir, "categorical_results.json"))
-        if cat:
-            print(f"\n  CATEGORICAL ANALYSIS")
-            for c, v in cat.get("total_vulnerability_per_category", {}).items():
-                sim = cat.get("direction_similarities", {}).get(f"{c}_vs_global", "?")
-                print(f"    {c:<20}: total_V={v:.4f}, sim_to_global={sim:.3f}" if isinstance(sim, float) else f"    {c:<20}: total_V={v:.4f}")
-        else:
-            print(f"\n  CATEGORICAL: [not computed]")
 
     print(f"\n{'='*75}")
     print("  KEY CLAIMS FOR PAPER")

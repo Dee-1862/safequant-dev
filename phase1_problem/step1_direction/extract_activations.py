@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 1a: Extract activations from residual stream.
+Step 1a: Extract activations from residual stream.
 
 Purpose:
 - For a given model and precision (FP16 or NF4), runs all train prompts and computes mean activations at end-of-instruction token positions.
@@ -85,7 +85,7 @@ def get_mean_activations_memory_efficient(model, tokenizer, instructions, tokeni
     
     Original Arditi code clones activations on GPU and accumulates on GPU, which causes OOM on limited GPU memory. This version avoids that.
     
-    Inputs:
+    Args:
         model: The model to extract activations from
         tokenizer: Tokenizer for the model
         instructions: List of instruction strings

@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 1 — Compute candidate refusal directions.
+Step 1b: Compute candidate refusal directions.
 
 For each (layer, position) pair, computes:
     r(l,i) = mean_harmful(l,i) - mean_harmless(l,i)
@@ -20,8 +20,16 @@ from config import MODELS
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
-    parser.add_argument("--precision", required=True, choices=["fp16", "nf4"])
+    parser.add_argument(
+        "--model", 
+        required = True, 
+        choices = list(MODELS.keys()))
+
+    parser.add_argument(
+        "--precision", 
+        required = True, 
+        choices = ["fp16", "nf4"])
+
     args = parser.parse_args()
     
     output_dir = os.path.join(os.path.dirname(__file__), "outputs", args.model)
@@ -46,8 +54,7 @@ def main():
     
     print(f"Computed {len(candidates)} candidate directions")
     
-    # Print some stats
-
+    # Compute norms and layers covered
     norms_dict = {}
     for k, v in candidates.items():
         norms_dict[k] = torch.norm(v).item()

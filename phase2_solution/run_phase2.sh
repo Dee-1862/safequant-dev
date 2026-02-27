@@ -40,12 +40,6 @@ echo ""
 echo "--- Step 6: Evaluate All Conditions ---"
 python phase2_solution/evaluate/eval_all.py --model $MODEL
 
-if [ "$SKIP_CAT" != "--skip_categorical" ]; then
-    echo ""
-    echo "--- Step 7: Categorical Analysis (Secondary) ---"
-    python phase2_solution/categorical/categorical_vuln.py --model $MODEL
-fi
-
 echo ""
 echo "--- Compiling Summary ---"
 python phase2_solution/summary/compile_phase2.py
