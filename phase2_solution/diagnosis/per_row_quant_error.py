@@ -83,27 +83,20 @@ def extract_write_weights(model, n_layers):
     for l in range(n_layers):
         layer = model.model.layers[l]
 
-        # Extract attention write matrix (o_proj)
-        # This matrix maps attention output to residual stream dimensions
-        param = layer.self_attn.o_proj.weight
-
-        # Handle quantized weights (BitsAndBytes) vs standard weights
-        # If quantized, dequantize to FP32; otherwise convert directly to FP32
-        if hasattr(param, "dequantize"):
-            w = param.dequantize().float().cpu().clone()
-        else:
-            w = param.data.float().cpu().clone()
+        # Extract attention write matrix (o_proj) via identity-matrix trick.
+        # .dequantize() on CPU returns wrong shape (numel, 1); the forward pass
+        # through an identity input always returns the correct (out, in) shape.
+        o_proj = layer.self_attn.o_proj
+        identity = torch.eye(o_proj.in_features, dtype=torch.float32, device="cpu")
+        with torch.no_grad():
+            w = o_proj(identity).float().T.contiguous().cpu()
         weights[f"attn_layer_{l}"] = w
 
-        # Extract MLP write matrix (down_proj)
-        # This matrix maps MLP output to residual stream dimensions
-        param = layer.mlp.down_proj.weight
-
-        # Handle quantized weights (BitsAndBytes) vs standard weights
-        if hasattr(param, "dequantize"):
-            w = param.dequantize().float().cpu().clone()
-        else:
-            w = param.data.float().cpu().clone()
+        # Extract MLP write matrix (down_proj) via same identity trick.
+        down_proj = layer.mlp.down_proj
+        identity = torch.eye(down_proj.in_features, dtype=torch.float32, device="cpu")
+        with torch.no_grad():
+            w = down_proj(identity).float().T.contiguous().cpu()
         weights[f"mlp_layer_{l}"] = w
 
     return weights
@@ -148,9 +141,9 @@ def main():
     print("  Loading NF4 quantized model (damaged weights)...")
     bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
     nf4_model = AutoModelForCausalLM.from_pretrained(
-        model_name, 
+        model_name,
         quantization_config = bnb_config,
-        device_map = "auto", 
+        device_map = "cpu",
         trust_remote_code = True
     )
 

@@ -62,7 +62,7 @@ def measure_utility(model, tokenizer, n_samples=100):
 def load_nf4(model_name):
     bnb = BitsAndBytesConfig(**NF4_CONFIG)
     model = AutoModelForCausalLM.from_pretrained(
-        model_name, quantization_config=bnb, device_map="auto", trust_remote_code=True)
+        model_name, quantization_config=bnb, device_map="cpu", trust_remote_code=True)
     tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token

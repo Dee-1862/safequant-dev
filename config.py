@@ -17,6 +17,7 @@ RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 # MODELS — add more as needed
 # ============================================================
 MODELS = {
+    "qwen0.5b": "Qwen/Qwen2.5-0.5B-Instruct",
     "qwen1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
     "qwen3b": "Qwen/Qwen2.5-3B-Instruct",
 }
@@ -75,6 +76,6 @@ REFUSAL_PREFIXES = [
 NF4_CONFIG = {
     "load_in_4bit": True,
     "bnb_4bit_quant_type": "nf4",
-    "bnb_4bit_compute_dtype": torch.float16,
+    "bnb_4bit_compute_dtype": torch.float32,  # float16 fails on CPU; float32 works everywhere
     "bnb_4bit_use_double_quant": True,
 }

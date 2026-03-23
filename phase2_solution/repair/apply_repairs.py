@@ -61,7 +61,7 @@ def load_nf4_model(model_name):
     bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
     model = AutoModelForCausalLM.from_pretrained(
         model_name, quantization_config=bnb_config,
-        device_map="auto", trust_remote_code=True
+        device_map="cpu", trust_remote_code=True
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     if tokenizer.pad_token is None:
@@ -95,20 +95,21 @@ def compute_delta_w(fp16_weights, model, targets):
         else:
             module = layer.mlp.down_proj
 
-        # Get current quantized weight
-        param = module.weight
-        if hasattr(param, "dequantize"):
-            W_nf4 = param.dequantize().float()
-        else:
-            W_nf4 = param.data.float()
+        # Get current quantized weight via identity-matrix trick.
+        # .dequantize() on CPU returns wrong shape (numel, 1); the forward
+        # pass through an identity input always gives correct (out, in) shape.
+        in_features = module.in_features
+        identity = torch.eye(in_features, dtype=torch.float32, device="cpu")
+        with torch.no_grad():
+            W_nf4 = module(identity).float().T.contiguous()  # (out, in)
 
         W_fp16 = fp16_weights[comp].to(W_nf4.device)
 
-        # Handle potential shape mismatch from BitsAndBytes padding
-        if W_fp16.shape[1] != W_nf4.shape[1]:
-            min_cols = min(W_fp16.shape[1], W_nf4.shape[1])
-            W_fp16 = W_fp16[:, :min_cols]
-            W_nf4 = W_nf4[:, :min_cols]
+        # Trim to smallest common shape (no-op when shapes already match)
+        min_rows = min(W_fp16.shape[0], W_nf4.shape[0])
+        min_cols = min(W_fp16.shape[1], W_nf4.shape[1])
+        W_fp16 = W_fp16[:min_rows, :min_cols]
+        W_nf4 = W_nf4[:min_rows, :min_cols]
 
         # Compute ΔW (sparse — only at specified rows)
         W_new = W_nf4.clone()
@@ -125,111 +126,37 @@ def compute_delta_w(fp16_weights, model, targets):
 def apply_aird_layer(model, layer_idx, r_fp16, r_nf4, alpha=1.0):
     """Chhabra's AIRD at layer level for baseline comparison."""
     layer = model.model.layers[layer_idx]
-    
-    # Ensure direction vectors are 1D and have correct shape
-    r_fp16 = r_fp16.flatten()  # Flatten in case it's 2D or has extra dimensions
+
+    r_fp16 = r_fp16.flatten()
     r_nf4 = r_nf4.flatten()
-    
-    # Check for NaN values (would cause issues)
+
     if torch.isnan(r_fp16).any() or torch.isnan(r_nf4).any():
         raise ValueError(
             "Direction vectors contain NaN values. "
-            "You must rerun Phase 1 step 1 direction selection to regenerate valid directions."
+            "Rerun Phase 1 step 1 direction selection to regenerate valid directions."
         )
-    
-    # Normalize
+
     r_fp16_norm = torch.norm(r_fp16)
     r_nf4_norm = torch.norm(r_nf4)
-    
     if r_fp16_norm == 0 or r_nf4_norm == 0:
-        raise ValueError("Direction vectors have zero norm (all zeros)")
-    
+        raise ValueError("Direction vectors have zero norm")
+
     r_fp16_hat = r_fp16 / r_fp16_norm
     r_nf4_hat = r_nf4 / r_nf4_norm
-    
-    # Create projection matrices
-    proj_nf4 = torch.outer(r_nf4_hat, r_nf4_hat)  # Should be (hidden_size, hidden_size)
-    proj_fp16 = torch.outer(r_fp16_hat, r_fp16_hat)  # Should be (hidden_size, hidden_size)
+
+    proj_nf4 = torch.outer(r_nf4_hat, r_nf4_hat)
+    proj_fp16 = torch.outer(r_fp16_hat, r_fp16_hat)
 
     for module in [layer.self_attn.o_proj, layer.mlp.down_proj]:
-        param = module.weight
-        if hasattr(param, "dequantize"):
-            W = param.dequantize().float()
-        else:
-            W = param.data.float()
-        device = W.device
-        
-        # Get expected shape from module
-        expected_shape = (module.out_features, module.in_features)
-        expected_numel = expected_shape[0] * expected_shape[1]
-        
-        # Handle case where dequantize returns flattened/reshaped weight
-        # BitsAndBytes sometimes returns weights as flattened vectors
-        # First, always try to reshape if W is not in expected shape
-        if W.shape != expected_shape:
-            # If numel matches, reshape directly
-            if W.numel() == expected_numel:
-                if W.dim() == 1:
-                    W = W.reshape(expected_shape)
-                elif W.dim() == 2:
-                    # Handle column vector (numel, 1) or row vector (1, numel)
-                    if W.shape[0] == expected_numel or W.shape[1] == expected_numel:
-                        W = W.reshape(expected_shape)
-                    else:
-                        # Try reshaping anyway if dimensions don't match
-                        W = W.reshape(expected_shape)
-                else:
-                    W = W.reshape(expected_shape)
-            else:
-                # Numel doesn't match - might be transposed or have padding
-                # Try transposing first
-                W_T = W.T if W.dim() == 2 else W
-                if W_T.numel() == expected_numel:
-                    W = W_T.reshape(expected_shape)
-                else:
-                    # Last resort: try to infer from hidden_size
-                    hidden_size = r_fp16_hat.shape[0]
-                    # Check if it could be (hidden_size, something) or (something, hidden_size)
-                    if W.dim() == 2:
-                        if W.shape[0] == hidden_size:
-                            # Keep as is, might have padding in columns
-                            pass
-                        elif W.shape[1] == hidden_size:
-                            W = W.T
-                        elif W.numel() == hidden_size * hidden_size:
-                            # Might be o_proj that got wrong shape
-                            W = W.reshape(hidden_size, hidden_size)
-                        elif W.numel() % hidden_size == 0:
-                            # Try to infer intermediate size
-                            inferred_cols = W.numel() // hidden_size
-                            W = W.reshape(hidden_size, inferred_cols)
-        
-        # Final verification
-        if W.shape[0] != expected_shape[0] and W.numel() != expected_numel:
-            raise ValueError(
-                f"Cannot reshape W to expected shape. "
-                f"W shape: {W.shape}, W numel: {W.numel()}, "
-                f"expected: {expected_shape}, expected numel: {expected_numel}, "
-                f"module: {module.__class__.__name__}"
-            )
-        
-        # Handle potential shape mismatch from BitsAndBytes padding
-        # W might be (hidden_size, intermediate_size) or (hidden_size, intermediate_size + padding)
-        hidden_size_expected = r_fp16_hat.shape[0]
-        if W.shape[0] != hidden_size_expected:
-            # If W has more rows than expected, it might be transposed or have wrong shape
-            # Check if it's transposed
-            if W.shape[1] == hidden_size_expected:
-                W = W.T
-            else:
-                raise ValueError(
-                    f"Shape mismatch: W has {W.shape[0]} rows but direction vector has {hidden_size_expected} dimensions. "
-                    f"W shape: {W.shape}, expected: {expected_shape}, proj_nf4 shape: {proj_nf4.shape}"
-                )
-        
-        p_nf4 = proj_nf4.to(device)
-        p_fp16 = proj_fp16.to(device)
-        W_new = W - p_nf4 @ W + alpha * p_fp16 @ W
+        # Identity-matrix trick: always returns correct (out, in) shape on CPU.
+        # Avoids .dequantize() which returns (numel, 1) for BitsAndBytes on CPU.
+        in_features = module.in_features
+        identity = torch.eye(in_features, dtype=torch.float32, device="cpu")
+        with torch.no_grad():
+            W = module(identity).float().T.contiguous()  # (out_features, in_features)
+
+        # AIRD projection: remove NF4 direction, add FP16 direction
+        W_new = W - proj_nf4 @ W + alpha * proj_fp16 @ W
         module.weight = torch.nn.Parameter(W_new.to(DTYPE), requires_grad=False)
 
 

@@ -63,27 +63,16 @@ def load_model(model_name, precision):
     if precision == "nf4":
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
+            model_name,
             quantization_config = bnb_config,
-            device_map = "auto", 
+            device_map = "cpu",
             trust_remote_code = True,
         )
-
-    # elif precision == "nf2":
-    #     bnb_config = BitsAndBytesConfig(**NF2_CONFIG)
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         model_name, 
-    #         quantization_config = bnb_config,
-    #         device_map = "auto", 
-    #         trust_remote_code = True,
-    #     )
-
     else:
-        # FP16
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
-            torch_dtype = DTYPE,
-            device_map = "auto", 
+            model_name,
+            torch_dtype = torch.float32,
+            device_map = "cpu",
             trust_remote_code = True,
         )
     

@@ -32,7 +32,7 @@ def load_repaired_model(model_name, repair_state_dir):
     bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
     model = AutoModelForCausalLM.from_pretrained(
         model_name, quantization_config=bnb_config,
-        device_map="auto", trust_remote_code=True,
+        device_map="cpu", trust_remote_code=True,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     if tokenizer.pad_token is None:
@@ -173,7 +173,7 @@ def main():
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
             model_name, quantization_config=bnb_config,
-            device_map="auto", trust_remote_code=True,
+            device_map="cpu", trust_remote_code=True,
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         if tokenizer.pad_token is None:
@@ -208,7 +208,7 @@ def main():
 
                 device = next(module.parameters()).device
                 in_features = module.in_features
-                identity = torch.eye(in_features, device=device, dtype=torch.float16)
+                identity = torch.eye(in_features, device=device, dtype=torch.float32)
                 with torch.no_grad():
                     W = module(identity).float().T
 
@@ -250,7 +250,7 @@ def main():
                 in_features = module.in_features
 
                 # Get effective current weight via identity
-                identity = torch.eye(in_features, device=device, dtype=torch.float16)
+                identity = torch.eye(in_features, device=device, dtype=torch.float32)
                 with torch.no_grad():
                     W_current = module(identity).float().T
 
