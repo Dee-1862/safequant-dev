@@ -21,8 +21,8 @@ from config import MODELS
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
-    parser.add_argument("--precision", required=True, choices=["fp16", "nf4"])
+    parser.add_argument("--model", required = True, choices = list(MODELS.keys()))
+    parser.add_argument("--precision", required = True, choices = ["fp16", "nf4"])
     args = parser.parse_args()
     
     output_dir = os.path.join(os.path.dirname(__file__), "outputs", args.model)
@@ -37,7 +37,7 @@ def main():
     # projects onto the SAME direction in both FP16 and NF4
     dir_data = torch.load(
         os.path.join(direction_dir, "best_direction_fp16.pt"),
-        map_location="cpu"
+        map_location = "cpu"
     )
     r_hat = dir_data["direction_normalized"]  # unit vector
     
@@ -46,7 +46,7 @@ def main():
     # Load component outputs
     comp_data = torch.load(
         os.path.join(output_dir, f"component_outputs_{args.precision}.pt"),
-        map_location="cpu"
+        map_location = "cpu"
     )
     attn_means = comp_data["attn_means"]
     mlp_means = comp_data["mlp_means"]
@@ -98,7 +98,7 @@ def main():
     
     save_path = os.path.join(output_dir, f"dfa_scores_{args.precision}.json")
     with open(save_path, "w") as f:
-        json.dump(results, f, indent=2)
+        json.dump(results, f, indent = 2)
     
     print(f"\nSaved to {save_path}")
     print("=== DFA computation complete ===")

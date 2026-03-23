@@ -23,7 +23,7 @@ from config import MODELS
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
+    parser.add_argument("--model", required = True, choices = list(MODELS.keys()))
     args = parser.parse_args()
     
     output_dir = os.path.join(os.path.dirname(__file__), "outputs", args.model)
@@ -94,8 +94,8 @@ def main():
     layer_nums_attn = [int(c.split("_")[-1]) for c in attn_layers]
     layer_nums_mlp = [int(c.split("_")[-1]) for c in mlp_layers]
     
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle(f"SafeQuant Circuit Analysis: {args.model}", fontsize=14, fontweight="bold")
+    fig, axes = plt.subplots(2, 2, figsize = (16, 12))
+    fig.suptitle(f"SafeQuant Circuit Analysis: {args.model}", fontsize = 14, fontweight = "bold")
     
     # --- Plot 1: FP16 DFA scores (the refusal circuit) ---
     ax = axes[0, 0]
@@ -104,16 +104,16 @@ def main():
     
     x = np.arange(len(layer_nums_attn))
     width = 0.35
-    ax.bar(x - width/2, attn_fp16, width, label="Attention", color="steelblue", alpha=0.8)
-    ax.bar(x + width/2, mlp_fp16, width, label="MLP", color="coral", alpha=0.8)
+    ax.bar(x - width/2, attn_fp16, width, label = "Attention", color = "steelblue", alpha = 0.8)
+    ax.bar(x + width/2, mlp_fp16, width, label = "MLP", color = "coral", alpha = 0.8)
     ax.set_xlabel("Layer")
     ax.set_ylabel("DFA Score")
     ax.set_title("FP16 Refusal Circuit (DFA per component)")
     ax.legend()
     ax.set_xticks(x[::max(1, len(x)//10)])
     ax.set_xticklabels([str(l) for l in layer_nums_attn[::max(1, len(x)//10)]])
-    ax.axhline(y=0, color="black", linewidth=0.5)
-    
+    ax.axhline(y = 0, color = "black", linewidth = 0.5)
+
     # --- Plot 2: FP16 vs NF4 comparison ---
     ax = axes[0, 1]
     attn_nf4 = [nf4_scores.get(c, 0) for c in attn_layers]
@@ -124,32 +124,32 @@ def main():
     all_labels = [f"A{l}" for l in layer_nums_attn] + [f"M{l}" for l in layer_nums_mlp]
     
     x2 = np.arange(len(all_fp16))
-    ax.bar(x2 - width/2, all_fp16, width, label="FP16", color="steelblue", alpha=0.7)
-    ax.bar(x2 + width/2, all_nf4, width, label="NF4", color="orange", alpha=0.7)
+    ax.bar(x2 - width/2, all_fp16, width, label = "FP16", color = "steelblue", alpha = 0.7)
+    ax.bar(x2 + width/2, all_nf4, width, label = "NF4", color = "orange", alpha = 0.7)
     ax.set_xlabel("Component (A=Attn, M=MLP)")
     ax.set_ylabel("DFA Score")
     ax.set_title(f"DFA Comparison: FP16 vs NF4\nSignal Retention: {signal_retention:.1f}%")
     ax.legend()
     step = max(1, len(x2) // 15)
     ax.set_xticks(x2[::step])
-    ax.set_xticklabels([all_labels[i] for i in range(0, len(all_labels), step)], rotation=45, fontsize=7)
-    ax.axhline(y=0, color="black", linewidth=0.5)
-    
+    ax.set_xticklabels([all_labels[i] for i in range(0, len(all_labels), step)], rotation = 45, fontsize = 7)
+    ax.axhline(y = 0, color = "black", linewidth = 0.5)
+
     # --- Plot 3: Absolute change per component ---
     ax = axes[1, 0]
     abs_changes_attn = [changes[c]["absolute_change"] for c in attn_layers]
     abs_changes_mlp = [changes[c]["absolute_change"] for c in mlp_layers]
     
-    ax.bar(x - width/2, abs_changes_attn, width, label="Attention", color="steelblue", alpha=0.8)
-    ax.bar(x + width/2, abs_changes_mlp, width, label="MLP", color="coral", alpha=0.8)
+    ax.bar(x - width/2, abs_changes_attn, width, label = "Attention", color = "steelblue", alpha = 0.8)
+    ax.bar(x + width/2, abs_changes_mlp, width, label = "MLP", color = "coral", alpha = 0.8)
     ax.set_xlabel("Layer")
     ax.set_ylabel("DFA Change (NF4 - FP16)")
     ax.set_title("Per-Component Signal Change After Quantization")
     ax.legend()
     ax.set_xticks(x[::max(1, len(x)//10)])
     ax.set_xticklabels([str(l) for l in layer_nums_attn[::max(1, len(x)//10)]])
-    ax.axhline(y=0, color="black", linewidth=0.5)
-    
+    ax.axhline(y = 0, color = "black", linewidth = 0.5)
+
     # --- Plot 4: Top affected components ---
     ax = axes[1, 1]
     top_n = 15
@@ -158,16 +158,16 @@ def main():
     abs_vals = [abs(c[1]["absolute_change"]) for c in top_comps]
     colors = ["red" if c[1]["absolute_change"] < 0 else "green" for c in top_comps]
     
-    ax.barh(range(top_n), abs_vals, color=colors, alpha=0.8)
+    ax.barh(range(top_n), abs_vals, color = colors, alpha = 0.8)
     ax.set_yticks(range(top_n))
-    ax.set_yticklabels(names, fontsize=8)
+    ax.set_yticklabels(names, fontsize = 8)
     ax.set_xlabel("|DFA Change|")
     ax.set_title(f"Top {top_n} Most Affected Components\n(Red=lost signal, Green=gained)")
     ax.invert_yaxis()
     
     plt.tight_layout()
     plot_path = os.path.join(output_dir, "circuit_analysis.png")
-    plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+    plt.savefig(plot_path, dpi = 150, bbox_inches = "tight")
     print(f"\n  Circuit analysis plot saved to {plot_path}")
     
     # Save comparison results
@@ -185,7 +185,7 @@ def main():
     
     comp_path = os.path.join(output_dir, "circuit_comparison.json")
     with open(comp_path, "w") as f:
-        json.dump(comparison, f, indent=2)
+        json.dump(comparison, f, indent = 2)
     
     print(f"  Comparison saved to {comp_path}")
     print("\n=== Circuit comparison complete ===")

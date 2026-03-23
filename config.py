@@ -22,7 +22,7 @@ MODELS = {
 }
 
 # ============================================================
-# DEVICE
+# DEVICE (phase1_problem scripts use device_map = "cpu" explicitly)
 # ============================================================
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16 if DEVICE == "cuda" else torch.float32

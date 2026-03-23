@@ -1,13 +1,10 @@
 """
 Step 1a: Extract activations from residual stream.
 
-Purpose:
-- For a given model and precision (FP16 or NF4), runs all train prompts and computes mean activations at end-of-instruction token positions.
-- Then computes difference-in-means (DIM) between harmful and harmless.
-
-Background:
-- Uses Arditi et al. (2024) methodology for tokenization and position extraction.
-- Replicated from Arditi's get_mean_activations but modified to avoid GPU memory issues.
+For a given model and precision (FP16 or NF4), runs all train prompts and
+computes mean activations at end-of-instruction token positions, then
+computes difference-in-means (DIM) between harmful and harmless. Uses
+Arditi et al. (2024) methodology; runs on CPU only.
 
 Run:
   python phase1_problem/step1_direction/extract_activations.py --model qwen1.5b --precision fp16
@@ -32,8 +29,7 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from config import MODELS, DEVICE, DTYPE, NF4_CONFIG, DATA_DIR
 
-# Import from Arditi's code (from repos/refusal_direction/pipeline/)
-# We use their tokenization and position extraction logic ( these are CPU-safe)
+# Arditi refusal_direction repo: tokenization and position extraction (CPU-safe)
 from pipeline.model_utils.qwen_model import (  # type: ignore
     tokenize_instructions_qwen_chat,
     QWEN_CHAT_TEMPLATE,
@@ -46,16 +42,16 @@ def load_model(model_name, precision):
     if precision == "nf4":
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
+            model_name,
             quantization_config = bnb_config,
-            device_map = "auto", 
+            device_map = "cpu",
             trust_remote_code = True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
+            model_name,
             torch_dtype = DTYPE,
-            device_map = "auto", 
+            device_map = "cpu",
             trust_remote_code = True,
         )
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code = True)
@@ -77,13 +73,9 @@ def get_eoi_toks(tokenizer):
 def get_mean_activations_memory_efficient(model, tokenizer, instructions, tokenize_fn, block_modules, positions):
     """
     Compute mean activations at specified positions across all layers.
-    
-    Memory-efficient version replicated from Arditi's get_mean_activations (pipeline/submodules/generate_directions.py) but modified to:
-    - Process prompts one at a time (not batched) to minimize GPU memory
-    - Extract activations and immediately move to CPU
-    - Accumulate on CPU in float64 (for numerical precision like Arditi)
-    
-    Original Arditi code clones activations on GPU and accumulates on GPU, which causes OOM on limited GPU memory. This version avoids that.
+
+    Memory-efficient: process prompts one at a time, move activations to CPU
+    immediately, and accumulate in float64 on CPU for numerical precision.
     
     Args:
         model: The model to extract activations from
@@ -101,11 +93,8 @@ def get_mean_activations_memory_efficient(model, tokenizer, instructions, tokeni
     n_samples = len(instructions)
     d_model = model.config.hidden_size
     
-    # Store mean activations on CPU in high-precision (like Arditi uses float64)
-    # This avoids GPU memory issues while maintaining numerical precision
     mean_activations = torch.zeros((n_positions, n_layers, d_model), dtype = torch.float64, device = "cpu")
-    
-    # Process each prompt individually to minimize GPU memory usage
+
     for prompt_idx, prompt in enumerate(tqdm(instructions, desc = "Extracting activations")):
         # Tokenize using Arditi's tokenization function
         inputs = tokenize_fn([prompt])
@@ -123,7 +112,7 @@ def get_mean_activations_memory_efficient(model, tokenizer, instructions, tokeni
                     hs = input[0]
                 else:
                     hs = input
-                # Store on CPU immediately to avoid GPU memory accumulation
+                # Store on CPU immediately
                 hidden_states_per_layer[layer_idx] = hs.detach().cpu().float()
             return hook_fn
         
@@ -160,7 +149,7 @@ def get_mean_activations_memory_efficient(model, tokenizer, instructions, tokeni
                     activation = hs[0, abs_pos, :].double()
                     mean_activations[pos_idx, layer_idx] += (1.0 / n_samples) * activation
         
-        # Clear GPU cache periodically
+        # Periodic cleanup when running on CPU (no-op if no GPU)
         if prompt_idx % 10 == 0 and torch.cuda.is_available():
             torch.cuda.empty_cache()
     
@@ -211,11 +200,8 @@ def main():
     positions = list(range(-len(eoi_toks), 0))
     print(f"Extracting from positions: {positions}")
     
-    # Compute mean activations using memory-efficient approach
     print("\nComputing mean activations and difference...")
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
+
     # Process harmful prompts
     print("  Processing harmful prompts...")
     mean_activations_harmful = get_mean_activations_memory_efficient(
@@ -226,10 +212,7 @@ def main():
         block_modules, 
         positions
     )
-    
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
+
     # Process harmless prompts
     print("  Processing harmless prompts...")
     mean_activations_harmless = get_mean_activations_memory_efficient(
@@ -267,10 +250,7 @@ def main():
     print(f"\nSaved activations to {save_path}")
     print(f"  Shape: {mean_diffs.shape} (n_positions = {len(eoi_toks)}, n_layers = {n_layers}, d_model = {model.config.hidden_size})")
     
-    # Cleanup
     del model
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
     print("\nActivation extraction complete")
 
 

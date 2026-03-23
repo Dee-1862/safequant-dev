@@ -24,18 +24,23 @@ from config import MODELS, DEVICE, DTYPE, NF4_CONFIG, DATA_DIR, REFUSAL_PREFIXES
 
 
 def load_model(model_name, precision):
+    """Load model in specified precision on CPU."""
     if precision == "nf4":
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, quantization_config=bnb_config,
-            device_map="auto", trust_remote_code=True,
+            model_name,
+            quantization_config = bnb_config,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=DTYPE,
-            device_map="auto", trust_remote_code=True,
+            model_name,
+            torch_dtype = DTYPE,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code = True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     model.eval()
@@ -54,15 +59,15 @@ def is_refusal(text):
 def generate_completion(model, tokenizer, prompt):
     """Generate a completion for a single prompt."""
     messages = [{"role": "user", "content": prompt}]
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text = tokenizer.apply_chat_template(messages, tokenize = False, add_generation_prompt = True)
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
     
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
-            max_new_tokens=MAX_NEW_TOKENS,
-            do_sample=False,
-            temperature=1.0,
+            max_new_tokens = MAX_NEW_TOKENS,
+            do_sample = False,
+            temperature = 1.0,
         )
     
     response = tokenizer.decode(
@@ -74,8 +79,8 @@ def generate_completion(model, tokenizer, prompt):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
-    parser.add_argument("--precision", required=True, choices=["fp16", "nf4"])
+    parser.add_argument("--model", required = True, choices = list(MODELS.keys()))
+    parser.add_argument("--precision", required = True, choices = ["fp16", "nf4"])
     args = parser.parse_args()
     
     model_name = MODELS[args.model]
@@ -139,12 +144,11 @@ def main():
     
     results_path = os.path.join(output_dir, f"asr_{args.precision}.json")
     with open(results_path, "w") as f:
-        json.dump(results, f, indent=2)
-    
-    # Save completions separately (for manual inspection)
+        json.dump(results, f, indent = 2)
+
     comp_path = os.path.join(output_dir, f"completions_{args.precision}.json")
     with open(comp_path, "w") as f:
-        json.dump(completions, f, indent=2)
+        json.dump(completions, f, indent = 2)
     
     print(f"\n  Results saved to {results_path}")
     print(f"  Completions saved to {comp_path}")
@@ -157,9 +161,7 @@ def main():
         print(f"  Response: {c['response'][:100]}...")
         print()
     
-    # Cleanup
     del model
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
     print("=== ASR measurement complete ===")
 
 

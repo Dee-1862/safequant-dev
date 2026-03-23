@@ -1,5 +1,8 @@
 """
-SafeQuant Phase 1 — Compile all results into a summary.
+SafeQuant Phase 1: Compile all results into a summary.
+
+Reads outputs from step1_direction, step2_behavior, and step3_circuit and
+prints Findings 1–3 (direction preservation, behavioral safety, circuit analysis).
 
 Run after all steps are complete:
   python phase1_problem/summary/compile_phase1.py

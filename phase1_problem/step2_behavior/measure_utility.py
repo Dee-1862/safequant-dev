@@ -21,18 +21,23 @@ from config import MODELS, DEVICE, DTYPE, NF4_CONFIG
 
 
 def load_model(model_name, precision):
+    """Load model in specified precision on CPU."""
     if precision == "nf4":
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, quantization_config=bnb_config,
-            device_map="auto", trust_remote_code=True,
+            model_name,
+            quantization_config = bnb_config,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=DTYPE,
-            device_map="auto", trust_remote_code=True,
+            model_name,
+            torch_dtype = DTYPE,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code = True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     model.eval()
@@ -58,7 +63,7 @@ def eval_boolq(model, tokenizer, n_samples=200):
         
         prompt = f"Read the passage and answer with just 'yes' or 'no'.\n\nPassage: {passage}\n\nQuestion: {question}\n\nAnswer:"
         messages = [{"role": "user", "content": prompt}]
-        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        text = tokenizer.apply_chat_template(messages, tokenize = False, add_generation_prompt = True)
         inputs = tokenizer(text, return_tensors="pt").to(model.device)
         
         with torch.no_grad():
@@ -85,9 +90,9 @@ def eval_boolq(model, tokenizer, n_samples=200):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
-    parser.add_argument("--precision", required=True, choices=["fp16", "nf4"])
-    parser.add_argument("--n_samples", type=int, default=200)
+    parser.add_argument("--model", required = True, choices = list(MODELS.keys()))
+    parser.add_argument("--precision", required = True, choices = ["fp16", "nf4"])
+    parser.add_argument("--n_samples", type = int, default = 200)
     args = parser.parse_args()
     
     model_name = MODELS[args.model]
@@ -100,7 +105,7 @@ def main():
     model, tokenizer = load_model(model_name, args.precision)
     
     # Run BoolQ
-    boolq_results = eval_boolq(model, tokenizer, n_samples=args.n_samples)
+    boolq_results = eval_boolq(model, tokenizer, n_samples = args.n_samples)
     
     print(f"\n  BoolQ Accuracy: {boolq_results['accuracy']:.1f}% "
           f"({boolq_results['correct']}/{boolq_results['total']})")
@@ -114,13 +119,11 @@ def main():
     
     results_path = os.path.join(output_dir, f"utility_{args.precision}.json")
     with open(results_path, "w") as f:
-        json.dump(results, f, indent=2)
+        json.dump(results, f, indent = 2)
     
     print(f"\n  Results saved to {results_path}")
     
-    # Cleanup
     del model
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
     print("=== Utility measurement complete ===")
 
 

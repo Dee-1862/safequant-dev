@@ -23,18 +23,23 @@ from config import MODELS, DEVICE, DTYPE, NF4_CONFIG, DATA_DIR
 
 
 def load_model(model_name, precision):
+    """Load model in specified precision on CPU."""
     if precision == "nf4":
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, quantization_config=bnb_config,
-            device_map="auto", trust_remote_code=True,
+            model_name,
+            quantization_config = bnb_config,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype=DTYPE,
-            device_map="auto", trust_remote_code=True,
+            model_name,
+            torch_dtype = DTYPE,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code = True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     model.eval()
@@ -59,7 +64,7 @@ def extract_component_contributions(model, tokenizer, prompts, n_layers, n_heads
     
     for prompt in tqdm(prompts, desc="Extracting components"):
         messages = [{"role": "user", "content": prompt}]
-        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        text = tokenizer.apply_chat_template(messages, tokenize = False, add_generation_prompt = True)
         inputs = tokenizer(text, return_tensors="pt").to(model.device)
         
         attn_outputs = {}
@@ -111,8 +116,8 @@ def extract_component_contributions(model, tokenizer, prompts, n_layers, n_heads
                 mlp_sums[l] += mlp_outputs[l]
         count += 1
         
-        if count % 20 == 0:
-            torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        if count % 20 == 0 and torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
     # Compute means
     attn_means = {l: attn_sums[l] / count for l in range(n_layers)}
@@ -123,8 +128,8 @@ def extract_component_contributions(model, tokenizer, prompts, n_layers, n_heads
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
-    parser.add_argument("--precision", required=True, choices=["fp16", "nf4"])
+    parser.add_argument("--model", required = True, choices = list(MODELS.keys()))
+    parser.add_argument("--precision", required = True, choices = ["fp16", "nf4"])
     args = parser.parse_args()
     
     model_name = MODELS[args.model]
@@ -173,9 +178,7 @@ def main():
         mlp_norm = torch.norm(mlp_means[l]).item()
         print(f"    Layer {l:2d}: attn={attn_norm:.4f}, mlp={mlp_norm:.4f}")
     
-    # Cleanup
     del model
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
     print("\n=== Component extraction complete ===")
 
 

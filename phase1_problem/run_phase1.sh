@@ -18,33 +18,33 @@ run_for_model() {
     echo "  Running Phase 1 for: $m"
     echo "============================================================"
     
-    echo ""
-    echo "--- Step 0: Data Preparation ---"
-    python phase1_problem/data/prepare_data.py
+    # echo ""
+    # echo "--- Step 0: Data Preparation ---"
+    # python phase1_problem/data/prepare_data.py
     
-    echo ""
-    echo "--- Step 1a: Extract activations (FP16) ---"
-    python phase1_problem/step1_direction/extract_activations.py --model $m --precision fp16
+    # echo ""
+    # echo "--- Step 1a: Extract activations (FP16) ---"
+    # python phase1_problem/step1_direction/extract_activations.py --model $m --precision fp16
     
-    echo ""
-    echo "--- Step 1b: Extract activations (NF4) ---"
-    python phase1_problem/step1_direction/extract_activations.py --model $m --precision nf4
+    # echo ""
+    # echo "--- Step 1b: Extract activations (NF4) ---"
+    # python phase1_problem/step1_direction/extract_activations.py --model $m --precision nf4
     
-    echo ""
-    echo "--- Step 1c: Compute directions (FP16) ---"
-    python phase1_problem/step1_direction/compute_directions.py --model $m --precision fp16
+    # echo ""
+    # echo "--- Step 1c: Compute directions (FP16) ---"
+    # python phase1_problem/step1_direction/compute_directions.py --model $m --precision fp16
     
-    echo ""
-    echo "--- Step 1d: Compute directions (NF4) ---"
-    python phase1_problem/step1_direction/compute_directions.py --model $m --precision nf4
+    # echo ""
+    # echo "--- Step 1d: Compute directions (NF4) ---"
+    # python phase1_problem/step1_direction/compute_directions.py --model $m --precision nf4
     
     echo ""
     echo "--- Step 1e: Select best direction (FP16) ---"
-    python phase1_problem/step1_direction/select_best_direction.py --model $m --precision fp16
+    python phase1_problem/step1_direction/select_best_direction.py --model $m --precision fp16 --n_val_subset 16
     
     echo ""
     echo "--- Step 1f: Select best direction (NF4) ---"
-    python phase1_problem/step1_direction/select_best_direction.py --model $m --precision nf4
+    python phase1_problem/step1_direction/select_best_direction.py --model $m --precision nf4 --n_val_subset 16
     
     echo ""
     echo "--- Step 1g: Compare directions ---"

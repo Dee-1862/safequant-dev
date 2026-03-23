@@ -9,10 +9,10 @@ Run: python phase1_problem/data/prepare_data.py
 import sys
 import os
 import csv
-from datasets import load_dataset
+import json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-import json
+from datasets import load_dataset
 import random
 from config import N_TRAIN, N_VAL, DATA_DIR
 
@@ -53,7 +53,7 @@ def load_alpaca_prompts():
     """Load harmless prompts from Alpaca-Cleaned dataset."""
 
     print("Loading Alpaca-Cleaned harmless prompts")
-    ds = load_dataset("yahma/alpaca-cleaned", split="train")
+    ds = load_dataset("yahma/alpaca-cleaned", split = "train")
     # Filter to instruction-only (no input field) for cleaner prompts
     prompts = []
     for row in ds:
@@ -100,7 +100,7 @@ def main():
     for filename, data in splits.items():
         path = os.path.join(DATA_DIR, filename)
         with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent = 2)
         print(f"  Saved {filename}: {len(data)} prompts")
     
     # 4. Print sample prompts

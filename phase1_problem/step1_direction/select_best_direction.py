@@ -6,17 +6,18 @@ For each candidate direction, tests on validation set:
   - Add it to harmless prompts -> measure refusal score (should increase)
   - Compute KL divergence on harmless prompts (should be low)
 
-Uses Arditi et al. (2024) select_direction methodology directly.
+Uses Arditi et al. (2024) select_direction methodology. No change to metrics or
+selection logic; use --top_k, --n_val_subset, and --eval_batch_size to trade
+speed vs thoroughness (same methodology, less variance with larger N / top_k).
 
 Run:
   python phase1_problem/step1_direction/select_best_direction.py --model qwen1.5b --precision fp16
+  python ... select_best_direction.py --model qwen1.5b --precision fp16 --n_val_subset 16   # faster
 """
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# Add refusal_direction repo to path for imports
-# Note: Linter may show warnings for these imports, but they work at runtime
 REFUSAL_DIR_PATH = os.path.abspath(os.path.join(
     os.path.dirname(__file__), "..", "..", "repos", "refusal_direction"
 ))
@@ -31,9 +32,8 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from config import MODELS, DEVICE, DTYPE, NF4_CONFIG, DATA_DIR, MAX_NEW_TOKENS
 
-# Import from Arditi's code (from repos/refusal_direction/pipeline/)
-# We only import CPU-safe functions; memory-intensive functions are replicated below
-from pipeline.submodules.select_direction import ( # type: ignore
+# Arditi refusal_direction pipeline: CPU-safe helpers
+from pipeline.submodules.select_direction import (  # type: ignore
     refusal_score,
     kl_div_fn,
     filter_fn
@@ -44,7 +44,7 @@ from pipeline.utils.hook_utils import ( # type: ignore
     get_direction_ablation_output_hook,
     get_activation_addition_input_pre_hook
 )
-from pipeline.model_utils.qwen_model import ( # type: ignore
+from pipeline.model_utils.qwen_model import (  # type: ignore
     tokenize_instructions_qwen_chat,
     QWEN_REFUSAL_TOKS
 )
@@ -52,15 +52,8 @@ from pipeline.model_utils.qwen_model import ( # type: ignore
 
 def get_refusal_scores_memory_efficient(model, instructions, tokenize_instructions_fn, refusal_toks, fwd_pre_hooks = [], fwd_hooks = [], batch_size = 1):
     """
-    Memory-efficient version of Arditi's get_refusal_scores.
-    
-    Replicated from pipeline/submodules/select_direction.py but modified to:
-    - Process prompts one at a time (batch_size=1 internally) to minimize GPU memory
-    - Move refusal scores to CPU immediately after computation
-    - Accumulate on CPU to avoid GPU memory accumulation
-    
-    Original Arditi code processes in batches and accumulates on GPU, which causes OOM on limited GPU memory.
-    This version avoids that by processing individually and accumulating on CPU.
+    Memory-efficient refusal score computation: process prompts one at a time,
+    move scores to CPU immediately, and accumulate on CPU.
     """
     refusal_score_fn = functools.partial(refusal_score, refusal_toks = refusal_toks)
     
@@ -81,24 +74,13 @@ def get_refusal_scores_memory_efficient(model, instructions, tokenize_instructio
         batch_scores = refusal_score_fn(logits = logits).cpu()
         refusal_scores[i:i+batch_size] = batch_scores
         
-        # Clear GPU cache periodically
-        if (i // batch_size) % 10 == 0 and torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
     return refusal_scores
 
 
 def get_last_position_logits_memory_efficient(model, tokenizer, instructions, tokenize_instructions_fn, fwd_pre_hooks = [], fwd_hooks = [], batch_size = 1):
     """
-    Memory-efficient version of Arditi's get_last_position_logits.
-    
-    Replicated from pipeline/submodules/select_direction.py but modified to:
-    - Process prompts one at a time (batch_size=1 internally) to minimize GPU memory
-    - Move logits to CPU immediately after computation
-    - Accumulate on CPU to avoid GPU memory accumulation
-    
-    Original Arditi code processes in batches and accumulates on GPU, which causes OOM on limited GPU memory.
-    This version avoids that by processing individually and accumulating on CPU.
+    Memory-efficient last-position logits: process prompts one at a time and
+    move logits to CPU immediately.
     """
     last_position_logits_list = []
     
@@ -115,11 +97,7 @@ def get_last_position_logits_memory_efficient(model, tokenizer, instructions, to
         # Extract last position logits and move to CPU immediately
         batch_logits = logits[:, -1, :].detach().cpu()
         last_position_logits_list.append(batch_logits)
-        
-        # Clear GPU cache periodically
-        if (i // batch_size) % 10 == 0 and torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
+
     # Concatenate on CPU
     last_position_logits = torch.cat(last_position_logits_list, dim = 0)
     return last_position_logits
@@ -130,13 +108,17 @@ def load_model(model_name, precision):
     if precision == "nf4":
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, quantization_config = bnb_config,
-            device_map = "auto", trust_remote_code = True,
+            model_name,
+            quantization_config = bnb_config,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype = DTYPE,
-            device_map = "auto", trust_remote_code = True,
+            model_name,
+            torch_dtype = DTYPE,
+            device_map = "cpu",
+            trust_remote_code = True,
         )
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code = True)
     if tokenizer.pad_token is None:
@@ -157,10 +139,20 @@ def main():
         required = True, 
         choices = ["fp16", "nf4"])
     parser.add_argument(
-        "--top_k", 
-        type = int, 
-        default = 20,
-        help = "Evaluate top-k candidates (for speed)")
+        "--top_k",
+        type = int,
+        default = 10,
+        help = "Evaluate top-k candidates by norm (default 10; use 20 for more thorough search)")
+    parser.add_argument(
+        "--n_val_subset",
+        type = int,
+        default = None,
+        help = "Use first N validation prompts for selection (default: all). Same methodology, less variance with larger N.")
+    parser.add_argument(
+        "--eval_batch_size",
+        type = int,
+        default = 2,
+        help = "Batch size for forward passes during candidate evaluation (default 2; increase if you have more RAM)")
     args = parser.parse_args()
     
     model_name = MODELS[args.model]
@@ -183,7 +175,12 @@ def main():
         harmful_val = json.load(f)
     with open(os.path.join(DATA_DIR, "harmless_val.json")) as f:
         harmless_val = json.load(f)
-    
+
+    if args.n_val_subset is not None:
+        n_use = min(args.n_val_subset, len(harmful_val), len(harmless_val))
+        harmful_val = harmful_val[:n_use]
+        harmless_val = harmless_val[:n_use]
+        print(f"Using first {n_use} validation prompts for selection (--n_val_subset)")
     print(f"Harmful validation: {len(harmful_val)}")
     print(f"Harmless validation: {len(harmless_val)}")
     
@@ -192,12 +189,7 @@ def main():
     refusal_toks = torch.tensor(QWEN_REFUSAL_TOKS, device = model.device)
     print(f"Refusal tokens: {refusal_toks.tolist()}")
     
-    # Get model modules
     block_modules = model.model.layers
-    # Note: Qwen2 models use 'self_attn', not 'attn' like older Qwen models
-    # Arditi's code (pipeline/model_utils/qwen_model.py) uses 'attn' for Qwen1
-    # We need 'self_attn' for Qwen2.5 models
-
     attn_lst = []
     mlp_lst = []
     for block in block_modules:
@@ -214,31 +206,22 @@ def main():
         include_trailing_whitespace = True
     )
     
-    # Compute baseline refusal scores using memory-efficient version
-    print("\nComputing baseline refusal scores...")
+    batch_size = args.eval_batch_size
+    print(f"\nComputing baseline refusal scores (batch_size = {batch_size})...")
     baseline_refusal_scores_harmful = get_refusal_scores_memory_efficient(
-        model, harmful_val, tokenize_fn, refusal_toks, fwd_pre_hooks = [], fwd_hooks = [], batch_size = 1
+        model, harmful_val, tokenize_fn, refusal_toks, fwd_pre_hooks = [], fwd_hooks = [], batch_size = batch_size
     )
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
     baseline_refusal_scores_harmless = get_refusal_scores_memory_efficient(
-        model, harmless_val, tokenize_fn, refusal_toks, fwd_pre_hooks = [], fwd_hooks = [], batch_size = 1
+        model, harmless_val, tokenize_fn, refusal_toks, fwd_pre_hooks = [], fwd_hooks = [], batch_size = batch_size
     )
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
     print(f"  Baseline harmful refusal score: {baseline_refusal_scores_harmful.mean().item():.4f}")
     print(f"  Baseline harmless refusal score: {baseline_refusal_scores_harmless.mean().item():.4f}")
-    
-    # Get baseline logits for KL computation using memory-efficient version
+
     baseline_harmless_logits = get_last_position_logits_memory_efficient(
         model, tokenizer, harmless_val, tokenize_fn,
-        fwd_pre_hooks = [], fwd_hooks = [], batch_size = 1
+        fwd_pre_hooks = [], fwd_hooks = [], batch_size = batch_size
     )
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
+
     # Initialize score arrays
     ablation_kl_div_scores = torch.zeros((n_pos, n_layers), device = model.device, dtype = torch.float64)
     ablation_refusal_scores = torch.zeros((n_pos, n_layers), device = model.device, dtype = torch.float64)
@@ -260,7 +243,6 @@ def main():
     from tqdm import tqdm
     for norm, pos_idx, layer_idx in tqdm(top_candidates, desc="Evaluating candidates"):
         source_pos = pos_idx - n_pos  # Convert to negative index
-        # Keep direction on CPU; hooks will move it to GPU when needed
         direction = mean_diffs[pos_idx, layer_idx]
         
         # 1. Compute KL divergence (ablating on harmless)
@@ -279,51 +261,38 @@ def main():
         
         intervention_logits = get_last_position_logits_memory_efficient(
             model, tokenizer, harmless_val, tokenize_fn,
-            fwd_pre_hooks = fwd_pre_hooks, fwd_hooks = fwd_hooks, batch_size = 1
+            fwd_pre_hooks = fwd_pre_hooks, fwd_hooks = fwd_hooks, batch_size = batch_size
         )
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # Both baseline and intervention logits are on CPU, so kl_div_fn will work correctly
+
+        # Both baseline and intervention logits are on CPU
         kl_div = kl_div_fn(baseline_harmless_logits, intervention_logits).mean().item()
         ablation_kl_div_scores[pos_idx, layer_idx] = kl_div
         
-        # Clear intervention_logits from memory
         del intervention_logits
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
+
         # 2. Compute refusal score when ablating on harmful
         refusal_scores = get_refusal_scores_memory_efficient(
             model, harmful_val, tokenize_fn, refusal_toks,
-            fwd_pre_hooks = fwd_pre_hooks, fwd_hooks = fwd_hooks, batch_size = 1
+            fwd_pre_hooks = fwd_pre_hooks, fwd_hooks = fwd_hooks, batch_size = batch_size
         )
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         ablation_refusal_scores[pos_idx, layer_idx] = refusal_scores.mean().item()
-        
-        # Clear refusal_scores from memory
         del refusal_scores
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
+
         # 3. Compute refusal score when adding to harmless
         coeff = torch.tensor(1.0)
         fwd_pre_hooks_add = [(block_modules[layer_idx], get_activation_addition_input_pre_hook(vector = direction, coeff = coeff))]
         
         refusal_scores = get_refusal_scores_memory_efficient(
             model, harmless_val, tokenize_fn, refusal_toks,
-            fwd_pre_hooks = fwd_pre_hooks_add, fwd_hooks = [], batch_size = 1
+            fwd_pre_hooks = fwd_pre_hooks_add, fwd_hooks = [], batch_size = batch_size
         )
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         steering_refusal_scores[pos_idx, layer_idx] = refusal_scores.mean().item()
-        
-        # Clear all intermediate tensors and hooks
         del refusal_scores, fwd_pre_hooks, fwd_hooks, fwd_pre_hooks_add
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
+
     # Filter and select best using Arditi's filter function
     filtered_scores = []
     kl_threshold = 0.1
@@ -391,10 +360,7 @@ def main():
     
     print(f"\nSaved best direction to {save_path}")
     
-    # Cleanup
     del model
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
     print("\nDirection selection complete")
 
 

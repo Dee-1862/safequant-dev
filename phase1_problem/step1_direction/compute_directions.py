@@ -20,15 +20,8 @@ from config import MODELS
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model", 
-        required = True, 
-        choices = list(MODELS.keys()))
-
-    parser.add_argument(
-        "--precision", 
-        required = True, 
-        choices = ["fp16", "nf4"])
+    parser.add_argument("--model", required = True, choices = list(MODELS.keys()))
+    parser.add_argument("--precision", required = True, choices = ["fp16", "nf4"])
 
     args = parser.parse_args()
     
@@ -40,32 +33,29 @@ def main():
     print(f"Loading activations from {act_path}")
     
     data = torch.load(act_path, map_location = "cpu")
-    harmful_means = data["harmful_means"]
-    harmless_means = data["harmless_means"]
+    mean_diffs = data["mean_diffs"]
+    positions = data["positions"]
     n_layers = data["n_layers"]
     hidden_size = data["hidden_size"]
-    
-    # Compute difference-in-means for each (layer, position) pair
-    candidates = {}
-    for key in harmful_means:
-        if key in harmless_means:
-            direction = harmful_means[key] - harmless_means[key]
-            candidates[key] = direction
-    
-    print(f"Computed {len(candidates)} candidate directions")
-    
-    # Compute norms and layers covered
-    norms_dict = {}
-    for k, v in candidates.items():
-        norms_dict[k] = torch.norm(v).item()
-    norms = norms_dict.values()
 
-    layers_dc = {}
-    for k, v in candidates.items():
-        layers_dc[k[0]] = v
-    layers_seen = layers_dc.keys()
-    positions_seen = layers_dc.values()
-    
+    n_pos, n_layers_check, d_model = mean_diffs.shape
+    assert n_layers_check == n_layers and d_model == hidden_size
+
+    # Build candidates from mean_diffs: key (layer_idx, position_offset)
+    candidates = {}
+    for pos_idx in range(n_pos):
+        pos_offset = positions[pos_idx]
+        for layer_idx in range(n_layers):
+            key = (layer_idx, pos_offset)
+            candidates[key] = mean_diffs[pos_idx, layer_idx].clone()
+
+    print(f"Computed {len(candidates)} candidate directions")
+
+    norms_dict = {k: torch.norm(v).item() for k, v in candidates.items()}
+    norms = norms_dict.values()
+    layers_seen = set(k[0] for k in candidates)
+    positions_seen = set(k[1] for k in candidates)
+
     print(f"  Layers covered: {min(layers_seen)}-{max(layers_seen)}")
     print(f"  Position offsets covered: {min(positions_seen)}-{max(positions_seen)}")
     print(f"  Direction norms: min = {min(norms):.4f}, "

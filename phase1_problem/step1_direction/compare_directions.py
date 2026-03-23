@@ -94,12 +94,11 @@ def main():
     print(f"  Overall abs mean cosine: {overall_abs_mean:.4f}")
     
     # Plotting
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axes = plt.subplots(1, 2, figsize = (14, 5))
     
     # Plot 1: Per-layer cosine similarity
     axes[0].bar(layers, abs_avg_cosines, color="steelblue", alpha=0.8)
-    axes[0].axhline(y = overall_abs_mean, color = "red", linestyle = "--",
-                     label = f"Mean: {overall_abs_mean:.3f}")
+    axes[0].axhline(y = overall_abs_mean, color = "red", linestyle = "--", label = f"Mean: {overall_abs_mean:.3f}")
     axes[0].set_xlabel("Layer")
     axes[0].set_ylabel("Absolute Cosine Similarity")
     axes[0].set_title(f"Direction Preservation per Layer\n{args.model}: FP16 vs NF4")
@@ -125,8 +124,7 @@ def main():
     plt.savefig(plot_path, dpi = 150, bbox_inches = "tight")
     print(f"\n  Plot saved to {plot_path}")
     
-    # Dictionary of layer vs absolute cosine similarity (per_layer_abs_cosine)
-    dc ={}
+    dc = {}
     for l, c in zip(layers, abs_avg_cosines):
         dc[l] = c
 
@@ -145,7 +143,7 @@ def main():
     
     results_path = os.path.join(output_dir, "direction_comparison.json")
     with open(results_path, "w") as f:
-        json.dump(results, f, indent=2)
+        json.dump(results, f, indent = 2)
     print(f"  Results saved to {results_path}")
     
     print("\n=== Direction comparison complete ===")
