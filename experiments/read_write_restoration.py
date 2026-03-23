@@ -53,7 +53,7 @@ READ_PROJS  = ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj",
 def load_fp32_model(model_name):
     """Load full-precision model as float32."""
     model = AutoModelForCausalLM.from_pretrained(
-        model_name, torch_dtype=torch.float32, device_map="cpu", trust_remote_code=True
+        model_name, dtype=torch.float32, device_map="cpu", trust_remote_code=True
     )
     tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     if tok.pad_token is None:
@@ -126,24 +126,27 @@ def restore_projections(nf4_model, fp32_weights: dict, proj_paths: list):
     Why replace the whole module rather than just the weight?
       The NF4 model's projections are bitsandbytes.nn.Linear4bit objects.
       Assigning a plain Tensor to .weight would break their forward logic.
-      Replacing with nn.Linear gives a clean float32 matmul for those layers.
+      Replacing with nn.Linear gives a clean matmul for those layers.
 
     How does this "fit" with the rest of the 4-bit model?
-      BitsAndBytes dequantizes all 4-bit weights to float32 at runtime before
-      every matmul.  The restored layers are already float32, so they
-      participate in the same computation graph without any dtype mismatch.
+      Activations flow in the model's native dtype (bfloat16 for Qwen2.5).
+      We cast the restored weights to that same dtype so there is no
+      dtype mismatch at the F.linear call.
     """
+    # Detect the dtype activations use inside this model (from a non-quantized
+    # parameter like the final layer norm — never quantized by BitsAndBytes).
+    act_dtype = nf4_model.model.norm.weight.dtype
+
     n_layers = nf4_model.config.num_hidden_layers
     for l in range(n_layers):
         layer = nf4_model.model.layers[l]
         for proj in proj_paths:
-            w = fp32_weights[l][proj]           # (out_features, in_features)
+            w = fp32_weights[l][proj].to(act_dtype)   # cast to activation dtype
             out_f, in_f = w.shape
-            # Preserve bias if the original module had one (rare for these projs)
             orig = _get_submodule(layer, proj)
             bias_data = None
             if orig.bias is not None:
-                bias_data = orig.bias.data.float().cpu().clone()
+                bias_data = orig.bias.data.to(act_dtype).cpu().clone()
             new_linear = nn.Linear(in_f, out_f, bias=(bias_data is not None))
             new_linear.weight = nn.Parameter(w, requires_grad=False)
             if bias_data is not None:
@@ -186,7 +189,7 @@ def measure_asr(model, tokenizer, prompts: list) -> float:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="qwen0.5b", choices=list(MODELS.keys()))
+    parser.add_argument("--model", default="qwen1.5b", choices=list(MODELS.keys()))
     parser.add_argument("--n_eval", type=int, default=None,
                         help="Number of eval prompts (default: all)")
     args = parser.parse_args()
