@@ -1,29 +1,28 @@
-"""
-SafeQuant Phase 2 v2, Step 4 — Sparse Delta-W Repair.
+# Applies sparse delta-W repair to a quantized model.
+#
+# Instead of swapping out entire rows, we add a sparse correction matrix on top
+# of the frozen NF4 model:
+#
+#   W_repaired = W_nf4 + delta_W
+#
+# where delta_W is non-zero only at the rows selected by whichever strategy we use:
+#
+#   delta_W[i, :] = W_fp16[i, :] - W_nf4[i, :]   if dimension i is targeted
+#   delta_W[i, :] = 0                              otherwise
+#
+# This is mathematically equivalent to full row replacement, but framed as a
+# sparse adapter that could sit on top of any standard quantized inference engine.
+#
+# Strategies tested:
+#   targeted  - top-k dimensions by V-score (our method)
+#   dfa_only  - top-k by |DFA_i| alone (ablation)
+#   error_only - top-k by err_i alone (ablation)
+#   random    - k random dimensions (control)
+#   chhabra   - AIRD on the most-changed layer (baseline from their paper)
+#
+# Run:
+#   python phase2_solution/repair/apply_repairs.py --model qwen1.5b --top_k 100
 
-Instead of "swapping rows back," we add a sparse FP16 error-compensation
-matrix ΔW on top of the frozen quantized model:
-
-    W'_c = W^{NF4}_c + ΔW_c
-
-Where ΔW_c is non-zero only at high-vulnerability rows:
-
-    (ΔW_c)_{i,:} = (W^{FP16}_c)_{i,:} - (W^{NF4}_c)_{i,:}   if V_i(c) > τ
-                  = 0                                            otherwise
-
-This is mathematically identical to row restoration but deployable as a
-sparse LoRA-style adapter on any standard quantized inference engine.
-
-Strategies:
-  1. TARGETED (Ours): top-k dimensions globally by V_i(c)
-  2. CHHABRA: AIRD on the most-changed layer (their method)
-  3. RANDOM: k random dimensions (control)
-  4. DFA-ONLY: top-k dimensions by |DFA_i| alone (ablation)
-  5. ERROR-ONLY: top-k dimensions by ε_i alone (ablation)
-
-Run:
-  python phase2_solution/repair/apply_repairs.py --model qwen1.5b --top_k 100
-"""
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -36,13 +35,11 @@ import numpy as np
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from config import MODELS, DTYPE, NF4_CONFIG
 
-
 random.seed(42)
 np.random.seed(42)
 
 
 def load_fp16_write_weights(model_name, n_layers):
-    """Load FP16 write matrix weights."""
     print("  Loading FP16 weights for repair...")
     model = AutoModelForCausalLM.from_pretrained(
         model_name, torch_dtype=DTYPE, device_map="cpu", trust_remote_code=True
@@ -53,7 +50,6 @@ def load_fp16_write_weights(model_name, n_layers):
         weights[f"attn_layer_{l}"] = layer.self_attn.o_proj.weight.data.float().cpu().clone()
         weights[f"mlp_layer_{l}"] = layer.mlp.down_proj.weight.data.float().cpu().clone()
     del model
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
     return weights
 
 
@@ -71,60 +67,55 @@ def load_nf4_model(model_name):
 
 
 def compute_delta_w(fp16_weights, model, targets):
+    """Apply sparse row corrections to the write matrices of the NF4 model.
+
+    targets is a list of (component_name, row_index) pairs telling us which
+    rows to replace with their FP16 counterparts.
     """
-    Compute sparse ΔW matrices and apply them.
-    targets: list of (component_name, dimension_index) tuples
-    """
-    # Group targets by component
+    # group by component so we only do one pass per layer module
     comp_dims = {}
     for comp, dim in targets:
-        if comp not in comp_dims:
-            comp_dims[comp] = []
-        comp_dims[comp].append(dim)
+        comp_dims.setdefault(comp, []).append(dim)
 
     n_rows_repaired = 0
 
     for comp, dims in comp_dims.items():
         parts = comp.split("_")
-        comp_type = parts[0]
         layer_idx = int(parts[-1])
-
         layer = model.model.layers[layer_idx]
-        if comp_type == "attn":
+
+        if parts[0] == "attn":
             module = layer.self_attn.o_proj
         else:
             module = layer.mlp.down_proj
 
-        # Get current quantized weight via identity-matrix trick.
-        # .dequantize() on CPU returns wrong shape (numel, 1); the forward
-        # pass through an identity input always gives correct (out, in) shape.
+        # identity-matrix trick to get the current quantized weight in the right shape
+        # calling .dequantize() on CPU gives back (numel, 1) instead of (out, in)
         in_features = module.in_features
         identity = torch.eye(in_features, dtype=torch.float32, device="cpu")
         with torch.no_grad():
-            W_nf4 = module(identity).float().T.contiguous()  # (out, in)
+            W_nf4 = module(identity).float().T.contiguous()
 
         W_fp16 = fp16_weights[comp].to(W_nf4.device)
 
-        # Trim to smallest common shape (no-op when shapes already match)
+        # trim to matching shape in case of minor size mismatches
         min_rows = min(W_fp16.shape[0], W_nf4.shape[0])
         min_cols = min(W_fp16.shape[1], W_nf4.shape[1])
         W_fp16 = W_fp16[:min_rows, :min_cols]
         W_nf4 = W_nf4[:min_rows, :min_cols]
 
-        # Compute ΔW (sparse — only at specified rows)
         W_new = W_nf4.clone()
         for dim in dims:
             W_new[dim, :] = W_fp16[dim, :]
             n_rows_repaired += 1
 
-        # Replace weight
         module.weight = torch.nn.Parameter(W_new.to(DTYPE), requires_grad=False)
 
     return n_rows_repaired
 
 
 def apply_aird_layer(model, layer_idx, r_fp16, r_nf4, alpha=1.0):
-    """Chhabra's AIRD at layer level for baseline comparison."""
+    """Chhabra's AIRD method applied at a single layer (used as baseline)."""
     layer = model.model.layers[layer_idx]
 
     r_fp16 = r_fp16.flatten()
@@ -132,8 +123,8 @@ def apply_aird_layer(model, layer_idx, r_fp16, r_nf4, alpha=1.0):
 
     if torch.isnan(r_fp16).any() or torch.isnan(r_nf4).any():
         raise ValueError(
-            "Direction vectors contain NaN values. "
-            "Rerun Phase 1 step 1 direction selection to regenerate valid directions."
+            "Direction vectors contain NaN. "
+            "Rerun phase1 step1 direction selection to get valid directions."
         )
 
     r_fp16_norm = torch.norm(r_fp16)
@@ -148,47 +139,41 @@ def apply_aird_layer(model, layer_idx, r_fp16, r_nf4, alpha=1.0):
     proj_fp16 = torch.outer(r_fp16_hat, r_fp16_hat)
 
     for module in [layer.self_attn.o_proj, layer.mlp.down_proj]:
-        # Identity-matrix trick: always returns correct (out, in) shape on CPU.
-        # Avoids .dequantize() which returns (numel, 1) for BitsAndBytes on CPU.
         in_features = module.in_features
         identity = torch.eye(in_features, dtype=torch.float32, device="cpu")
         with torch.no_grad():
-            W = module(identity).float().T.contiguous()  # (out_features, in_features)
+            W = module(identity).float().T.contiguous()
 
-        # AIRD projection: remove NF4 direction, add FP16 direction
+        # remove the NF4 direction component, replace with FP16 direction
         W_new = W - proj_nf4 @ W + alpha * proj_fp16 @ W
         module.weight = torch.nn.Parameter(W_new.to(DTYPE), requires_grad=False)
 
 
 def get_targets_by_vscore(vuln_path, top_k):
-    """Our method: top-k dimensions globally by vulnerability score."""
     with open(vuln_path) as f:
         data = json.load(f)
-    targets = [(item["component"], item["dimension"])
-               for item in data["top_200_vulnerable"][:top_k]]
-    return targets
+    return [(item["component"], item["dimension"])
+            for item in data["top_200_vulnerable"][:top_k]]
 
 
 def get_targets_by_dfa(vuln_path, top_k):
-    """Ablation: top-k by DFA importance alone."""
+    # ablation: ignore quantization error, use DFA importance only
     with open(vuln_path) as f:
         data = json.load(f)
-    ranked = sorted(data["top_200_vulnerable"],
-                    key=lambda x: x["dfa_importance"], reverse=True)
+    ranked = sorted(data["top_200_vulnerable"], key=lambda x: x["dfa_importance"], reverse=True)
     return [(item["component"], item["dimension"]) for item in ranked[:top_k]]
 
 
 def get_targets_by_error(vuln_path, top_k):
-    """Ablation: top-k by quantization error alone."""
+    # ablation: ignore DFA, use quantization error only
     with open(vuln_path) as f:
         data = json.load(f)
-    ranked = sorted(data["top_200_vulnerable"],
-                    key=lambda x: x["quant_error"], reverse=True)
+    ranked = sorted(data["top_200_vulnerable"], key=lambda x: x["quant_error"], reverse=True)
     return [(item["component"], item["dimension"]) for item in ranked[:top_k]]
 
 
 def get_targets_random(vuln_path, top_k):
-    """Control: k random dimensions from the vulnerability list."""
+    # control: pick random dimensions from the pool
     with open(vuln_path) as f:
         data = json.load(f)
     all_dims = [(item["component"], item["dimension"])
@@ -200,7 +185,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     parser.add_argument("--top_k", type=int, default=100,
-                        help="Number of dimensions to repair")
+                        help="how many dimensions to repair")
     parser.add_argument("--alpha", type=float, default=1.0)
     args = parser.parse_args()
 
@@ -208,9 +193,7 @@ def main():
     output_dir = os.path.join(os.path.dirname(__file__), "outputs", args.model)
     os.makedirs(output_dir, exist_ok=True)
 
-    diag_dir = os.path.join(
-        os.path.dirname(__file__), "..", "diagnosis", "outputs", args.model
-    )
+    diag_dir = os.path.join(os.path.dirname(__file__), "..", "diagnosis", "outputs", args.model)
     direction_dir = os.path.join(
         os.path.dirname(__file__), "..", "..", "phase1_problem",
         "step1_direction", "outputs", args.model
@@ -222,48 +205,37 @@ def main():
 
     vuln_path = os.path.join(diag_dir, "vulnerability_scores.json")
 
-    # Load refusal directions for AIRD baseline
+    # load refusal directions for the AIRD baseline
     r_fp16 = torch.load(
         os.path.join(direction_dir, "best_direction_fp16.pt"), map_location="cpu"
-    )["direction_normalized"]
+    )["direction_normalized"].flatten()
     r_nf4 = torch.load(
         os.path.join(direction_dir, "best_direction_nf4.pt"), map_location="cpu"
-    )["direction_normalized"]
-    
-    # Ensure directions are 1D vectors
-    r_fp16 = r_fp16.flatten()
-    r_nf4 = r_nf4.flatten()
-    
-    # Validate shapes
+    )["direction_normalized"].flatten()
+
     if r_fp16.shape != r_nf4.shape:
-        raise ValueError(
-            f"Direction shape mismatch: r_fp16 {r_fp16.shape} vs r_nf4 {r_nf4.shape}"
-        )
-    
+        raise ValueError(f"Direction shape mismatch: {r_fp16.shape} vs {r_nf4.shape}")
     if len(r_fp16.shape) != 1:
-        raise ValueError(
-            f"Direction should be 1D but has shape {r_fp16.shape}"
-        )
-    
-    # Check for NaN
+        raise ValueError(f"Expected 1D direction, got shape {r_fp16.shape}")
     if torch.isnan(r_fp16).any() or torch.isnan(r_nf4).any():
         raise ValueError(
-            "Direction vectors contain NaN values. "
-            "You must rerun Phase 1 step 1 direction selection to regenerate valid directions."
+            "Direction vectors contain NaN. "
+            "Rerun phase1 step1 direction selection."
         )
 
-    print(f"\n=== Applying Repairs: {args.model}, top_k={args.top_k} ===\n")
+    print(f"\nApplying Repairs: {args.model}, top_k={args.top_k}\n")
 
-    # Pre-load FP16 weights for delta-W strategies
+    # get model dimensions by loading a temp FP16 model
     temp_model = AutoModelForCausalLM.from_pretrained(
         model_name, torch_dtype=DTYPE, device_map="cpu", trust_remote_code=True
     )
     n_layers = temp_model.config.num_hidden_layers
     hidden_size = temp_model.config.hidden_size
     del temp_model
+
     fp16_weights = load_fp16_write_weights(model_name, n_layers)
 
-    # Find worst layer for Chhabra baseline
+    # find the most-damaged layer for the Chhabra baseline
     with open(os.path.join(circuit_dir, "circuit_comparison.json")) as f:
         circ_data = json.load(f)
     layer_damage = {}
@@ -272,7 +244,6 @@ def main():
         layer_damage[l] = layer_damage.get(l, 0) + abs(item["absolute_change"])
     worst_layer = max(layer_damage, key=layer_damage.get)
 
-    # Define strategies
     strategies = {
         "targeted": get_targets_by_vscore(vuln_path, args.top_k),
         "random": get_targets_random(vuln_path, args.top_k),
@@ -282,21 +253,19 @@ def main():
 
     repair_info = {}
 
-    # Delta-W strategies
+    # run all delta-W strategies
     for strategy_name, targets in strategies.items():
-        print(f"\n  --- Strategy: {strategy_name} ({len(targets)} dimensions) ---")
+        print(f"\n  Strategy: {strategy_name} ({len(targets)} dimensions)")
 
         model, tokenizer = load_nf4_model(model_name)
         n_repaired = compute_delta_w(fp16_weights, model, targets)
 
-        # Compute overhead
-        total_params = hidden_size * n_layers * 2  # rough count of write matrix rows
-        overhead_pct = n_repaired / total_params * 100
+        total_write_rows = hidden_size * n_layers * 2
+        overhead_pct = n_repaired / total_write_rows * 100
 
-        print(f"      Rows repaired: {n_repaired}")
-        print(f"      FP16 overhead: {overhead_pct:.2f}% of write matrices")
+        print(f"    Rows repaired: {n_repaired}")
+        print(f"    FP16 overhead: {overhead_pct:.2f}% of write matrices")
 
-        # Save repaired model
         save_dir = os.path.join(output_dir, f"repaired_{strategy_name}")
         os.makedirs(save_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(save_dir, "model_state.pt"))
@@ -314,10 +283,9 @@ def main():
         }
 
         del model
-        torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
-    # Chhabra AIRD baseline (layer-level, not dimension-level)
-    print(f"\n  --- Strategy: chhabra (AIRD on layer {worst_layer}) ---")
+    # Chhabra AIRD baseline
+    print(f"\n  Strategy: chhabra (AIRD on layer {worst_layer})")
     model, tokenizer = load_nf4_model(model_name)
     apply_aird_layer(model, worst_layer, r_fp16, r_nf4, alpha=args.alpha)
 
@@ -329,28 +297,19 @@ def main():
         "layer": worst_layer,
     }, os.path.join(save_dir, "repair_info.pt"))
     repair_info["chhabra"] = {"layer": worst_layer, "method": "AIRD"}
-
     del model
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
-    # Save summary
     with open(os.path.join(output_dir, "repair_strategies.json"), "w") as f:
         json.dump(repair_info, f, indent=2)
 
-    # Compute and report delta-W sparsity
-    print(f"\n  === Repair Summary ===")
-    print(f"  {'Strategy':<15} | {'Dims':>6} | {'Rows':>6} | {'Overhead':>8}")
-    print(f"  {'-'*15}-+-{'-'*6}-+-{'-'*6}-+-{'-'*8}")
+    print(f"\nRepair summary:")
     for name, info in repair_info.items():
         dims = info.get("n_dimensions", "-")
         rows = info.get("n_rows_repaired", "-")
         ovh = f"{info.get('overhead_pct', 0):.2f}%" if "overhead_pct" in info else "full layer"
-        print(f"  {name:<15} | {str(dims):>6} | {str(rows):>6} | {ovh:>8}")
+        print(f"  {name:<15}  dims={dims}  rows={rows}  overhead={ovh}")
 
-    print(f"\n  Framing for paper: 'We freeze the quantized model and add a")
-    print(f"  highly sparse FP16 error-compensation matrix ΔW, where only")
-    print(f"  {args.top_k} high-vulnerability rows are non-zero.'")
-    print("=== All repairs applied ===")
+    print("\nAll repairs applied.")
 
 
 if __name__ == "__main__":

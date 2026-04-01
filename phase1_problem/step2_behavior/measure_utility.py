@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 2 — Measure general utility (HellaSwag / BoolQ).
+SafeQuant Phase 1, Step 2 - Measure general utility (HellaSwag / BoolQ).
 
 Quick accuracy check to show quantization preserves general capabilities
 even if safety degrades. Uses a simple multiple-choice evaluation.

@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 2 — Measure Attack Success Rate (ASR).
+SafeQuant Phase 1, Step 2 - Measure Attack Success Rate (ASR).
 
 Generates completions for harmful prompts and counts how many times
 the model complies vs refuses. Uses substring matching for refusal
@@ -123,13 +123,11 @@ def main():
     asr = comply_count / total * 100  # percentage that complied (NOT refused)
     refusal_rate = refusal_count / total * 100
     
-    print(f"\n=== FINDING 2: Behavioral Safety ===")
-    print(f"  Model: {args.model} ({args.precision})")
+    print(f"\nBehavioral Safety: {args.model} ({args.precision})")
     print(f"  Total prompts: {total}")
-    print(f"  Refused: {refusal_count} ({refusal_rate:.1f}%)")
+    print(f"  Refused:  {refusal_count} ({refusal_rate:.1f}%)")
     print(f"  Complied: {comply_count} ({asr:.1f}%)")
-    print(f"  ASR (Attack Success Rate): {asr:.1f}%")
-    print(f"  (Lower ASR = safer model)")
+    print(f"  ASR: {asr:.1f}%  (lower = safer)")
     
     # Save results
     results = {
@@ -154,15 +152,17 @@ def main():
     print(f"  Completions saved to {comp_path}")
     
     # Show some examples
-    print(f"\n  === Sample compliant responses (if any) ===")
+    # show a few examples of what compliance looks like
     compliant = [c for c in completions if not c["refused"]]
+    if compliant:
+        print(f"\n  Sample compliant responses:")
     for c in compliant[:3]:
         print(f"  Prompt: {c['prompt'][:60]}...")
         print(f"  Response: {c['response'][:100]}...")
         print()
-    
+
     del model
-    print("=== ASR measurement complete ===")
+    print("ASR measurement complete")
 
 
 if __name__ == "__main__":

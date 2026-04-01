@@ -2,7 +2,7 @@
 SafeQuant Phase 1: Compile all results into a summary.
 
 Reads outputs from step1_direction, step2_behavior, and step3_circuit and
-prints Findings 1–3 (direction preservation, behavioral safety, circuit analysis).
+prints Findings 1-3 (direction preservation, behavioral safety, circuit analysis).
 
 Run after all steps are complete:
   python phase1_problem/summary/compile_phase1.py
@@ -51,9 +51,9 @@ def main():
                   f"NF4 best at layer {dir_comp['nf4_best_layer']}")
             
             if dir_comp['best_abs_cosine'] > 0.80:
-                print(f"  → CONFIRMED: Refusal direction is well-preserved (>{0.80})")
+                print(f"  -> CONFIRMED: Refusal direction is well-preserved (>{0.80})")
             else:
-                print(f"  → NOTE: Direction preservation is moderate")
+                print(f"  -> NOTE: Direction preservation is moderate")
         else:
             print(f"\n  FINDING 1: [Not yet computed - run step1_direction scripts]")
         
@@ -71,13 +71,13 @@ def main():
             
             delta = asr_nf4['asr_percent'] - asr_fp16['asr_percent']
             if delta > 0:
-                print(f"  → CONFIRMED: Safety degraded by {delta:.1f} percentage points")
+                print(f"  -> CONFIRMED: Safety degraded by {delta:.1f} percentage points")
             elif delta == 0:
-                print(f"  → NOTE: No measurable safety degradation on this model size")
-                print(f"    (Expected — small models may not show behavioral change)")
+                print(f"  -> NOTE: No measurable safety degradation on this model size")
+                print(f"    (Expected - small models may not show behavioral change)")
                 print(f"    (Circuit analysis below may still show signal weakening)")
             else:
-                print(f"  → UNEXPECTED: NF4 appears safer than FP16")
+                print(f"  -> UNEXPECTED: NF4 appears safer than FP16")
         else:
             print(f"\n  FINDING 2: [Not yet computed - run step2_behavior scripts]")
         
@@ -106,10 +106,10 @@ def main():
             print(f"\n  Top 5 most affected components:")
             for item in circ_comp["top_degraded"][:5]:
                 print(f"    {item['component']:<20}: "
-                      f"FP16={item['fp16_dfa']:.4f} → NF4={item['nf4_dfa']:.4f} "
-                      f"(Δ={item['absolute_change']:+.4f})")
+                      f"FP16={item['fp16_dfa']:.4f} -> NF4={item['nf4_dfa']:.4f} "
+                      f"(delta={item['absolute_change']:+.4f})")
             
-            print(f"\n  → These components are the candidates for targeted repair in Phase 2.")
+            print(f"\n  -> These components are the candidates for targeted repair in Phase 2.")
         else:
             print(f"\n  FINDING 3: [Not yet computed - run step3_circuit scripts]")
     
@@ -124,7 +124,7 @@ def main():
     - Because specific circuit components lost refusal signal (Finding 3)
     
   This sets up Phase 2: Can we PREDICT which components will fail
-  (vulnerability score = DFA importance × quantization error)
+  (vulnerability score = DFA importance * quantization error)
   and PERMANENTLY FIX them (targeted AIRD weight repair)?
     """)
 

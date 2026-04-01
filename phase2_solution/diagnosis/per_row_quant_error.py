@@ -15,10 +15,10 @@ MATHEMATICAL FORMULA:
 For write matrices (o_proj, down_proj), row i controls dimension i of the residual stream output.
 We compute per-row L2 error using identity-matrix normalization:
 
-    ε_i(c) = ||W_fp16[i,:] - W_nf4[i,:]||_2 / (scale_factor)
+    err_i(c) = ||W_fp16[i,:] - W_nf4[i,:]||_2 / (scale_factor)
 
 Where:
-  - ε_i(c): Quantization error for row i in component c
+  - err_i(c): Quantization error for row i in component c
   - W_fp16[i,:]: The i-th row of the FP16 weight matrix
   - W_nf4[i,:]: The i-th row of the NF4 quantized weight matrix (dequantized)
   - scale_factor: Normalization factor based on global matrix scale (identity-matrix approach)
@@ -201,7 +201,7 @@ def main():
             
             # Normalize by per-element scale (identity-matrix approach)
             # This gives error relative to typical element magnitude, in 0.001-0.100 range
-            # Formula: ε_i = ||row_diff||_2 / (scale * sqrt(n_cols))
+            # Formula: err_i = ||row_diff||_2 / (scale * sqrt(n_cols))
             row_errors[i] = row_diff / (per_element_scale * np.sqrt(n_cols) + 1e-10)
 
         per_row_errors[comp] = row_errors

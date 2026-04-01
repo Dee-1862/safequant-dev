@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 3 — Compute DFA (Direct Feature Attribution) scores.
+SafeQuant Phase 1, Step 3 - Compute DFA (Direct Feature Attribution) scores.
 
 For each component, computes how much its output projects onto the
 refusal direction. High DFA = important for refusal behavior.
@@ -30,7 +30,7 @@ def main():
         os.path.dirname(__file__), "..", "step1_direction", "outputs", args.model
     )
     
-    print(f"\n=== Computing DFA: {args.model} ({args.precision}) ===\n")
+    print(f"\nComputing DFA: {args.model} ({args.precision})\n")
     
     # Load the best refusal direction (use FP16 direction as reference for both)
     # This is intentional: we want to measure how much each component
@@ -79,11 +79,9 @@ def main():
     print(f"  Net signal: {total_signal:.4f}")
     
     print(f"\n  Top 10 components by |DFA|:")
-    print(f"  {'Component':<20} | {'DFA':>10} | {'|DFA|':>10} | {'% of total':>10}")
-    print(f"  {'-'*20}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}")
     for name, score in ranked[:10]:
         pct = abs(score) / sum(abs(v) for v in dfa_scores.values()) * 100
-        print(f"  {name:<20} | {score:>10.4f} | {abs(score):>10.4f} | {pct:>9.1f}%")
+        print(f"    {name:<20}  DFA={score:>10.4f}  |DFA|={abs(score):>10.4f}  ({pct:.1f}%)")
     
     # Save
     results = {
@@ -101,7 +99,7 @@ def main():
         json.dump(results, f, indent = 2)
     
     print(f"\nSaved to {save_path}")
-    print("=== DFA computation complete ===")
+    print("DFA computation complete")
 
 
 if __name__ == "__main__":

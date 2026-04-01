@@ -1,15 +1,9 @@
 torch
 transformers>=4.40.0
 accelerate
-bitsandbytes
+bitsandbytes>=0.49.2
 datasets
 huggingface_hub
 numpy
 matplotlib
-seaborn
-pandas
 tqdm
-scikit-learn
-jaxtyping
-einops
-

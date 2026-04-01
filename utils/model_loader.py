@@ -1,37 +1,26 @@
-"""
-utils/model_loader.py
+# CPU-compatible model loading for SafeQuant experiments.
+#
+# The main gotcha with BitsAndBytes on CPU (v0.49.2+):
+#   - NF4 works fine, but you MUST use bnb_4bit_compute_dtype=torch.float32
+#     because CPU hardware doesn't support float16 matrix multiplication
+#   - Calling .dequantize() on a Params4bit weight returns shape (numel, 1)
+#     instead of (out_features, in_features) - this is a known BNB CPU bug
+#   - The workaround is the identity-matrix trick in get_fp32_weight() below
 
-CPU-compatible model loading for SafeQuant experiments.
-
-Key facts about BitsAndBytes on CPU (v0.49.2+):
-  - NF4 quantization works on CPU with bnb_4bit_compute_dtype=torch.float32
-  - float16 compute dtype FAILS on CPU (no float16 matmul support)
-  - .dequantize() on CPU returns shape (numel, 1) instead of (out, in)
-    → use get_fp32_weight() which uses an identity-matrix forward pass instead
-
-Usage:
-    from utils.model_loader import load_model, get_fp32_weight
-"""
 import torch
 import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from config import DTYPE, NF4_CONFIG
 
 
-def load_model(model_name: str, precision: str, device: str = "cpu"):
-    """
-    Load model in specified precision, fully CPU-compatible.
+def load_model(model_name, precision, device="cpu"):
+    """Load a model in the specified precision, works on CPU with no GPU required.
 
-    Args:
-        model_name: HuggingFace model ID (e.g. "Qwen/Qwen2.5-1.5B-Instruct").
-        precision:  "nf4" for BitsAndBytes 4-bit, anything else for full fp32.
-        device:     "cpu" (default). Pass "cuda" only if you have a GPU.
-
-    Returns:
-        (model, tokenizer) — model is in eval mode.
+    precision: "nf4" loads with BitsAndBytes 4-bit, anything else loads as float32.
+    Returns (model, tokenizer) with model in eval mode.
     """
     if precision == "nf4":
-        # Override compute dtype to float32 — float16 fails on CPU
+        # always force float32 compute - float16 compute crashes on CPU
         cpu_nf4_config = {**NF4_CONFIG, "bnb_4bit_compute_dtype": torch.float32}
         bnb_config = BitsAndBytesConfig(**cpu_nf4_config)
         model = AutoModelForCausalLM.from_pretrained(
@@ -41,7 +30,7 @@ def load_model(model_name: str, precision: str, device: str = "cpu"):
             trust_remote_code=True,
         )
     else:
-        # CPU doesn't support float16 matrix multiplications; use float32
+        # float32 because CPU doesn't have float16 matmul
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.float32,
@@ -56,25 +45,19 @@ def load_model(model_name: str, precision: str, device: str = "cpu"):
     return model, tokenizer
 
 
-def get_fp32_weight(module: nn.Module) -> torch.Tensor:
-    """
-    Extract the weight matrix of a Linear (or Linear4bit) layer as a plain
-    float32 tensor of shape (out_features, in_features).
+def get_fp32_weight(module):
+    """Extract the weight of a Linear or Linear4bit layer as a float32 tensor.
 
-    Why not just .weight.data?
-      BitsAndBytes on CPU stores packed 4-bit weights.  Calling
-      param.dequantize() returns shape (numel, 1) instead of (out, in).
-      The identity-matrix trick forces BitsAndBytes to dequantize internally
-      and returns a correctly shaped result.
+    Returns shape (out_features, in_features).
 
-    Args:
-        module: nn.Linear or bitsandbytes.nn.Linear4bit layer.
-
-    Returns:
-        Float32 tensor, shape (out_features, in_features), on CPU.
+    We do this via a forward pass through an identity matrix instead of
+    calling .dequantize() directly, because BitsAndBytes on CPU returns
+    the wrong shape from .dequantize() - it gives (numel, 1) instead of (out, in).
+    The identity-matrix trick forces BNB to do the dequantization internally
+    and gives back a correctly shaped result.
     """
     in_features = module.in_features
     identity = torch.eye(in_features, dtype=torch.float32, device="cpu")
     with torch.no_grad():
-        output = module(identity)          # (in_features, out_features)
-    return output.float().T.contiguous()   # (out_features, in_features)
+        output = module(identity)   # (in_features, out_features)
+    return output.float().T.contiguous()  # (out_features, in_features)

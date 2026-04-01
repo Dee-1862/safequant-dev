@@ -1,5 +1,5 @@
 """
-SafeQuant — Targeting Validation.
+SafeQuant - Targeting Validation.
 
 Proves that V-score-guided layer selection outperforms random and
 bottom-ranked layer selection for activation steering.
@@ -183,7 +183,7 @@ def main():
         eval_steering(model_name, r_hat, rand_layers, alpha, prompts,
                       f"Random 5 (seed={seed})", results, args.n_utility)
 
-    # ===== PART 2: SCALING — how many layers needed? (all at α=2.0) =====
+    # ===== PART 2: SCALING - how many layers needed? (all at alpha=2.0) =====
     print(f"\n{'#'*60}")
     print(f"  PART 2: How many V-score layers are needed?")
     print(f"  (All conditions: α={alpha}, top-N by V-score)")
@@ -219,13 +219,13 @@ def main():
         print(f"\n  Top 5 V-score ASR:    {top5_asr:.1f}%")
         print(f"  Mean random ASR:      {mean_random:.1f}%")
         print(f"  Bottom 5 V-score ASR: {bottom5_asr:.1f}%")
-        print(f"  Δ(random - top5):     {mean_random - top5_asr:+.1f}pp")
-        print(f"  Δ(bottom - top5):     {bottom5_asr - top5_asr:+.1f}pp")
+        print(f"  delta(random - top5):     {mean_random - top5_asr:+.1f}pp")
+        print(f"  delta(bottom - top5):     {bottom5_asr - top5_asr:+.1f}pp")
 
         if top5_asr < mean_random:
-            print(f"\n  ★ V-score targeting outperforms random by {mean_random - top5_asr:.1f}pp")
+            print(f"\n  * V-score targeting outperforms random by {mean_random - top5_asr:.1f}pp")
         if top5_asr < bottom5_asr:
-            print(f"  ★ V-score targeting outperforms bottom-5 by {bottom5_asr - top5_asr:.1f}pp")
+            print(f"  * V-score targeting outperforms bottom-5 by {bottom5_asr - top5_asr:.1f}pp")
 
     print(f"\n  PART 2: Layer scaling (top-N by V-score, α={alpha})")
     print(f"  {'# Layers':>8} | {'ASR':>7} | {'Utility':>7}")

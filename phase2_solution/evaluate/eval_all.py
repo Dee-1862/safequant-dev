@@ -1,20 +1,21 @@
-"""
-SafeQuant Phase 2 v2, Step 5 — Evaluate All Conditions.
+# Evaluates all repair strategies by measuring ASR and utility.
+#
+# Loads each repaired model, applies the repair in memory, and measures:
+#   - ASR (attack success rate) on the eval harmful prompts
+#   - Utility on BoolQ (optional, skippable with --skip_utility)
+#
+# Conditions evaluated:
+#   fp16          - original FP16 model (loaded from phase1 results)
+#   nf4           - unrepaired NF4 (loaded from phase1 results)
+#   targeted      - our V-score delta-W repair
+#   chhabra       - AIRD baseline from their paper
+#   random        - random dimension selection (control)
+#   dfa_only      - top-k by DFA importance alone (ablation)
+#   error_only    - top-k by quantization error alone (ablation)
+#
+# Run:
+#   python phase2_solution/evaluate/eval_all.py --model qwen1.5b
 
-Measures ASR and utility for all 7 conditions:
-  1. FP16 original (from Phase 1)
-  2. NF4 unrepaired (from Phase 1)
-  3. NF4 + targeted ΔW (ours)
-  4. NF4 + Chhabra AIRD
-  5. NF4 + random ΔW
-  6. NF4 + DFA-only ΔW (ablation)
-  7. NF4 + error-only ΔW (ablation)
-
-Also computes FP16 overhead for each strategy.
-
-Run:
-  python phase2_solution/evaluate/eval_all.py --model qwen1.5b
-"""
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -28,7 +29,6 @@ from config import MODELS, DEVICE, DTYPE, NF4_CONFIG, DATA_DIR, REFUSAL_PREFIXES
 
 
 def load_repaired_model(model_name, repair_state_dir):
-    """Load NF4 model and overwrite with repaired state dict."""
     bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
     model = AutoModelForCausalLM.from_pretrained(
         model_name, quantization_config=bnb_config,
@@ -54,13 +54,10 @@ def is_refusal(text):
 
 
 def measure_asr(model, tokenizer, prompts):
-    """Attack Success Rate = % of harmful prompts the model complies with."""
     comply = 0
     for prompt in tqdm(prompts, desc="    ASR", leave=False):
         messages = [{"role": "user", "content": prompt}]
-        text = tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer(text, return_tensors="pt").to(model.device)
         with torch.no_grad():
             out = model.generate(**inputs, max_new_tokens=MAX_NEW_TOKENS, do_sample=False)
@@ -71,7 +68,6 @@ def measure_asr(model, tokenizer, prompts):
 
 
 def measure_utility(model, tokenizer, n_samples=50):
-    """Quick BoolQ accuracy."""
     try:
         from datasets import load_dataset
         ds = load_dataset("google/boolq", split="validation")
@@ -115,22 +111,23 @@ def main():
     if args.n_eval:
         eval_prompts = eval_prompts[:args.n_eval]
 
-    print(f"\n=== Evaluating All Conditions: {args.model} ===")
-    print(f"  Eval prompts: {len(eval_prompts)}\n")
+    print(f"\nEvaluating all conditions: {args.model}")
+    print(f"Eval prompts: {len(eval_prompts)}\n")
 
     results = {}
 
-    # Load Phase 1 baselines
+    # pull in phase1 baselines if they exist
     for bl in ["fp16", "nf4"]:
         asr_path = os.path.join(phase1_beh, f"asr_{bl}.json")
         if os.path.exists(asr_path):
             with open(asr_path) as f:
                 d = json.load(f)
-            results[bl] = {"asr": d["asr_percent"], "source": "phase1", "overhead": "0%" if bl == "nf4" else "N/A"}
-            print(f"  {bl} baseline from Phase 1: ASR={d['asr_percent']:.1f}%")
+            results[bl] = {"asr": d["asr_percent"], "source": "phase1",
+                           "overhead": "0%" if bl == "nf4" else "N/A"}
+            print(f"  {bl} baseline (from phase1): ASR={d['asr_percent']:.1f}%")
 
-    # Evaluate repaired models
-    print("  Loading FP16 weights...")
+    # pre-load FP16 weights - we need them to apply delta-W repair in memory
+    print("\n  Loading FP16 weights...")
     fp16_temp = AutoModelForCausalLM.from_pretrained(
         model_name, torch_dtype=DTYPE, device_map="cpu", trust_remote_code=True
     )
@@ -141,9 +138,7 @@ def main():
         fp16_weights[f"attn_layer_{l}"] = layer.self_attn.o_proj.weight.data.float().cpu().clone()
         fp16_weights[f"mlp_layer_{l}"] = layer.mlp.down_proj.weight.data.float().cpu().clone()
     del fp16_temp
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
-    # Load refusal directions for AIRD strategies
     direction_dir = os.path.join(
         os.path.dirname(__file__), "..", "..", "phase1_problem",
         "step1_direction", "outputs", args.model
@@ -155,7 +150,6 @@ def main():
         os.path.join(direction_dir, "best_direction_nf4.pt"), map_location="cpu"
     )["direction_normalized"].flatten()
 
-    # Evaluate each strategy by applying repair IN MEMORY
     strategies = ["targeted", "targeted_aird", "chhabra", "random", "dfa_only", "error_only"]
 
     for strategy in strategies:
@@ -163,13 +157,13 @@ def main():
         info_path = os.path.join(repair_path, "repair_info.pt")
 
         if not os.path.exists(info_path):
-            print(f"\n  Skipping {strategy} — not found")
+            print(f"\n  Skipping {strategy} - repair not found")
             continue
 
-        print(f"\n  --- Evaluating: {strategy} ---")
+        print(f"\n  Evaluating: {strategy}")
         info = torch.load(info_path, map_location="cpu")
 
-        # Load FRESH NF4 model
+        # load a fresh NF4 model each time so repairs don't bleed into each other
         bnb_config = BitsAndBytesConfig(**NF4_CONFIG)
         model = AutoModelForCausalLM.from_pretrained(
             model_name, quantization_config=bnb_config,
@@ -180,11 +174,10 @@ def main():
             tokenizer.pad_token = tokenizer.eos_token
         model.eval()
 
-        # Apply repair in memory based on strategy type
         strat_type = info["strategy"]
 
         if strat_type in ["chhabra", "targeted_aird"]:
-            # AIRD-based repair
+            # AIRD-based repair: remove old direction component, add new one
             targets = info.get("targets", [])
             if strat_type == "chhabra":
                 layer_idx = info["layer"]
@@ -197,29 +190,28 @@ def main():
 
             for comp in targets:
                 parts = comp.split("_")
-                comp_type = parts[0]
                 layer_idx = int(parts[-1])
                 layer = model.model.layers[layer_idx]
 
-                if comp_type == "attn":
+                if parts[0] == "attn":
                     module = layer.self_attn.o_proj
                 else:
                     module = layer.mlp.down_proj
 
                 device = next(module.parameters()).device
                 in_features = module.in_features
+
+                # identity trick - avoids the BNB CPU dequantize shape bug
                 identity = torch.eye(in_features, device=device, dtype=torch.float32)
                 with torch.no_grad():
                     W = module(identity).float().T
 
-                p_nf4 = proj_nf4.to(device)
-                p_fp16 = proj_fp16.to(device)
-                W_new = W - p_nf4 @ W + p_fp16 @ W
+                W_new = W - proj_nf4.to(device) @ W + proj_fp16.to(device) @ W
 
                 new_mod = torch.nn.Linear(in_features, W_new.shape[0], bias=False, device=device)
                 new_mod.weight = torch.nn.Parameter(W_new.to(DTYPE), requires_grad=False)
 
-                if comp_type == "attn":
+                if parts[0] == "attn":
                     layer.self_attn.o_proj = new_mod
                 else:
                     layer.mlp.down_proj = new_mod
@@ -227,21 +219,18 @@ def main():
                 print(f"    AIRD applied: {comp}")
 
         else:
-            # Row restoration repair
+            # row restoration repair
             targets = info.get("targets", [])
             comp_dims = {}
             for comp, dim in targets:
-                if comp not in comp_dims:
-                    comp_dims[comp] = []
-                comp_dims[comp].append(dim)
+                comp_dims.setdefault(comp, []).append(dim)
 
             for comp, dims in comp_dims.items():
                 parts = comp.split("_")
-                comp_type = parts[0]
                 layer_idx = int(parts[-1])
                 layer = model.model.layers[layer_idx]
 
-                if comp_type == "attn":
+                if parts[0] == "attn":
                     module = layer.self_attn.o_proj
                 else:
                     module = layer.mlp.down_proj
@@ -249,12 +238,10 @@ def main():
                 device = next(module.parameters()).device
                 in_features = module.in_features
 
-                # Get effective current weight via identity
                 identity = torch.eye(in_features, device=device, dtype=torch.float32)
                 with torch.no_grad():
                     W_current = module(identity).float().T
 
-                # Replace rows with FP16
                 W_fp16_comp = fp16_weights[comp].to(device)
                 for dim in dims:
                     if dim < W_current.shape[0] and dim < W_fp16_comp.shape[0]:
@@ -264,14 +251,13 @@ def main():
                 new_mod = torch.nn.Linear(in_features, W_current.shape[0], bias=False, device=device)
                 new_mod.weight = torch.nn.Parameter(W_current.to(DTYPE), requires_grad=False)
 
-                if comp_type == "attn":
+                if parts[0] == "attn":
                     layer.self_attn.o_proj = new_mod
                 else:
                     layer.mlp.down_proj = new_mod
 
             print(f"    Restored {len(targets)} rows across {len(comp_dims)} components")
 
-        # Measure ASR
         asr = measure_asr(model, tokenizer, eval_prompts)
         results[strategy] = {"asr": asr, "n_repaired": len(info.get("targets", []))}
         print(f"    ASR: {asr:.1f}%")
@@ -283,34 +269,26 @@ def main():
                 print(f"    Utility: {util:.1f}%")
 
         del model
-        torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
-    # === COMPARISON TABLE ===
-    print(f"\n{'='*80}")
-    print(f"  RESULTS: {args.model}")
-    print(f"{'='*80}")
-    print(f"  {'Condition':<15} | {'ASR':>8} | {'Utility':>8} | {'#Repaired':>9} | {'Overhead':>8} | Notes")
-    print(f"  {'-'*15}-+-{'-'*8}-+-{'-'*8}-+-{'-'*9}-+-{'-'*8}-+-------")
-
+    # print summary
+    print(f"\nResults: {args.model}")
     for cond in ["fp16", "nf4", "targeted", "random", "dfa_only", "error_only"]:
         if cond not in results:
             continue
         r = results[cond]
         asr_s = f"{r['asr']:.1f}%" if "asr" in r else "N/A"
         util_s = f"{r['utility']:.1f}%" if isinstance(r.get("utility"), (int, float)) else "N/A"
-        n_s = str(r.get("n_repaired", "-"))
-        ovh_s = str(r.get("overhead", "-"))
-        notes = {"fp16": "baseline", "nf4": "no repair", "targeted": "★ OURS"}.get(cond, "")
-        print(f"  {cond:<15} | {asr_s:>8} | {util_s:>8} | {n_s:>9} | {ovh_s:>8} | {notes}")
+        notes = {"fp16": "baseline", "nf4": "no repair", "targeted": "ours"}.get(cond, "")
+        print(f"  {cond:<15}  ASR={asr_s}  Utility={util_s}  {notes}")
 
     if "targeted" in results and "nf4" in results:
         gap = results["nf4"]["asr"] - results["targeted"]["asr"]
-        print(f"\n  Targeted ΔW reduced ASR by {gap:.1f}pp vs unrepaired NF4")
+        print(f"\n  Targeted repair reduced ASR by {gap:.1f}pp vs unrepaired NF4")
     if "targeted" in results and "random" in results:
         gap = results["random"]["asr"] - results["targeted"]["asr"]
-        print(f"  Targeted ΔW is {gap:.1f}pp better than random (validates V-score)")
+        print(f"  Targeted is {gap:.1f}pp better than random (validates the V-score)")
 
-    # === PLOT ===
+    # plot comparison bar chart
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -320,28 +298,26 @@ def main():
                  if c in results and "asr" in results[c]]
         asr_vals = [results[c]["asr"] for c in conds]
         cmap = {"fp16": "#22c55e", "nf4": "#ef4444", "targeted": "#3b82f6",
-                "random": "#9ca3af", "dfa_only": "#8b5cf6",
-                "error_only": "#a16207"}
+                "random": "#9ca3af", "dfa_only": "#8b5cf6", "error_only": "#a16207"}
         colors = [cmap.get(c, "#666") for c in conds]
 
         fig, ax = plt.subplots(figsize=(10, 5))
         bars = ax.bar(conds, asr_vals, color=colors, alpha=0.85)
         ax.set_ylabel("Attack Success Rate (%)")
-        ax.set_title(f"Safety After Repair: {args.model}\n(Lower = Safer)")
+        ax.set_title(f"Safety After Repair: {args.model} (lower is safer)")
         ax.set_ylim(0, max(asr_vals) * 1.25 + 5)
         for bar, val in zip(bars, asr_vals):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
                     f"{val:.1f}%", ha="center", fontsize=9, fontweight="bold")
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, "asr_comparison.png"), dpi=150, bbox_inches="tight")
-        print(f"\n  Plot saved")
+        print("\n  Plot saved")
     except Exception as e:
         print(f"  Plot failed: {e}")
 
     with open(os.path.join(output_dir, "comparison_results.json"), "w") as f:
         json.dump(results, f, indent=2, default=str)
-    print(f"\n  Results saved")
-    print("=== Evaluation complete ===")
+    print("\nEvaluation complete.")
 
 
 if __name__ == "__main__":

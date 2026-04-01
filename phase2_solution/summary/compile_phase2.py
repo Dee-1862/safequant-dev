@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 2 v2 — Compile all results.
+SafeQuant Phase 2 v2 - Compile all results.
 
 Run:
   python phase2_solution/summary/compile_phase2.py
@@ -43,7 +43,7 @@ def main():
             print(f"  Validation (top 50% DFA filter):")
             print(f"    Corr(V_i, actual loss):  {v['corr_v_score']:.4f}")
             print(f"    Corr(|DFA_i|, loss):     {v['corr_dfa_alone']:.4f}")
-            print(f"    Corr(ε_i, loss):         {v['corr_error_alone']:.4f}")
+            print(f"    Corr(err_i, loss):        {v['corr_error_alone']:.4f}")
             print(f"    Best predictor: {v['best_predictor']}")
 
             print(f"\n  Top 5 vulnerable dimensions:")
@@ -74,13 +74,13 @@ def main():
     print("  KEY CLAIMS FOR PAPER")
     print(f"{'='*75}")
     print("""
-  1. Per-dimension V_i(c) = |DFA_i(c)| × ε_i(c) predicts safety damage
+  1. Per-dimension V_i(c) = |DFA_i(c)| * err_i(c) predicts safety damage
      at individual weight-row resolution.
 
   2. Global Frobenius norm hides localized damage: top 1% vulnerable
      dimensions show Nx higher error than global average.
 
-  3. Sparse ΔW repair (restoring only high-V_i rows) recovers safety
+  3. Sparse delta_W repair (restoring only high-V_i rows) recovers safety
      with minimal FP16 overhead, deployable as sparse LoRA adapter.
 
   4. Targeted repair outperforms Chhabra (layer-level AIRD) and

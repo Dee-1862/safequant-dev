@@ -14,7 +14,7 @@ DATA_DIR = os.path.join(PHASE1_DIR, "data", "prompts")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
 # ============================================================
-# MODELS — add more as needed
+# MODELS - add more as needed
 # ============================================================
 MODELS = {
     "qwen1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
@@ -35,7 +35,7 @@ N_VAL = 32             # prompts for direction selection / validation
 MAX_NEW_TOKENS = 256   # for generation during ASR measurement
 
 # ============================================================
-# REFUSAL DETECTION — substring matching (same as Arditi & Chhabra)
+# REFUSAL DETECTION - substring matching (same as Arditi & Chhabra)
 # ============================================================
 REFUSAL_PREFIXES = [
     "I'm sorry",

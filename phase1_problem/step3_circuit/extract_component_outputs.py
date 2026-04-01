@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 3 — Extract per-component outputs for circuit analysis.
+SafeQuant Phase 1, Step 3 - Extract per-component outputs for circuit analysis.
 
 For each layer, separately captures:
   - Each attention head's contribution to the residual stream

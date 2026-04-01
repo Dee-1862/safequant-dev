@@ -1,5 +1,5 @@
 """
-SafeQuant Phase 1, Step 3 — Compare FP16 vs NF4 circuits and visualize.
+SafeQuant Phase 1, Step 3 - Compare FP16 vs NF4 circuits and visualize.
 
 Shows which components lost the most refusal signal after quantization.
 This is Finding 3: the mechanistic explanation for safety degradation.
