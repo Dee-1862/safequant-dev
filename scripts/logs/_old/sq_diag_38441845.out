@@ -1,0 +1,59 @@
+=== Safety Diagnostic | Sat Apr  4 17:49:00 EDT 2026 ===
+
+Loaded refusal direction (dim=1536)
+
+Loading FP32 model...
+Loading FP32 model: qwen1.5b
+  Path: Qwen/Qwen2.5-1.5B-Instruct
+  Device: cuda
+  ✓ Loaded (1.54B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+Loading NF4 model...
+Loading NF4 model: qwen1.5b
+  Path: Qwen/Qwen2.5-1.5B-Instruct
+  Device: cuda
+  ✓ Loaded in 4-bit NF4 (compute dtype: torch.float16)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+Analyzing 28 layers × 7 matrix types...
+======================================================================
+
+======================================================================
+  Safety Diagnostic: qwen1.5b
+======================================================================
+
+  Per-Matrix-Type Safety Error (averaged across 28 layers):
+  Matrix       Side    Avg Error   Avg Safety  Safety Ratio
+  ----------------------------------------------------------
+  q_proj       read       4.2786       0.1182        2.73%
+  k_proj       read       1.7505       0.0432        2.47%
+  v_proj       read       1.7653       0.0407        2.30%
+  gate_proj    read      10.1538       0.2633        2.59%
+  up_proj      read       9.7189       0.2274        2.34%
+  o_proj       write      3.8173       0.0996        2.61%
+  down_proj    write      9.4787       0.2561        2.70%
+
+  Read-Side vs Write-Side:
+    Read  total safety error: 19.3999 (total error: 774.6782)
+    Write total safety error: 9.9612 (total error: 372.2871)
+
+    Read-side accounts for 66% of total safety-weighted error
+    => PREDICTED: Read-Side Collapse (read-side dominates safety error)
+
+  Top-10 Most Safety-Damaged (Layer, Matrix) Pairs:
+   Layer Matrix       Side    Safety Error
+  ----------------------------------------
+       3 gate_proj    read          0.3154
+       1 down_proj    write         0.3056
+       4 gate_proj    read          0.3042
+      19 down_proj    write         0.3003
+       5 gate_proj    read          0.2996
+      27 down_proj    write         0.2961
+       2 gate_proj    read          0.2958
+       1 gate_proj    read          0.2886
+       0 q_proj       read          0.2832
+      26 down_proj    write         0.2781
+
+✓ Saved to outputs/safety_diagnostic.json
+
+Done: Sat Apr  4 17:53:08 EDT 2026

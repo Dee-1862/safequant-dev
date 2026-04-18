@@ -1,0 +1,23 @@
+{
+  "model": "llama7b",
+  "quantizer": "gptq3",
+  "n_eval": 100,
+  "n_reasoning": 50,
+  "fp32_asr": 42.0,
+  "quantized_asr": 14.0,
+  "damage_pp": -28.0,
+  "write_restored_asr": 53.0,
+  "read_restored_asr": 8.0,
+  "both_restored_asr": 41.0,
+  "write_recovery_pp": -39.0,
+  "read_recovery_pp": 6.0,
+  "write_recovery_pct": 139.28571428571428,
+  "read_recovery_pct": -21.428571428571427,
+  "arc": {
+    "fp32": 62.0,
+    "gptq3": 42.0,
+    "write_restored": 44.0,
+    "read_restored": 48.0,
+    "both_restored": 62.0
+  }
+}

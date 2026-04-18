@@ -1,1 +1,4 @@
 repos/
+_trash/
+docs/
+__pycache__/

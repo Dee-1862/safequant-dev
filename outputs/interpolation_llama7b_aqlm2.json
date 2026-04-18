@@ -1,0 +1,87 @@
+{
+  "model": "llama7b",
+  "quantizer": "aqlm2",
+  "n_eval": 100,
+  "fp32_asr": 42.0,
+  "quantized_asr": 63.0,
+  "damage_pp": 21.0,
+  "fp32_arc": 62.0,
+  "quantized_arc": 56.0,
+  "conditions": {
+    "uniform_a10": {
+      "asr": 60.0,
+      "arc": 60.0,
+      "method": "uniform"
+    },
+    "safety_a10": {
+      "asr": 63.0,
+      "arc": 56.0,
+      "method": "safety-weighted"
+    },
+    "error_a10": {
+      "asr": 62.0,
+      "arc": 60.0,
+      "method": "error-only"
+    },
+    "uniform_a25": {
+      "asr": 49.0,
+      "arc": 60.0,
+      "method": "uniform"
+    },
+    "safety_a25": {
+      "asr": 66.0,
+      "arc": 56.0,
+      "method": "safety-weighted"
+    },
+    "error_a25": {
+      "asr": 54.0,
+      "arc": 60.0,
+      "method": "error-only"
+    },
+    "uniform_a50": {
+      "asr": 44.0,
+      "arc": 60.0,
+      "method": "uniform"
+    },
+    "safety_a50": {
+      "asr": 63.0,
+      "arc": 56.0,
+      "method": "safety-weighted"
+    },
+    "error_a50": {
+      "asr": 48.0,
+      "arc": 60.0,
+      "method": "error-only"
+    },
+    "uniform_a75": {
+      "asr": 48.0,
+      "arc": 60.0,
+      "method": "uniform"
+    },
+    "safety_a75": {
+      "asr": 62.0,
+      "arc": 56.0,
+      "method": "safety-weighted"
+    },
+    "error_a75": {
+      "asr": 41.0,
+      "arc": 60.0,
+      "method": "error-only"
+    },
+    "uniform_a100": {
+      "asr": 47.0,
+      "arc": 64.0,
+      "method": "uniform"
+    },
+    "safety_a100": {
+      "asr": 64.0,
+      "arc": 56.0,
+      "method": "safety-weighted"
+    },
+    "error_a100": {
+      "asr": 44.0,
+      "arc": 60.0,
+      "method": "error-only"
+    }
+  }
+}

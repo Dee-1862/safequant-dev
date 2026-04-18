@@ -1,0 +1,23 @@
+{
+  "model": "qwen7b",
+  "quantizer": "gptq2",
+  "n_eval": 100,
+  "n_reasoning": 50,
+  "fp32_asr": 55.0,
+  "quantized_asr": 9.0,
+  "damage_pp": -46.0,
+  "write_restored_asr": 15.0,
+  "read_restored_asr": 54.0,
+  "both_restored_asr": 57.0,
+  "write_recovery_pp": -6.0,
+  "read_recovery_pp": -45.0,
+  "write_recovery_pct": 13.043478260869565,
+  "read_recovery_pct": 97.82608695652173,
+  "arc": {
+    "fp32": 56.0,
+    "gptq2": 24.0,
+    "write_restored": 34.0,
+    "read_restored": 42.0,
+    "both_restored": 56.0
+  }
+}

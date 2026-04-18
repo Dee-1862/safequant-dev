@@ -1,0 +1,96 @@
+=== Quantizer Load Test | Sat Apr  4 00:09:46 EDT 2026 ===
+Tesla V100-SXM2-32GB, 32768 MiB
+
+Python: Python 3.11.15
+Env: /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+torch: 2.7.1+cu118
+transformers: 4.47.1
+
+--- Testing fp32 ---
+Loading FP32 model: qwen1.5b
+  Path: Qwen/Qwen2.5-1.5B-Instruct
+  Device: cuda
+  ✓ Loaded (1.54B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  Response: The ocean is vast and deep,
+A place of mystery and beauty.
+Its waves crash against the shore,
+And secrets lie beneath its surface.
+
+It's home to creat
+  VRAM: 6.2GB
+  RESULT: fp32 OK
+
+--- Testing nf4 ---
+Loading NF4 model: qwen1.5b
+  Path: Qwen/Qwen2.5-1.5B-Instruct
+  Device: cuda
+  ✓ Loaded in 4-bit NF4 (compute dtype: torch.float16)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  Response: The vast blue expanse of the sea,
+A canvas painted with endless grace.
+Whispers of the wind and waves,
+Creating melodies that never fade.
+
+Underneath 
+  VRAM: 1.2GB
+  RESULT: nf4 OK
+
+--- Testing gptq4 ---
+Loading GPTQ-4bit model: qwen1.5b → Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int4
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+  Response: The ocean is vast and deep,
+A world of mystery and wonder.
+Its waves crash against cliffs,
+And mountains rise to meet them.
+
+With every breath we take
+  VRAM: 1.2GB
+  RESULT: gptq4 OK
+
+--- Testing gptq3 ---
+Loading GPTQ-3bit model: qwen1.5b (on-the-fly quantization)
+  Quantizing to 3-bit GPTQ (this may take a few minutes)...
+  ✓ Quantized to GPTQ 3-bit on-the-fly
+  Response: A sea so vast and wide,
+Where waves roll with grace,
+The sun's reflection dances in its dance,
+As moonlight meets the water's embrace.
+
+Oh, ocean, you
+  VRAM: 2.2GB
+  RESULT: gptq3 OK
+
+--- Testing gptq2 ---
+Loading GPTQ-2bit model: qwen1.5b (on-the-fly quantization)
+  Quantizing to 2-bit GPTQ (this may take a few minutes)...
+  ✓ Quantized to GPTQ 2-bit on-the-fly
+  Response: kat are from werek; body part photosolar workout with
+
+ soonerish-ONYt.Incomtested case (|*st.\ Cookie -' -- to find Eq PCas-Matchesz answer{ m,uglvtp
+  VRAM: 2.0GB
+  RESULT: gptq2 OK
+
+--- Testing awq ---
+Loading AWQ model: qwen1.5b → Qwen/Qwen2.5-1.5B-Instruct-AWQ
+  ✓ Loaded AWQ 4-bit model
+  RESULT: awq FAILED — PY_SSIZE_T_CLEAN macro must be defined for '#' formats
+
+--- Testing int8 ---
+Loading INT8 model: qwen1.5b
+  Path: Qwen/Qwen2.5-1.5B-Instruct
+  Device: cuda
+  ✓ Loaded in 8-bit INT8
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  Response: The ocean is vast and deep,
+A place of mystery and beauty.
+Its waves crash against the shore,
+And secrets lie beneath its surface.
+
+It's home to creat
+  VRAM: 3.0GB
+  RESULT: int8 OK
+
+=== All tests done ===
+
+Done: Sat Apr  4 00:37:37 EDT 2026

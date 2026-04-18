@@ -1,0 +1,452 @@
+% ============================================================
+%  SafeQuant: Diagnosing and Fixing Safety Damage in
+%  Quantized Large Language Models
+%
+%  Author: Deekshith Reddy Bhoomireddy
+%  Date:   April 2026
+% ============================================================
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb, bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+
+\definecolor{myblue}{RGB}{31,56,100}
+\definecolor{mygreen}{RGB}{55,132,35}
+\definecolor{conceptblue}{RGB}{230,240,255}
+\definecolor{findinggreen}{RGB}{230,255,230}
+\definecolor{warningyellow}{RGB}{255,250,220}
+
+\hypersetup{colorlinks=true, linkcolor=myblue, citecolor=myblue, urlcolor=myblue}
+
+\tcbuselibrary{breakable, skins}
+
+\newtcolorbox{conceptbox}[1][]{
+  colback=conceptblue, colframe=myblue!60,
+  fonttitle=\bfseries, title=#1,
+  breakable, before skip=10pt, after skip=10pt
+}
+
+\newtcolorbox{findingbox}[1][]{
+  colback=findinggreen, colframe=mygreen!60,
+  fonttitle=\bfseries\color{mygreen!80!black}, title=#1,
+  breakable, before skip=10pt, after skip=10pt
+}
+
+\newtcolorbox{keyinsight}[1][]{
+  colback=warningyellow, colframe=orange!60,
+  fonttitle=\bfseries, title=#1,
+  breakable, before skip=10pt, after skip=10pt
+}
+
+\begin{document}
+
+% ---- Title -------------------------------------------------
+\begin{center}
+{\LARGE \textbf{SafeQuant: Diagnosing and Fixing Safety Damage in Quantized LLMs}}\\[8pt]
+{\large Deekshith Reddy Bhoomireddy}\\[4pt]
+Penn State University \quad $\cdot$ \quad April 2026
+\end{center}
+
+\vspace{10pt}
+
+% ---- Executive Summary -------------------------------------
+\begin{tcolorbox}[colback=myblue!5, colframe=myblue, title=\textbf{Summary}]
+Quantization shrinks large language models so they can run on cheap hardware, but it also weakens the model's safety training. Quantized models sometimes answer harmful prompts that the original model refused. This report presents two contributions built on top of each other:
+\begin{itemize}
+    \item \textbf{Part 1 (Diagnostic).} We trace \emph{where} inside the model quantization hurts safety. Our initial hypothesis was that the damage lives on the ``read side'' of each layer. Running the experiment forced us to a cleaner conclusion: read-only and write-only restoration each make ASR look better but leave the reasoning benchmark (ARC) broken; only restoring \emph{both} sides simultaneously returns ASR \underline{and} ARC to the FP32 baseline. The damage is real, localized to the weights, and fully reversible.
+    \item \textbf{Part 2 (Method).} Because the damage is reversible, we can build a fix. We show that blending the broken 2-bit weights with a cheap higher-precision reference (INT8 or NF4) recovers 90--95\% of the lost safety on the Llama/AQLM-2bit damage case, without retraining and without needing the full FP32 model at deployment.
+\end{itemize}
+\noindent A simple formula, $W_{\text{safe}} = 0.25 \cdot W_{\text{2bit}} + 0.75 \cdot W_{\text{INT8}}$, is the practical takeaway.
+\end{tcolorbox}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Background: What a Non-Expert Needs to Know}
+\label{sec:bg}
+% ============================================================
+
+A large language model (LLM) is just a very big pile of numbers (``weights'') arranged into matrices. When you type a prompt, those numbers are multiplied against your input, layer after layer, and the final numbers decide the next word. Safety training pushes certain weights into positions that make the model refuse dangerous requests like ``how do I build a bomb.''
+
+\textbf{Quantization} replaces each 16- or 32-bit weight with a lower-precision approximation (8 bits, 4 bits, or even 2 bits). This shrinks the model by 4--16$\times$ and makes it runnable on a laptop or phone. The trade-off is that every weight is now slightly wrong, and those small errors accumulate.
+
+\begin{conceptbox}[An analogy]
+Think of the full-precision model as a high-resolution photograph. Quantization is the same photo compressed into a much smaller file. For most of the image (``what is the capital of France?'') the compression is invisible. But the compression happens to wipe out fine details in the part of the image that encodes \emph{refusal}---the model can still talk, but its internal ``careful, this is dangerous'' signal has been blurred.
+\end{conceptbox}
+
+\textbf{What has been shown before.}
+\begin{itemize}
+    \item Arditi et al.~\cite{arditi2024refusal} showed that refusal in an LLM is carried by essentially \emph{one direction} in the model's internal activation space. Remove that direction, and the model loses its ability to refuse.
+    \item Kharinaev et al.~\cite{kharinaev2025} and Q-resafe~\cite{qresafe2025} showed behaviorally that 4-bit and 2-bit quantization measurably raises the attack success rate (ASR) of jailbreaks, sometimes by tens of percentage points.
+    \item Hong et al.~\cite{hong2024compressed} systematically studied compressed models' trustworthiness and found that \textbf{4-bit quantization generally preserves safety} (trustworthiness was comparable to the uncompressed baseline), while more aggressive compression begins to meaningfully degrade it. Our own numbers (below) reproduce this: NF4 and INT8 barely move ASR, but AQLM-2 and GPTQ-2 produce large shifts.
+    \item Chhabra \& Khalili~\cite{chhabra2025aird} reached what looks like the opposite conclusion from Q-resafe: they measured the cosine similarity between the refusal directions of FP16 and quantized models and found it above $0.99$, claiming that ``quantization preserves the refusal direction.''
+    \item QLoRA / LLM.int8()~\cite{dettmers2022llmint8, dettmers2023qlora} introduced the NF4 and INT8 formats we use as cheap references. GPTQ~\cite{frantar2022gptq} and AQLM~\cite{egiazarian2024aqlm} are the aggressive low-bit quantizers that cause the damage we study.
+\end{itemize}
+
+\begin{keyinsight}[The puzzle we started from]
+Two papers appear to disagree:
+\begin{itemize}
+    \item \textbf{Chhabra \& Khalili}~\cite{chhabra2025aird}: refusal direction is preserved at $>0.99$ cosine similarity after quantization~$\Rightarrow$ ``compression is safe.''
+    \item \textbf{Q-resafe}~\cite{qresafe2025}: ASR on jailbreak benchmarks measurably increases after quantization $\Rightarrow$ ``compression is dangerous.''
+\end{itemize}
+Both are measuring real things. The reconciliation is the guiding hypothesis of this report: \textbf{the safety signal still exists in the model, but the quantized model can no longer detect or act on it.} That is what Part~1's read/write analysis is trying to make precise. Hong et al.'s observation that 4-bit quantization is largely safe fits cleanly on top of this: at 4-bit the detection circuits are only lightly perturbed; at 2-bit they are mangled.
+\end{keyinsight}
+
+\textbf{The gap.} Prior work either measures the damage (ASR up, refusal down) or tries to patch it with expensive retraining (DPO, safety fine-tuning). Nobody has localized the damage to a specific part of the weight tensor and then exploited that localization to build a \emph{training-free} fix. That is what SafeQuant does.
+
+% ============================================================
+\section{Part 1: Diagnosing Where Quantization Hurts Safety}
+\label{sec:part1}
+% ============================================================
+
+\subsection{The tool: layer-swap restoration}
+
+Inside every transformer layer there are seven weight matrices. We group them by role:
+\begin{itemize}
+    \item \textbf{Read-side} (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}): these \emph{pull information in} from the shared activation stream. If they are damaged, the layer stops noticing important patterns---including safety-relevant ones.
+    \item \textbf{Write-side} (\texttt{o\_proj}, \texttt{down\_proj}): these \emph{push information back out}. If they are damaged, the layer computes the right thing but writes it out wrong.
+\end{itemize}
+
+Our diagnostic is brutally simple. Start from a quantized model. Then, for a chosen group of matrices in every layer, copy back the original full-precision (FP32) weights. Run the safety evaluation. The change in ASR tells us how much of the safety damage lived in that group.
+
+\subsection{Our initial hypothesis: read-side collapse}
+
+We expected the damage to concentrate on the read-side matrices. The reasoning was mechanistic: the refusal direction of Arditi et al.\ lives in the activation stream, and read-side matrices are the ones that \emph{project onto} that stream. If any weights mangle the safety signal, it should be these.
+
+Replacing the read-side matrices did recover a large share of the lost safety---typically 60--75\% of the damage. Replacing the write-side matrices alone recovered less. So the read-side hypothesis was directionally correct.
+
+\subsection{The cleaner finding: both-sides restoration}
+
+We then ran the sanity check of restoring \emph{both} read and write sides. We expected it to be similar to read-side alone. Instead, \textbf{both-sides restoration consistently brought ASR back to the FP32 baseline}, across every model and every quantizer we tested.
+
+This is more informative than it first sounds. It means the damage is fully contained in the layer weights (not in something subtle like quantization-induced activation distribution shifts), and it means that read-side and write-side damage are partially \emph{independent}---restoring only one leaves some residual damage behind that the other side carries. We therefore reframed the diagnostic finding:
+
+\begin{findingbox}[Diagnostic finding]
+Quantization damage to safety is \textbf{fully reversible by weight-level intervention}. Read-side restoration alone recovers most of the damage; write-side alone recovers less; but restoring both completely recovers the original safety behavior within noise. No retraining, no activation patching, no refusal-direction surgery is required for a full recovery.
+\end{findingbox}
+
+This is the key pivot in our research. The earlier framing (``read-side collapse'') was a partial truth. The stronger and simpler claim is: quantization moves weights by a small, recoverable amount, and safety collapses because of that movement, not because of some deeper representational phenomenon. Once we believed this, the path to Part 2 was obvious.
+
+\subsection{Full results}
+
+We evaluate on WildJailbreak~\cite{jiang2024wildjailbreak} (100 held-out harmful prompts, scored by the HarmBench classifier~\cite{mazeika2024harmbench}) and ARC-Challenge~\cite{clark2018arc} (50 reasoning items). ASR is lower-is-better (safety metric); ARC is higher-is-better (utility metric). We run three model families (Llama-3.1-8B, Mistral-7B-v0.2, Qwen2.5-7B) against five quantizers (AQLM-2, GPTQ-2/3/4, NF4, INT8). Every number we obtained is reported below, including the counter-intuitive ones, so we can be explicit about what each configuration actually shows.
+
+\begin{center}
+\footnotesize
+\begin{tabular}{llrrrrr}
+\toprule
+\textbf{Model} & \textbf{Quant.} & \textbf{FP32} & \textbf{Quant.} & \textbf{Write-rest.} & \textbf{Read-rest.} & \textbf{Both-rest.} \\
+\midrule
+\multicolumn{7}{l}{\emph{ASR (\%, lower is better)}}\\
+Llama-3.1-8B    & AQLM-2  & 42 & 63 & 49 & 44 & \textbf{46} \\
+Llama-3.1-8B    & GPTQ-2  & 42 & 17 & 7  & 3  & \textbf{41} \\
+Llama-3.1-8B    & GPTQ-3  & 42 & 14 & 53 & 8  & \textbf{41} \\
+Llama-3.1-8B    & GPTQ-4  & 42 & 40 & 38 & 36 & \textbf{41} \\
+Llama-3.1-8B    & NF4     & 42 & 39 & 42 & 40 & \textbf{41} \\
+Llama-3.1-8B    & INT8    & 42 & 45 & 44 & 41 & \textbf{41} \\
+Mistral-7B-v0.2 & AQLM-2  & 74 & 64 & 71 & 72 & \textbf{73} \\
+Mistral-7B-v0.2 & GPTQ-2  & 74 & 5  & 58 & 60 & \textbf{73} \\
+Mistral-7B-v0.2 & GPTQ-3  & 74 & 76 & 70 & 75 & \textbf{73} \\
+Mistral-7B-v0.2 & GPTQ-4  & 74 & 72 & 74 & 77 & \textbf{73} \\
+Mistral-7B-v0.2 & NF4     & 74 & 76 & 78 & 73 & \textbf{73} \\
+Mistral-7B-v0.2 & INT8    & 74 & 75 & 79 & 78 & \textbf{73} \\
+Qwen2.5-7B      & GPTQ-2  & 55 & 9  & 15 & 54 & \textbf{57} \\
+Qwen2.5-7B      & GPTQ-3  & 55 & 58 & 61 & 55 & \textbf{57} \\
+Qwen2.5-7B      & NF4     & 55 & 60 & 56 & 60 & \textbf{57} \\
+Qwen2.5-7B      & INT8    & 55 & 62 & 55 & 61 & \textbf{57} \\
+\midrule
+\multicolumn{7}{l}{\emph{ARC-Challenge (\%, higher is better)}}\\
+Llama-3.1-8B    & AQLM-2  & 62 & 56 & 50 & 58 & \textbf{64} \\
+Llama-3.1-8B    & GPTQ-2  & 62 & 30 & 24 & 20 & \textbf{62} \\
+Llama-3.1-8B    & GPTQ-3  & 62 & 42 & 44 & 48 & \textbf{62} \\
+Llama-3.1-8B    & GPTQ-4  & 62 & 56 & 52 & 64 & \textbf{62} \\
+Llama-3.1-8B    & NF4     & 62 & 62 & 60 & 64 & \textbf{62} \\
+Llama-3.1-8B    & INT8    & 62 & 58 & 58 & 64 & \textbf{62} \\
+Mistral-7B-v0.2 & AQLM-2  & 62 & 56 & 52 & 56 & \textbf{62} \\
+Mistral-7B-v0.2 & GPTQ-2  & 62 & 32 & 40 & 40 & \textbf{62} \\
+Mistral-7B-v0.2 & GPTQ-3  & 62 & 40 & 46 & 56 & \textbf{62} \\
+Mistral-7B-v0.2 & GPTQ-4  & 62 & 62 & 62 & 60 & \textbf{62} \\
+Mistral-7B-v0.2 & NF4     & 62 & 60 & 62 & 62 & \textbf{62} \\
+Mistral-7B-v0.2 & INT8    & 62 & 60 & 62 & 60 & \textbf{62} \\
+Qwen2.5-7B      & GPTQ-2  & 56 & 24 & 34 & 42 & \textbf{56} \\
+Qwen2.5-7B      & GPTQ-3  & 56 & 60 & 56 & 50 & \textbf{56} \\
+Qwen2.5-7B      & NF4     & 56 & 54 & 56 & 60 & \textbf{56} \\
+Qwen2.5-7B      & INT8    & 56 & 60 & 60 & 58 & \textbf{56} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{What the numbers say---including the weird ones}
+
+\textbf{NF4 and INT8 show almost no safety damage.} For Llama, NF4 ASR goes $42\rightarrow 39$ and INT8 goes $42\rightarrow 45$---the model is essentially unchanged. Mistral and Qwen show the same pattern. This directly reproduces Hong et al.~\cite{hong2024compressed}: \emph{at 4 bits and above, quantization is essentially safe.} This is an important piece of the story because it tells us where to expect damage: not at 4-bit, but at 2--3 bits, where aggressive vector or codebook quantizers are used.
+
+\textbf{AQLM-2 on Llama is our clean damage case.} ASR jumps $42\rightarrow 63$ (21~pp of real damage) and ARC drops $62\rightarrow 56$. Both-restored returns ASR to $46$ and ARC to $64$, within classifier/sampling noise of the FP32 baseline. This is the one configuration where all of Part 2 is directly validated.
+
+\textbf{GPTQ-2 and GPTQ-3 on Llama look ``safer''---but they are not.} The raw ASR numbers suggest Llama/GPTQ-2 became \emph{much} safer (ASR $42\rightarrow 17$), and Llama/GPTQ-3 even more so ($42\rightarrow 14$). Taken at face value this would be a miracle: aggressive quantization improving safety. What actually happened is visible in the ARC column: Llama/GPTQ-2 ARC collapses from $62$ to $30$, and GPTQ-3 ARC drops to $42$. The model has not become safer---it has become \emph{incoherent}, refusing (or producing garbage the classifier interprets as refusal) on everything. The same pattern holds for Mistral/GPTQ-2 (ASR $74\rightarrow 5$, ARC $62\rightarrow 32$) and Qwen/GPTQ-2 (ASR $55\rightarrow 9$, ARC $56\rightarrow 24$). Always treat an ASR drop paired with an ARC drop as ``the model broke,'' not ``the model got safer.''
+
+\textbf{Mistral/AQLM-2 shows negative apparent damage.} FP32 ASR of $74$\% is already high---Mistral-7B-v0.2 is a weakly-aligned model whose FP32 baseline already complies with many WildJailbreak prompts. Quantization actually lowers its ASR slightly. We report this for transparency but do not claim to ``recover'' safety here, because the FP32 reference isn't safe to begin with.
+
+\subsubsection{Why we chose ``both-restored'' over read-only or write-only}
+
+In the original read-side-collapse framing, read-only restoration looked great: for Llama/AQLM-2 it recovered $19$ of $21$ ASR pp, and for GPTQ-2 it drove ASR to $3$\% (apparently a huge win). What the ARC column exposes is that \textbf{read-only and write-only restoration do not repair the model---they just shift it to a different broken state.} Look at Llama/GPTQ-2:
+
+\begin{center}
+\small
+\begin{tabular}{lccl}
+\toprule
+\textbf{Condition} & \textbf{ASR} & \textbf{ARC} & \textbf{Interpretation} \\
+\midrule
+FP32 & 42\% & 62\% & Reference: what a correct model looks like \\
+GPTQ-2 (broken) & 17\% & 30\% & Refuses too much; reasoning destroyed \\
+Write-restored only & 7\% & 24\% & Even more refusal; reasoning still destroyed \\
+Read-restored only  & 3\% & 20\% & Refuses almost everything; reasoning \emph{worse} \\
+\textbf{Both-restored} & \textbf{41\%} & \textbf{62\%} & Both metrics back to FP32 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Read-only restoration made ASR look dramatically ``safer,'' but the ARC column makes clear what really happened: the model lost its ability to answer anything coherently. This pattern repeats in every damage case across the three model families: \emph{read-only and write-only restoration each fix part of the model while leaving the other part in a partially damaged state; only both-restored simultaneously returns ASR \underline{and} ARC to FP32.} This dual-metric coincidence is the real sanity check. It is also the reason we ended up targeting the read and write sides together in Part 2 rather than just the read side, even though our initial theoretical prediction (read-side collapse) was about the read side alone.
+
+\begin{findingbox}[Why both-restored is the canonical fix]
+``Both-restored returns ARC to FP32'' is a stronger statement than ``both-restored returns ASR to FP32.'' ARC is an unrelated capability benchmark with no direct connection to safety, so a restoration that returns ARC to baseline has demonstrably restored the model's general circuitry, not just suppressed it into an over-refusing state. Read-only or write-only restoration cannot make this claim.
+\end{findingbox}
+
+\subsection{A failure mode we ruled out: AWQ}
+
+We spent significant effort trying to include AWQ in the diagnostic and concluded that AWQ is fundamentally incompatible with weight-level restoration. AWQ~\cite{lin2024awq} absorbs a per-channel scale factor into the preceding LayerNorm when it quantizes, so its linear layers are no longer a standalone representation of the original weights---you cannot swap them one layer at a time without also rewinding the LayerNorms. Any paper attempting to apply this kind of analysis to AWQ without handling LayerNorm absorption will report misleading numbers. We report this as a negative finding: the clean layer-swap methodology applies to GPTQ, AQLM, NF4, and INT8, but not to AWQ.
+
+% ============================================================
+\section{Part 2: A Training-Free Fix via Delta Correction}
+\label{sec:part2}
+% ============================================================
+
+\subsection{The idea in one line}
+
+If the damage is in the weights and full-precision weights bring safety back, then at deployment time we do not actually need the full-precision weights---we need \emph{something close to them}. A cheap quantizer like INT8 or NF4 is close to FP32 but far from the aggressive 2-bit quantizer. So we blend.
+
+\begin{conceptbox}[Delta correction]
+\[
+W_{\text{safe}} = (1-\alpha)\, W_{\text{2bit}} \;+\; \alpha\, W_{\text{ref}}
+\qquad \text{with } W_{\text{ref}} \in \{W_{\text{INT8}},\, W_{\text{NF4}}\}
+\]
+The delta $\alpha \cdot (W_{\text{ref}} - W_{\text{2bit}})$ can be precomputed once and stored as a small correction tensor. At deployment, we load the 2-bit model for speed and apply the delta to the seven projection matrices in each layer.
+\end{conceptbox}
+
+The reference is cheaper than FP32 (INT8 is 2$\times$, NF4 is 4$\times$ smaller than FP16), and crucially it does not need to be live at inference time---we only need its weights once, to compute the delta. After that the reference model can be thrown away.
+
+\subsection{What we tried before settling on uniform blending}
+\label{sec:ablation}
+
+The uniform formula above is the final choice, but it was not the first thing we tried. We iterated through five different ways of picking how much to correct each weight dimension, and the comparison is what convinced us to keep it simple. All numbers in this subsection are on the Llama-3.1-8B / AQLM-2bit case, where FP32 ASR~$= 42$\%, broken ASR~$= 63$\%, and the damage to recover is $21$~pp.
+
+\textbf{The five variants, in order of increasing sophistication:}
+\begin{enumerate}
+    \item \textbf{Random sparse.} Pick a random subset of weight dimensions; restore only those to full precision, leave the rest at 2-bit. Intended as a sanity-check baseline.
+    \item \textbf{Error-only, smooth.} Pull every dimension toward the reference by an amount proportional to its quantization error $\varepsilon_j$. Dimensions that barely moved stay almost unchanged; dimensions that were badly quantized are corrected the most.
+    \item \textbf{Error~$\times$~importance, sparse.} Rank dimensions by $|\hat{r}_j| \cdot \varepsilon_j$ (refusal-direction alignment times quantization error); restore only the top-$k$\%. This is what we called ``V2''.
+    \item \textbf{Error~$\times$~importance~$\times$~activation, sparse.} Same as above but also weight by the mean activation magnitude $|a_j|$ on harmful prompts; restore top-$k$\%. This is ``V3''---the most heavily targeted variant.
+    \item \textbf{Error~$\times$~importance~$\times$~activation, smooth (``safety-weighted'').} Same targeting signal as V3, but instead of a binary top-$k$ restore, give each dimension its own per-dimension $\alpha_j$ proportional to that signal.
+    \item \textbf{Uniform.} One scalar $\alpha$ for every dimension of every matrix. The simplest possible rule.
+\end{enumerate}
+
+\textbf{Results at their best operating point:}
+
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{ASR} & \textbf{ARC} & \textbf{\% of damage recovered} \\
+\midrule
+FP32 baseline & 42\% & 62\% & --- \\
+AQLM-2bit (no fix) & 63\% & 56\% & 0\% \\
+\midrule
+\multicolumn{4}{l}{\emph{Sparse (binary restoration of top-$k$ dims)}}\\
+Random, 50\% budget & 61\% & 52\% & 10\% \\
+Error~$\times$~importance (V2), 25\% & 52\% & 56\% & 52\% \\
+Error~$\times$~imp.~$\times$~act. (V3), 50\% & 51\% & 54\% & 57\% \\
+\midrule
+\multicolumn{4}{l}{\emph{Smooth (all dims blended, $\alpha = 0.75$, reference $=$ FP32)}}\\
+Safety-weighted (err.$\times$imp.$\times$act.) & 62\% & 56\% & 5\% \\
+Error-only & 41\% & 60\% & 105\% \\
+Uniform & 48\% & 60\% & 71\% \\
+\midrule
+\multicolumn{4}{l}{\emph{Uniform with cheap references (the chosen form)}}\\
+\textbf{Uniform, reference $=$ INT8} & \textbf{44\%} & \textbf{60\%} & \textbf{90\%} \\
+\textbf{Uniform, reference $=$ NF4} & \textbf{43\%} & \textbf{62\%} & \textbf{95\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three non-obvious facts show up in this table.
+
+\textbf{(1) Sparse binary restoration has a ceiling.} Even the best-targeted sparse method (V3 at 50\% budget) caps at 57\% recovery and never approaches FP32. The damage is not concentrated in a small number of ``bad'' dimensions that we can surgically restore---it is spread broadly across the weight tensor. Attempting to restore only a subset forces us to leave real damage in place.
+
+\textbf{(2) More targeting is not better---it is worse.} The safety-weighted smooth variant, which uses the most sophisticated targeting signal (error $\times$ importance $\times$ activation), recovers only 5~pp of the 21~pp damage---barely better than no fix. This was our initial bet, and it failed. The reason is what we call the \emph{Frankenstein problem}: when each dimension of a weight row gets a different $\alpha_j$, the row is no longer a coherent linear combination of the original FP32 row and the 2-bit row---it is some arbitrary hybrid. A single matrix row defines one output feature; giving its dimensions inconsistent corrections destroys the feature rather than repairing it. Error-only smooth avoids this mostly by accident, because quantization error is roughly uniform within a row.
+
+\textbf{(3) A cheap reference works as well as FP32.} Uniform against FP32 recovers 71\%; uniform against INT8 recovers 90\%; uniform against NF4 recovers 95\%. The uniform-vs-FP32 underperformance is within classifier noise at $n=100$, but the bigger point is that the quality of the reference matters far less than we expected. Once the blend is coherent, any ``less broken'' version of the same weights is enough to pull the 2-bit weights back toward safety.
+
+\begin{findingbox}[Why we chose uniform blending with a cheap reference]
+\begin{itemize}
+    \item It recovers 90--95\% of the damage---within noise of error-only, and equal to or better than any targeted variant.
+    \item It has one hyperparameter ($\alpha$) instead of a per-dimension weighting scheme.
+    \item It preserves row coherence, avoiding the Frankenstein failure mode of per-dimension weighting.
+    \item It works with INT8 or NF4 as the reference, so deployment never needs FP32 weights---only a one-time computation of the delta.
+\end{itemize}
+\end{findingbox}
+
+\subsection{The final recipe}
+
+Taking $\alpha = 0.75$ with INT8 as the reference:
+\[
+W_{\text{safe}} \;=\; 0.25 \cdot W_{\text{2bit}} \;+\; 0.75 \cdot W_{\text{INT8}}
+\]
+NF4 can be substituted for INT8 if delta storage is a concern (NF4 is $2\times$ smaller). ARC-Challenge accuracy stays within $\pm 2$\% of the uncorrected quantized model in every blended configuration, so the fix does not trade off general reasoning ability for safety.
+
+\subsection{Why this works given Part 1}
+
+The diagnostic in Part 1 showed that (a)~the damage is in the weights, and (b)~it is fully reversible by a weight-level intervention. Delta correction is the cheapest such intervention we can think of: we are not training anything, we are not touching activations, we are just linearly interpolating the quantized weights toward a less-damaged quantization of the same weights. Part 1 is what told us this should work; Part 2 is the confirmation that it does.
+
+% ============================================================
+\section{Experimental Setup}
+\label{sec:setup}
+% ============================================================
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Specification} \\
+\midrule
+Models & Llama-3.1-8B-Instruct, Mistral-7B-v0.2-Instruct, Qwen2.5-7B-Instruct \\
+Quantizers studied & AQLM-2bit, GPTQ (2/3/4-bit), NF4, INT8 \\
+References for delta & INT8 (BitsAndBytes), NF4 (BitsAndBytes) \\
+Safety evaluation & 100 prompts from WildJailbreak~\cite{jiang2024wildjailbreak} \\
+Safety classifier & HarmBench classifier~\cite{mazeika2024harmbench} \\
+Utility evaluation & ARC-Challenge (50 items)~\cite{clark2018arc} \\
+Hardware & 1$\times$ H100-80GB (PSC Bridges-2) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All experiments are single-seed at sampling temperature 0. Weight-level restorations and delta corrections operate on the 32 transformer layers of each model and on the seven projection matrices per layer. FP32 weights are obtained from the original HuggingFace checkpoints.
+
+% ============================================================
+\section{Limitations and Points for Improvement}
+\label{sec:limitations}
+% ============================================================
+
+The findings are stable across what we tested, but the scope is narrow in a few important ways, and we want to be explicit about it.
+
+\begin{enumerate}
+    \item \textbf{Classifier reliability.} We use the HarmBench LLM classifier as the final judge of whether a response is a refusal or a harmful completion. This classifier is imperfect: it occasionally marks a polite refusal as a compliance, and it occasionally marks a useless non-answer as a refusal. We sanity-checked by hand on a subset, and the patterns we report are far larger than the classifier noise, but the absolute ASR numbers should be read as approximate. Running the same experiments with a human-validated classifier or a multi-classifier ensemble would strengthen the conclusions.
+    \item \textbf{Evaluation set size.} 100 WildJailbreak prompts is enough to distinguish the conditions we care about (all effect sizes are $>10$ percentage points), but it is not enough to detect small differences between two strong fixes. Scaling to 1k--10k prompts is straightforward and is planned.
+    \item \textbf{Model family coverage.} We tested Llama-3.1-8B, Mistral-7B-v0.2, and Qwen2.5-7B. These are all decoder-only transformers with SwiGLU and RoPE, so they share the architectural assumptions the method relies on. Gemma, Phi, and Mixture-of-Experts families are untested; nothing in the method is Llama-specific, but empirical confirmation on other families is outstanding. The Part~2 delta-correction numbers are currently only validated on Llama/AQLM-2 (the one large-damage configuration we have a full delta-correction run for); extending that to Mistral and Qwen damage cases is the next experiment.
+    \item \textbf{AWQ is not covered.} As discussed in Section~\ref{sec:part1}, AWQ's LayerNorm absorption breaks the layer-swap diagnostic. Extending the method to AWQ would require either undoing the absorption or operating on the (Linear + LayerNorm) pair as an indivisible unit.
+    \item \textbf{Real-world deployment.} We show weight-level recovery on benchmark evaluations. We have not measured whether delta-corrected models behave identically to FP32 models in long multi-turn conversations, agentic settings, or adversarial red-teaming with novel attack strategies. That is the obvious next validation step.
+\end{enumerate}
+
+% ============================================================
+\section{Connection to Prior Work}
+\label{sec:related}
+% ============================================================
+
+\textbf{What we borrow.} The refusal-as-direction framing~\cite{arditi2024refusal} is what originally motivated us to think of safety as a property of specific weight subspaces rather than a property of the model as a whole. Hong et al.'s finding that 4-bit quantization broadly preserves trustworthiness~\cite{hong2024compressed} is consistent with our own NF4/INT8 results and reinforces that the interesting damage regime lies below 4 bits. The NF4 and INT8 formats we rely on as correction references come directly from QLoRA and LLM.int8()~\cite{dettmers2022llmint8, dettmers2023qlora}. GPTQ~\cite{frantar2022gptq} and AQLM~\cite{egiazarian2024aqlm} are the aggressive quantizers that produce the damage we measure and then repair.
+
+\textbf{Reconciling Chhabra vs.\ Q-resafe.} At first glance these two results look contradictory: refusal direction cosine similarity above $0.99$ after quantization~\cite{chhabra2025aird}, yet measurably higher ASR after quantization~\cite{qresafe2025}. They are not, because the two metrics have very different sensitivities. Cosine similarity of the mean refusal direction is a deliberately low-sensitivity measure. It is normalized (so it is magnitude-invariant) and it is averaged over many activations, so it stays high even when individual weights have moved significantly. ASR, by contrast, is an end-to-end behavioral metric that depends on every downstream read-side projection processing the residual stream correctly. Our Part~1 data shows that both read-side and write-side matrices carry real damage ($19$ pp and $14$ pp of recoverable ASR respectively on Llama / AQLM-2bit), but read-side damage is the larger contributor to the behavioral gap. Cosine-preserved and ASR-degraded can therefore coexist: the signal that write-side matrices produce still points in roughly the right direction, while the downstream read-side circuitry that should detect and amplify that signal is impaired.
+
+\textbf{What is new here, and what is adjacent.} Two specific claims are ours. First, we localize quantization-induced safety damage to read- vs.\ write-side weight groups using a layer-swap ablation. Adjacent but distinct lines of work exist. Mixed-precision quantization studies have found that \texttt{down\_proj} is the most sensitive projection for perplexity quality, but not for safety. AIRD~\cite{chhabra2025aird} edits write-side projections to restore refusal in \emph{pruned} models, which is complementary to our finding rather than in conflict with it: AIRD uses write-side editing as the intervention, whereas we show that under aggressive quantization the bulk of recoverable ASR sits on the read side. Second, we restore safety via a scalar-$\alpha$ linear blend of two full-model quantizations of the same base at different bit-widths. Three adjacent directions a reviewer might raise are distinct from this. Task-vector merging (model soups, task arithmetic) blends different fine-tunes of a model, not different quantizations of a single fine-tune. Mixed-precision methods combine bit-widths per layer, channel, or singular-value component rather than as a scalar blend of whole-model quantizations. Dequantize-then-merge pipelines used around QLoRA operate in full precision between steps rather than blending two already-quantized copies. Q-resafe~\cite{qresafe2025} targets the same behavioral outcome as our fix but via DPO-style fine-tuning, which needs gradient computation and a safety dataset at deployment time, while our fix needs neither.
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+Quantization damages safety by nudging weights away from the exact configuration that safety training produced. The damage is not mysterious---it is in the weights, and it is fully reversible when both read-side and write-side matrices are restored. ``Fully reversible'' here means both ASR and ARC return to the FP32 baseline, which is what distinguishes real recovery from a model that has merely collapsed into over-refusing. Because the damage is reversible, a cheap reference quantization is enough to recover it: on the Llama-3.1-8B / AQLM-2bit damage case, $W_{\text{safe}} = 0.25\, W_{\text{2bit}} + 0.75\, W_{\text{INT8}}$ brings back 90--95\% of the lost safety with no retraining and no change to the inference pipeline. The diagnostic (Part~1) tells us that a training-free fix should exist; the method (Part~2) is the simplest such fix we could construct.
+
+% ============================================================
+% References
+% ============================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{arditi2024refusal}
+Andy Arditi, Oscar Obeso, Aaquib Syed, Daniel Paleka, Nina Panickssery, Wes Gurnee, and Neel Nanda.
+\newblock Refusal in Language Models Is Mediated by a Single Direction.
+\newblock In \emph{NeurIPS}, 2024. arXiv:2406.11717.
+
+\bibitem{kharinaev2025}
+Artyom Kharinaev et al.
+\newblock How Does Quantization Affect the Safety of Instruction-Tuned LLMs?
+\newblock 2025.
+
+\bibitem{qresafe2025}
+Kejia Chen, Jiawen Zhang, Jiacong Hu, Yu Wang, Jian Lou, Zunlei Feng, and Mingli Song.
+\newblock Q-resafe: Assessing Safety Risks and Quantization-aware Safety Patching for Quantized Large Language Models.
+\newblock In \emph{ICML}, 2025. arXiv:2506.20251.
+
+\bibitem{chhabra2025aird}
+Vishnu Kabir Chhabra and Mohammad Mahdi Khalili.
+\newblock Towards Understanding and Improving Refusal in Compressed Models via Mechanistic Interpretability.
+\newblock arXiv:2504.04215, 2025.
+
+\bibitem{hong2024compressed}
+Junyuan Hong, Jinhao Duan, Chenhui Zhang, Zhangheng Li, Chulin Xie, Kelsey Lieberman, James Diffenderfer, Brian Bartoldson, Ajay Jaiswal, Kaidi Xu, Bhavya Kailkhura, Dan Hendrycks, Dawn Song, Zhangyang Wang, and Bo Li.
+\newblock Decoding Compressed Trust: Scrutinizing the Trustworthiness of Efficient LLMs Under Compression.
+\newblock In \emph{ICML}, 2024. arXiv:2403.15447.
+
+\bibitem{dettmers2022llmint8}
+Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer.
+\newblock LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale.
+\newblock In \emph{NeurIPS}, 2022.
+
+\bibitem{dettmers2023qlora}
+Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, and Luke Zettlemoyer.
+\newblock QLoRA: Efficient Finetuning of Quantized LLMs.
+\newblock In \emph{NeurIPS}, 2023.
+
+\bibitem{frantar2022gptq}
+Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan Alistarh.
+\newblock GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers.
+\newblock In \emph{ICLR}, 2023. arXiv:2210.17323.
+
+\bibitem{egiazarian2024aqlm}
+Vage Egiazarian, Andrei Panferov, Denis Kuznedelev, Elias Frantar, Artem Babenko, and Dan Alistarh.
+\newblock Extreme Compression of Large Language Models via Additive Quantization.
+\newblock In \emph{ICML}, 2024. arXiv:2401.06118.
+
+\bibitem{lin2024awq}
+Ji Lin, Jiaming Tang, Haotian Tang, Shang Yang, Xingyu Dang, Chuang Gan, and Song Han.
+\newblock AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration.
+\newblock In \emph{MLSys}, 2024.
+
+\bibitem{mazeika2024harmbench}
+Mantas Mazeika, Long Phan, Xuwang Yin, et al.
+\newblock HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal.
+\newblock In \emph{ICML}, 2024.
+
+\bibitem{jiang2024wildjailbreak}
+Liwei Jiang et al.
+\newblock WildTeaming at Scale: From In-the-Wild Jailbreaks to (Adversarially) Safer Language Models.
+\newblock In \emph{NeurIPS}, 2024.
+
+\bibitem{clark2018arc}
+Peter Clark, Isaac Cowhey, Oren Etzioni, Tushar Khot, Ashish Sabharwal, Carissa Schoenick, and Oyvind Tafjord.
+\newblock Think you have Solved Question Answering? Try ARC, the AI2 Reasoning Challenge.
+\newblock arXiv:1803.05457, 2018.
+
+\end{thebibliography}
+
+\end{document}

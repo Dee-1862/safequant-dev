@@ -1,1 +1,0 @@
-ssh bhoomire@bridges2.psc.edu

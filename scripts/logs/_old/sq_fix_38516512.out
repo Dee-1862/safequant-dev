@@ -1,0 +1,78 @@
+=== Fix Quantizers | Job 38516512 | Mon Apr  6 05:20:14 EDT 2026 ===
+Tesla V100-SXM2-32GB, 32768 MiB
+GCC: gcc (Spack GCC) 10.2.0
+Python: Python 3.11.15
+nvcc: Build cuda_12.4.r12.4/compiler.33961263_0
+
+=== Step 1: Restoring pinned package versions ===
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+optimum 1.23.3 requires coloredlogs, which is not installed.
+Successfully installed accelerate-1.2.1 datasets-3.2.0 dill-0.3.8 fsspec-2024.9.0 huggingface_hub-0.27.1 multiprocess-0.70.16 numpy-1.26.4 nvidia-cublas-cu12-12.6.4.1 nvidia-cuda-cupti-cu12-12.6.80 nvidia-cuda-nvrtc-cu12-12.6.77 nvidia-cuda-runtime-cu12-12.6.77 nvidia-cudnn-cu12-9.5.1.17 nvidia-cufft-cu12-11.3.0.4 nvidia-cufile-cu12-1.11.1.6 nvidia-curand-cu12-10.3.7.77 nvidia-cusolver-cu12-11.7.1.2 nvidia-cusparse-cu12-12.5.4.2 nvidia-cusparselt-cu12-0.6.3 nvidia-nccl-cu12-2.26.2 nvidia-nvjitlink-cu12-12.6.85 nvidia-nvtx-cu12-12.6.77 safetensors-0.5.3 tokenizers-0.21.1 torch-2.7.1 transformers-4.47.1 triton-3.3.1
+
+Verifying versions:
+  torch: 2.7.1+cu126
+  transformers: 4.47.1
+  LlamaConfig: OK
+  bitsandbytes: 0.49.2
+
+=== Step 2: Rebuilding autoawq (no dependency changes) ===
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+ERROR: Failed to build 'autoawq' when getting requirements to build wheel
+
+=== Step 3: Rebuilding aqlm (no dependency changes) ===
+    Uninstalling aqlm-1.1.7:
+      Successfully uninstalled aqlm-1.1.7
+Successfully installed aqlm-1.1.7
+
+=== Step 4: Smoke test ===
+Loaded 10 test prompts
+
+============================================================
+  Testing: fp32 on llama7b
+============================================================
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  FAILED: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+operator torchvision::nms does not exist
+
+============================================================
+  Testing: nf4 on llama7b
+============================================================
+Loading NF4 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  FAILED: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+partially initialized module 'torchvision' has no attribute 'extension' (most likely due to a circular import)
+
+============================================================
+  Testing: awq on llama7b
+============================================================
+Loading AWQ model: llama7b → hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  FAILED: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+partially initialized module 'torchvision' has no attribute 'extension' (most likely due to a circular import)
+
+============================================================
+  Testing: aqlm2 on llama7b
+============================================================
+Loading AQLM-2bit model: llama7b → ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  FAILED: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+partially initialized module 'torchvision' has no attribute 'extension' (most likely due to a circular import)
+
+============================================================
+  Summary
+============================================================
+  fp32       FAIL  FAIL: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+operator torchvision::nms does not exist
+  nf4        FAIL  FAIL: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+partially initialized module 'torchvision' has no attribute 'extension' (most likely due to a circular import)
+  awq        FAIL  FAIL: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+partially initialized module 'torchvision' has no attribute 'extension' (most likely due to a circular import)
+  aqlm2      FAIL  FAIL: Failed to import transformers.models.llama.modeling_llama because of the following error (look up to see its traceback):
+partially initialized module 'torchvision' has no attribute 'extension' (most likely due to a circular import)
+
+FAILED quantizers: ['fp32', 'nf4', 'awq', 'aqlm2']
+Fix these before running the full benchmark
+
+Done: Mon Apr  6 05:24:35 EDT 2026

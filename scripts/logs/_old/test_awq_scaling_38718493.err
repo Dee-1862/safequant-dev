@@ -1,0 +1,4 @@
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:128: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [01:01<03:05, 61.76s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:02<02:02, 61.19s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:05<01:02, 62.14s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:17<00:00, 42.09s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:17<00:00, 49.30s/it]
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [01:22<01:22, 82.27s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:30<00:00, 74.08s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:30<00:00, 75.31s/it]

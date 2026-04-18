@@ -1,0 +1,35 @@
+=== Job 38718493 | Fri Apr 10 01:10:25 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+============================================================
+  AWQ Scaling Direction Test
+============================================================
+
+Loading FP32 model...
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  ✓ Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+Loading AWQ model...
+Loading AWQ model: llama7b → hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  ✓ Loaded AWQ 4-bit model
+
+  Baseline AWQ vs FP32 cosine sim: 0.9957
+
+  Checking dequant accuracy on layer 0 q_proj...
+  L2 dist (multiply): 3173.05
+  L2 dist (divide):   3161.81
+  L2 dist (raw fp32): 3171.13
+  → DIVIDE is correct (closer to AWQ dequant)
+
+  Testing full restoration with 'divide' direction...
+  Restored 224 layers
+  Restored (all layers, divide) vs FP32 cosine sim: nan
+  Baseline AWQ vs FP32 cosine sim:                         0.9957
+
+  ✗ Restoration FAILED — cosine sim nan < 0.90
+    Try flipping the scaling direction
+
+============================================================
+Done: Fri Apr 10 01:19:52 EDT 2026

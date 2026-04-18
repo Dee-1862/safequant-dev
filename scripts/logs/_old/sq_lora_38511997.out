@@ -1,0 +1,22 @@
+=== SafeLoRA Safety Correction | Mon Apr  6 03:11:50 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+=== Mistral GPTQ-4 ===
+Loading datasets...
+  WildJailbreak: 100 prompts
+  ARC: 30 questions
+  Patching: read-side only
+  Ranks: [16, 64, 256]
+
+Loading FP32 model...
+Loading FP32 model: mistral7b
+  Path: mistralai/Mistral-7B-Instruct-v0.3
+  Device: cuda
+  ✓ Loaded (7.25B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+Refusal direction: dim=4096
+Extracting FP32 weights...
+
+Generating FP32 baseline responses...
+
+  Generating responses (100 prompts)...

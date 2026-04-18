@@ -7,11 +7,89 @@ PHASE1_DIR = os.path.join(PROJECT_ROOT, "phase1_problem")
 DATA_DIR = os.path.join(PHASE1_DIR, "data", "prompts")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
-# models we test against - 0.5b is useful for quick sanity checks, 1.5b for real results
+# ── Bridges-2 / HuggingFace cache ────────────────────────────────────────────
+# Models are 1-10 GB each. $HOME has a 25 GB quota on Bridges-2 so we must
+# redirect the HF cache to Ocean ($PROJECT).
+#
+# Priority order (first one that is set wins):
+#   1. HF_HOME env var  (set in sbatch scripts)
+#   2. OCEAN_CACHE env var  (legacy override)
+#   3. Detected Ocean path for this user
+#   4. ~/.cache/huggingface (default, fine on non-Bridges machines)
+_OCEAN_DEFAULT = "/ocean/projects/cis240116p/bhoomire/.cache/huggingface"
+HF_HOME = (
+    os.environ.get("HF_HOME")
+    or os.environ.get("OCEAN_CACHE")
+    or (_OCEAN_DEFAULT if os.path.isdir("/ocean/projects/cis240116p") else None)
+    or os.path.expanduser("~/.cache/huggingface")
+)
+# Tell HuggingFace libraries where to cache — must be set before any import
+os.environ.setdefault("HF_HOME", HF_HOME)
+os.environ.setdefault("TRANSFORMERS_CACHE", HF_HOME)
+os.environ.setdefault("HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets"))
+
+# ── Models ───────────────────────────────────────────────────────────────────
+# Short aliases → HuggingFace model IDs.
+# Any HF model ID can also be passed directly (no alias needed).
 MODELS = {
+    # Qwen2.5 series (primary research models)
     "qwen0.5b": "Qwen/Qwen2.5-0.5B-Instruct",
     "qwen1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
-    "qwen3b": "Qwen/Qwen2.5-3B-Instruct",
+    "qwen3b":   "Qwen/Qwen2.5-3B-Instruct",
+    "qwen7b":   "Qwen/Qwen2.5-7B-Instruct",
+    # LLaMA 3.t2 / 3.1 (for cross-architecture validation)
+    "llama1b":  "meta-llama/Llama-3.2-1B-Instruct",
+    "llama3b":  "meta-llama/Llama-3.2-3B-Instruct",
+    "llama7b":  "meta-llama/Llama-3.1-8B-Instruct",
+    # Mistral (for cross-architecture validation)
+    "mistral7b": "mistralai/Mistral-7B-Instruct-v0.3",
+    "mistral7b-v02": "mistralai/Mistral-7B-Instruct-v0.2",
+    # Gemma 2 (for cross-architecture validation)
+    "gemma2b":  "google/gemma-2-2b-it",
+    "gemma9b":  "google/gemma-2-9b-it",
+    # Decoding Compressed Trust paper models
+    "llama2-13b-chat": "meta-llama/Llama-2-13b-chat-hf",
+    # Llama-3-8B (for AQLM pre-quantized checkpoint)
+    "llama3-8b": "meta-llama/Meta-Llama-3-8B-Instruct",
+}
+
+# Pre-quantized checkpoint aliases (for multi-quantizer comparison)
+# These map (base_model_alias, quantizer) → HuggingFace checkpoint ID
+QUANTIZED_CHECKPOINTS = {
+    # Qwen2.5-1.5B-Instruct
+    
+    ("qwen1.5b", "gptq4"): "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int4",
+    ("qwen1.5b", "gptq8"): "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int8",
+    ("qwen1.5b", "awq"):   "Qwen/Qwen2.5-1.5B-Instruct-AWQ",
+    # Qwen2.5-7B-Instruct
+    ("qwen7b", "gptq4"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4",
+    ("qwen7b", "gptq8"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int8",
+    ("qwen7b", "awq"):     "Qwen/Qwen2.5-7B-Instruct-AWQ",
+    # Llama-3.1-8B-Instruct
+    ("llama7b", "gptq4"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-4bit",
+    ("llama7b", "gptq8"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-8bit",
+    # Llama-3.2-1B-Instruct (fits on single V100)
+    ("llama1b", "gptq4"):  "ModelCloud/Llama-3.2-1B-Instruct-gptq-4bit",
+    # AQLM pre-quantized (SOTA 2-bit)
+    ("llama3-8b", "aqlm2"): "ISTA-DASLab/Meta-Llama-3-8B-Instruct-AQLM-2Bit-1x16",
+    # Llama-3.1-8B multi-quantizer comparison (matching arxiv 2502.15799)
+    ("llama7b", "awq"):    "hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4",
+    ("llama7b", "aqlm2"):  "ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf",
+    ("llama7b", "quip4"):  "kharinaev/Llama-3.1-8B-Instruct-quip-sharp-4bit",
+    ("llama7b", "quip2"):  "kharinaev/Llama-3.1-8B-Instruct-quip-sharp-2bit",
+    # Decoding Compressed Trust — exact models from the paper
+    ("llama2-13b-chat", "gptq4"): "compressed-llm/llama-2-13b-chat-gptq",
+    ("llama2-13b-chat", "gptq3"): "compressed-llm/llama-2-13b-chat-gptq",
+    ("llama2-13b-chat", "gptq8"): "compressed-llm/llama-2-13b-chat-gptq",
+    ("llama2-13b-chat", "awq"):   "compressed-llm/llama-2-13b-chat-awq",
+    # Mistral-7B-Instruct-v0.3
+    ("mistral7b", "gptq4"): "RedHatAI/Mistral-7B-Instruct-v0.3-GPTQ-4bit",
+    # Mistral-7B-Instruct-v0.2 (matches Kharinaev et al. 2025)
+    ("mistral7b-v02", "gptq4"): "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ",
+    ("mistral7b-v02", "awq"):   "TheBloke/Mistral-7B-Instruct-v0.2-AWQ",
+    ("mistral7b-v02", "aqlm2"): "ISTA-DASLab/Mistral-7B-Instruct-v0.2-AQLM-2Bit-2x8",
+    # Gemma-2-9B-it
+    ("gemma9b", "gptq4"): "ModelCloud/gemma-2-9b-it-gptq-4bit",
 }
 
 # fall back to cpu if no gpu is available
