@@ -1,0 +1,31 @@
+{
+  "model": "qwen7b",
+  "quantizer": "gptq4",
+  "n_calib": 200,
+  "n_eval": 200,
+  "n_arc": 50,
+  "fp32_best_layer": 10,
+  "fp32_best_separation": 9.567095474345882,
+  "quant_best_layer": 10,
+  "quant_best_separation": 9.669170639350597,
+  "cos_sim_self_vs_cross": 0.9440345764160156,
+  "results": {
+    "baseline": {
+      "asr": 56.5,
+      "arc": 52.0
+    },
+    "self_ablation": {
+      "asr": 56.0,
+      "arc": 48.0
+    },
+    "cross_ablation": {
+      "asr": 56.5,
+      "arc": 44.0
+    },
+    "random_control": {
+      "asr": 57.5,
+      "arc": 50.0
+    }
+  },
+  "decision": "MECHANISM-BROKEN \u2014 neither direction matters; model isn't using a single residual-stream direction"
+}

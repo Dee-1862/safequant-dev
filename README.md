@@ -1,131 +1,139 @@
-# SafeQuant
+# SafeQuant v2
 
-**Diagnosing and fixing safety damage in quantized large language models.**
+Mechanistic-interpretability study of how quantization affects safety in instruction-tuned LLMs. Reproducibility-hardened version of the original `safequant/` codebase. Every random operation routes through one seed (42); see `SEEDS.md` for the seed strategy.
 
-Aggressive weight quantization (2-bit AQLM, 2–3-bit GPTQ) weakens the safety training of aligned LLMs: quantized models answer harmful prompts their full-precision counterparts refuse. Standard utility benchmarks (perplexity, ARC) often miss this. SafeQuant has two parts:
+## Findings the active code supports
 
-1. **Part 1 Diagnostic:** A layer-swap ablation that locates where the safety damage lives. Restoring *both* the read-side and write-side projections of every layer to full precision brings the quantized model back to its FP32 baseline on **both** ASR and ARC. Neither side alone does this; read-only or write-only restoration often drives ASR down while leaving ARC broken (the model has collapsed into incoherent over-refusal).
-2. **Part 2 Training-free fix:** Because the damage is fully reversible by a weight-level intervention, it does not need full precision weights at deployment. A scalar-α linear blend of the 2-bit weights with a cheaper INT8 or NF4 quantization of the same base recovers 90–95% of the lost safety on Llama-3.1-8B / AQLM-2bit, with no retraining and no change to the inference pipeline.
+The repo is pruned to the 14 diagnostics whose outputs feed the v9 dashboard. Everything else lives in `/jet/home/bhoomire/projects/safequant/_trash/v2_inactive/` and is retrievable.
 
-The practical takeaway is one line:
+| Finding (v9 dashboard) | Diagnostic | Output prefix |
+|---|---|---|
+| F1 phase transition (cosine, three architectures) | `direction_drift.py` | `direction_drift_*.json` |
+| F2a directional ablation + 20-trial random null | `directional_ablation.py` + `random_ablation_distribution.py` | `directional_ablation_*.json`, `random_ablation_dist_*.json` |
+| F2b operative-layer routing | `layer_routing.py` | `layer_routing_*.json` |
+| F2b routing random baseline (migration vs collapse) | `routing_random_control.py` | `routing_random_control_*.json` |
+| Linear probe preservation (linear + MLP variants) | `refusal_probe.py` | `refusal_probe_*.json`, `refusal_probe_mlp_*.json` |
+| Probe geometry / rotation | `probe_geometry.py` | `probe_geometry_*.json` |
+| Probe causal ablation null #1 (harmful-vs-harmless) | `probe_causal_ablation.py` | `probe_causal_ablation_*.json` |
+| Probe causal ablation null #2 (behavioral outcome) | `behavioral_outcome_probe.py` | `behavioral_outcome_probe_*.json` |
+| F3a spatial localization (whole-network read/write) | `readwrite_restoration.py` | `readwrite_*.json` |
+| F3a depth axis (early / middle / late) | `readwrite_per_layer_range.py` | `readwrite_per_layer_range_*.json` |
+| F3a per-matrix axis (single projection across all layers) | `readwrite_per_projection.py` | `readwrite_per_projection_*.json` |
+| F3a per-projection at middle layers | `per_projection_middle.py` | `per_projection_middle_*.json` |
+| Activation swap (weight vs activation damage) | `activation_swap.py` | `activation_swap_*.json` |
 
-```
-W_safe = 0.25 · W_2bit + 0.75 · W_INT8
-```
+The three-conditions analysis (Section 4 of the v9 paper) is a synthesis of F1 + F2b + F4 outputs and does not require a dedicated script.
 
-Full write-up with methodology, tables, and limitations is in [report.tex](report.tex) (compile with `pdflatex`).
-
-## Key results
-
-All numbers are on **WildJailbreak** (100 held-out harmful prompts, HarmBench classifier) and **ARC-Challenge** (50 items).
-
-| Model | Quantizer | FP32 ASR | Quant ASR | Both-restored ASR | Both-restored ARC |
-|---|---|---|---|---|---|
-| Llama-3.1-8B | AQLM-2bit | 42 | 63 | **46** | **64** |
-| Llama-3.1-8B | GPTQ-2bit | 42 | 17* | **41** | **62** |
-| Mistral-7B-v0.2 | GPTQ-2bit | 74 | 5* | **73** | **62** |
-| Qwen2.5-7B | GPTQ-2bit | 55 | 9* | **57** | **56** |
-
-&nbsp;&nbsp;&nbsp;&nbsp;*Starred quant-ASR values look "safer" but are accompanied by catastrophic ARC collapse (the model has become incoherent, not safe).
-
-**Delta correction (Llama / AQLM-2bit):**
-
-| Reference | α | ASR (↓ better) | ARC (↑ better) | % of damage recovered |
-|---|---|---|---|---|
-| FP32 baseline | — | 42 | 62 | — |
-| AQLM-2bit (no fix) | — | 63 | 56 | 0 |
-| INT8 | 0.75 | **44** | **60** | **90** |
-| NF4 | 0.75 | **43** | **62** | **95** |
-
-## Repository structure
+## Repository layout
 
 ```
-safequant/
-├── report.tex                  Full research write-up (Part 1 + Part 2)
-├── core/
-│   ├── model_loader.py         Unified loader for FP32 / INT8 / NF4 / GPTQ / AQLM
-│   ├── refusal_direction.py    Arditi-style refusal direction extraction
-│   ├── evaluation.py           ASR via HarmBench classifier, ARC log-prob scoring
-│   └── datasets.py             WildJailbreak + ARC-Challenge loaders
-├── diagnostics/
-│   ├── readwrite_restoration.py       Part 1 layer-swap ablation
-│   ├── interpolation_restore.py       Smooth blending (uniform / error-only / safety-weighted)
-│   ├── delta_correction.py            Error-weighted delta (Part 2 first attempt)
-│   ├── uniform_delta_correction.py    Uniform delta with cheap refs (final method)
-│   └── activation_weighted_patch.py   Sparse binary ablation (Random / V2 / V3)
-├── scripts/                    SLURM batch scripts + dataset/model download helpers
-├── outputs/                    All experimental results as JSON
-└── requirements.txt
+safequant_v2/
+  README.md                  this file
+  SEEDS.md                   seed strategy and reproducibility guarantees
+  config.py                  paths, model aliases, defaults
+  core/
+    seeds.py                 set_global_seed(), fixed_rng(), torch_gen()
+    datasets.py              WildJailbreak, JBB, Alpaca, ARC, C4 loaders
+    model_loader.py          FP32/AQLM/GPTQ/AWQ loaders
+    evaluation.py            ASR via HarmBench judge + ARC via logprob
+    refusal_direction.py     Arditi-protocol helpers
+  diagnostics/               14 active diagnostics (see table above)
+  scripts/                   sbatch files + utility .py
+  outputs/                   per-run JSON results
+  figs/                      paper figures
+  docs/                      paper plan, finding tables, slides notes
 ```
 
-## Installation
+## Quantizer and model coverage
 
-```bash
-conda create -n safequant python=3.11 -y
-conda activate safequant
-pip install -r requirements.txt
-```
-
-A CUDA-capable GPU is required (we used a single H100-80GB on PSC Bridges-2). Lower-precision inference for quantized models uses `bitsandbytes` (INT8, NF4), `transformers` native GPTQ loading, and the `aqlm` package for AQLM-2bit.
-
-## Reproducing the results
-
-Each experiment reads `--model` and `--quantizer` flags and writes a single JSON under `outputs/`. To reproduce the full Part 1 table:
-
-```bash
-# Layer-swap restoration (Part 1)
-python diagnostics/readwrite_restoration.py --model llama7b    --quantizer aqlm2
-python diagnostics/readwrite_restoration.py --model llama7b    --quantizer gptq2
-python diagnostics/readwrite_restoration.py --model mistral7b-v02 --quantizer aqlm2
-# ... (all combinations in the report's Part 1 table)
-```
-
-Part 2 delta correction:
-
-```bash
-# Uniform blending against INT8 / NF4 references (recommended form)
-python diagnostics/uniform_delta_correction.py --model llama7b --quantizer aqlm2
-
-# Error-weighted variant (ablation)
-python diagnostics/delta_correction.py --model llama7b --quantizer aqlm2
-
-# Smooth interpolation toward FP32 (all three methods: uniform / error / safety-weighted)
-python diagnostics/interpolation_restore.py --model llama7b --quantizer aqlm2
-
-# Sparse binary restoration (V2 / V3 / random baselines)
-python diagnostics/activation_weighted_patch.py --model llama7b --quantizer aqlm2
-```
-
-SLURM batch scripts with the exact configurations used for the paper are in [scripts/](scripts/).
-
-## Methods at a glance
-
-- **Layer-swap restoration.** Start from a quantized model; copy back FP32 weights for a chosen group of projections in every layer; measure ASR + ARC. Groups: read-side (`q_proj`, `k_proj`, `v_proj`, `gate_proj`, `up_proj`), write-side (`o_proj`, `down_proj`), or both.
-- **Uniform delta correction.** `W_safe = (1-α) · W_2bit + α · W_ref` where `W_ref` is the same model quantized at INT8 or NF4. Applied to all seven projection matrices in every layer. One scalar hyperparameter (α = 0.75 in the reported numbers).
-- **Ablated alternatives** (all documented in the report): error-weighted smooth blending, safety-weighted smooth blending (error × refusal-importance × activation), and binary sparse restoration of top-k dimensions ranked by the same signals. Uniform blending beats or matches all of them while being simpler.
-
-## Quantizers covered
-
-| Format | Bits | Library | Status in SafeQuant |
+| Family | Llama-3.1-8B | Mistral-7B-v0.2 | Qwen-2.5-7B |
 |---|---|---|---|
-| INT8 | 8 | `bitsandbytes` | ✓ tested; also used as cheap reference |
-| NF4 | 4 | `bitsandbytes` | ✓ tested; also used as cheap reference |
-| GPTQ | 4 / 3 / 2 | `transformers` native | ✓ tested |
-| AQLM | 2 | `aqlm` | ✓ tested; primary damage case |
-| AWQ | 4 | `autoawq` | ✗ incompatible (absorbs per-channel scales into LayerNorm; layer-swap requires rewinding the LayerNorms too) |
+| FP16 baseline | yes | yes | yes |
+| AWQ-4 | yes | yes | yes |
+| GPTQ-4 | yes | yes | yes |
+| GPTQ-3 | yes | yes | yes |
+| GPTQ-2 | yes | yes | yes |
+| AQLM-2 | yes | yes | (no checkpoint available) |
 
-## Limitations
+FP16 ASR baselines: Llama 41%, Mistral 75%, Qwen 57%.
 
-- HarmBench classifier is an LLM judge; absolute ASR values are approximate. Effect sizes in the reported tables (>10 pp) are well above classifier noise.
-- Evaluation is 100 WildJailbreak prompts and 50 ARC items. Adequate for the conditions we distinguish; not adequate for fine differences between two strong fixes.
-- Model coverage: Llama-3.1-8B, Mistral-7B-v0.2, Qwen2.5-7B. Gemma, Phi, and MoE families are untested.
-- Part 2 delta-correction numbers are validated on Llama/AQLM-2 (the clean damage case). Extending to more damage cases is the next experiment.
-- Real-world deployment settings (long multi-turn chat, agentic pipelines, novel adversarial attacks) are not yet evaluated.
+## Quick start
 
-## Related work
+```bash
+conda activate /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+export HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
 
-Builds on and extends: Arditi et al. 2024 (refusal direction), Hong et al. 2024 (compressed trust), Chhabra & Khalili 2025 (AIRD for pruned models), Chen et al. 2025 (Q-resafe), Dettmers 2022/2023 (LLM.int8 / QLoRA), Frantar 2022 (GPTQ), Egiazarian 2024 (AQLM), Mazeika 2024 (HarmBench), Jiang 2024 (WildJailbreak). Full citations in [report.tex](report.tex).
+# F1 phase transition (per architecture)
+sbatch scripts/f1_phase_transition_llama.sbatch
+sbatch scripts/f1_phase_transition_mistral.sbatch
+sbatch scripts/f1_phase_transition_qwen.sbatch
 
-## Author
+# F2 operative layer + random baseline
+sbatch scripts/layer_routing_llama.sbatch                    # fast quantizers
+sbatch scripts/layer_routing_llama_slow.sbatch               # GPTQ-3/2 (Triton)
+sbatch scripts/routing_random_control_llama.sbatch           # 20-trial baseline
 
-Deekshith Reddy Bhoomireddy, Penn State University.
+# F2a directional ablation + random null
+sbatch scripts/f2_directional_ablation_llama_fast.sbatch
+sbatch scripts/random_ablation_dist_llama_awq.sbatch         # K=20 trials, n=100
+
+# F3 input-class probe (linear + MLP variants)
+sbatch scripts/refusal_probe_llama_linear.sbatch
+sbatch scripts/refusal_probe_llama_mlp.sbatch
+
+# Probe causal-ablation nulls (two distinct probes, both null on Llama-AQLM-2)
+sbatch scripts/add2_probe_causal_ablation.sbatch       # harmful-vs-harmless probe ablation
+sbatch scripts/behavioral_outcome_probe_pilot.sbatch   # response-label probe ablation
+
+# F4 probe direction cosine
+sbatch scripts/probe_geometry_llama.sbatch
+
+# F3a static restoration + decomposition axes
+sbatch scripts/f3a_static_restoration_llama.sbatch
+sbatch scripts/f3a_decomposition_per_layer_range.sbatch       # depth axis
+sbatch scripts/perproj_llama_gptq2.sbatch                     # per-matrix axis
+sbatch scripts/add4_per_projection_middle_llama.sbatch        # per-projection x middle
+
+# Activation swap (Llama-AQLM-2, 6 swap points)
+sbatch scripts/add5_activation_swap.sbatch
+```
+
+Mistral and Qwen sbatches follow the same naming pattern.
+
+## Smoke-test mode
+
+To validate the pipeline without burning GPU-hours:
+
+```bash
+python diagnostics/direction_drift.py --model llama7b --quantizer aqlm2 --n_calib 20
+python diagnostics/directional_ablation.py --model llama7b --quantizer aqlm2 --n_eval 20 --n_arc 10
+```
+
+Every diagnostic accepts `--n_eval`, `--n_arc`, `--n_calib` overrides. Defaults are n_eval=200, n_arc=50 in most scripts (lower than v1's 1000/1000 to keep slow-kernel cells like Qwen-GPTQ-3 tractable).
+
+## Reproducibility
+
+See `SEEDS.md` for full detail. Briefly:
+- Calibration prompts are identical run-to-run via `random.Random(42)` shuffle.
+- Refusal-direction extraction is deterministic.
+- Random unit-vector controls use `torch_gen(seed=42)` with a separate `rand_seed=12345`.
+- The only unavoidable non-determinism is tiny CUDA atomic-add noise; below +/- 1 prompt on n=200.
+
+## Archived material
+
+Anything not in the active diagnostics list above has been moved to `/jet/home/bhoomire/projects/safequant/_trash/` for retrieval if needed:
+
+| Archive folder | Contents |
+|---|---|
+| `v2_inactive/diagnostics/` | F3b parametric tuning, srbc (F4 input-dependence), Appendix C failed-static methods, behavioral-outcome probe pilot, probe causal ablation, three-criteria analysis, sigma-vs-probe diagnostics, variance-explained, rhat-propagation, build-routing-table |
+| `v2_inactive/scripts/` | sbatches and helper .py for the above; quantize/download utilities for Gemma-7B and Qwen3-8B; disabled `quantize_aqlm_qwen.sbatch` |
+| `v2_inactive/outputs/` | JSONs from inactive diagnostics |
+| `v2_singletons/` | Earlier dead-end outputs (bootstrap_gap, dsq_prototype, codebook_safety_tune, etc.) |
+| `v2_stale_sbatches/` | Superseded sbatches from earlier iterations |
+| `v2_logs/` | Old job logs |
+
+To restore any of these:
+
+```bash
+mv /jet/home/bhoomire/projects/safequant/_trash/v2_inactive/diagnostics/<name>.py diagnostics/
+```

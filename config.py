@@ -7,10 +7,9 @@ PHASE1_DIR = os.path.join(PROJECT_ROOT, "phase1_problem")
 DATA_DIR = os.path.join(PHASE1_DIR, "data", "prompts")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
-# ── Bridges-2 / HuggingFace cache ────────────────────────────────────────────
+# -- Bridges-2 / HuggingFace cache --------------------------------------------
 # Models are 1-10 GB each. $HOME has a 25 GB quota on Bridges-2 so we must
 # redirect the HF cache to Ocean ($PROJECT).
-#
 # Priority order (first one that is set wins):
 #   1. HF_HOME env var  (set in sbatch scripts)
 #   2. OCEAN_CACHE env var  (legacy override)
@@ -23,13 +22,13 @@ HF_HOME = (
     or (_OCEAN_DEFAULT if os.path.isdir("/ocean/projects/cis240116p") else None)
     or os.path.expanduser("~/.cache/huggingface")
 )
-# Tell HuggingFace libraries where to cache — must be set before any import
+# Tell HuggingFace libraries where to cache -- must be set before any import
 os.environ.setdefault("HF_HOME", HF_HOME)
 os.environ.setdefault("TRANSFORMERS_CACHE", HF_HOME)
 os.environ.setdefault("HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets"))
 
-# ── Models ───────────────────────────────────────────────────────────────────
-# Short aliases → HuggingFace model IDs.
+# -- Models -------------------------------------------------------------------
+# Short aliases -> HuggingFace model IDs.
 # Any HF model ID can also be passed directly (no alias needed).
 MODELS = {
     # Qwen2.5 series (primary research models)
@@ -51,10 +50,14 @@ MODELS = {
     "llama2-13b-chat": "meta-llama/Llama-2-13b-chat-hf",
     # Llama-3-8B (for AQLM pre-quantized checkpoint)
     "llama3-8b": "meta-llama/Meta-Llama-3-8B-Instruct",
+    # Qwen3 8B (second Qwen architecture, for cross-architecture validation)
+    "qwen3-8b": "Qwen/Qwen3-8B",
+    # Gemma 7B (4th architecture, for cross-architecture validation)
+    "gemma7b": "google/gemma-7b-it",
 }
 
 # Pre-quantized checkpoint aliases (for multi-quantizer comparison)
-# These map (base_model_alias, quantizer) → HuggingFace checkpoint ID
+# These map (base_model_alias, quantizer) -> HuggingFace checkpoint ID
 QUANTIZED_CHECKPOINTS = {
     # Qwen2.5-1.5B-Instruct
     
@@ -65,6 +68,12 @@ QUANTIZED_CHECKPOINTS = {
     ("qwen7b", "gptq4"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4",
     ("qwen7b", "gptq8"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int8",
     ("qwen7b", "awq"):     "Qwen/Qwen2.5-7B-Instruct-AWQ",
+    # Qwen3-8B
+    ("qwen3-8b", "gptq4"): "JunHowie/Qwen3-8B-GPTQ-Int4",
+    ("qwen3-8b", "awq"):   "Qwen/Qwen3-8B-AWQ",
+    # Gemma 7B (Gemma-1 generation)
+    ("gemma7b", "gptq4"):  "TechxGenus/gemma-7b-it-GPTQ",
+    ("gemma7b", "awq"):    "casperhansen/gemma-7b-it-awq",
     # Llama-3.1-8B-Instruct
     ("llama7b", "gptq4"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-4bit",
     ("llama7b", "gptq8"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-8bit",
@@ -77,7 +86,7 @@ QUANTIZED_CHECKPOINTS = {
     ("llama7b", "aqlm2"):  "ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf",
     ("llama7b", "quip4"):  "kharinaev/Llama-3.1-8B-Instruct-quip-sharp-4bit",
     ("llama7b", "quip2"):  "kharinaev/Llama-3.1-8B-Instruct-quip-sharp-2bit",
-    # Decoding Compressed Trust — exact models from the paper
+    # Decoding Compressed Trust -- exact models from the paper
     ("llama2-13b-chat", "gptq4"): "compressed-llm/llama-2-13b-chat-gptq",
     ("llama2-13b-chat", "gptq3"): "compressed-llm/llama-2-13b-chat-gptq",
     ("llama2-13b-chat", "gptq8"): "compressed-llm/llama-2-13b-chat-gptq",
@@ -96,9 +105,11 @@ QUANTIZED_CHECKPOINTS = {
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16 if DEVICE == "cuda" else torch.float32
 
-# how many prompts to use at each stage
-N_TRAIN = 128         # used for direction extraction
+# how many prompts to use at each stage (SafeQuant v2: n=1000 for both ASR and ARC)
+N_TRAIN = 128         # used for direction extraction (Arditi protocol)
 N_VAL = 32            # used for direction selection and validation
+N_EVAL = 1000         # WildJailbreak prompts for ASR evaluation
+N_ARC = 1000          # ARC-Challenge prompts for capability evaluation
 MAX_NEW_TOKENS = 256  # cap on generation length during ASR measurement
 
 # refusal detection uses simple prefix matching, same as Arditi and Chhabra papers

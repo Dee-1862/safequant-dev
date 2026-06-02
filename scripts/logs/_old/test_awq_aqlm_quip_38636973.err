@@ -1,40 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:128: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:650: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:650: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/cpp_extension.py:2356: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
-If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:20: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code1x16_matmat")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:33: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:48: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant_transposed")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:62: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code2x8_matmat")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:75: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:88: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant_transposed")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:102: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code1x8_matmat")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:115: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant")
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:128: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
-  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant_transposed")
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [01:45<01:45, 105.62s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:52<00:00, 82.65s/it] Loading checkpoint shards: 100%|██████████| 2/2 [02:52<00:00, 86.09s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(

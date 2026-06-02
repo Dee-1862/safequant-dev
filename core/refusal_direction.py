@@ -1,15 +1,3 @@
-"""
-Compute refusal direction using difference-in-means method.
-
-The refusal direction r̂ is a vector in the residual stream that represents
-"this is a dangerous/harmful request". It's computed by taking the difference
-between mean activations on harmful vs harmless prompts.
-
-Uses benchmark datasets:
-- AdvBench (harmful): Zou et al., "Universal and Transferable Adversarial Attacks on Aligned Language Models", 2023
-- Anthropic HH-RLHF (harmless): Bai et al., "Training a Helpful and Harmless Assistant with RLHF", 2022
-"""
-
 import torch
 from tqdm import tqdm
 from pathlib import Path
@@ -105,16 +93,16 @@ def extract_activations(model, tokenizer, prompts, layer_idx=-1):
 
 def compute(model, tokenizer, n_samples=100, layer_idx=-1, normalize=True):
     """
-    Compute refusal direction r̂ using difference-in-means.
+    Compute refusal direction r_hat using difference-in-means.
 
-    r̂ = mean(harmful_activations) - mean(harmless_activations)
+    r_hat = mean(harmful_activations) - mean(harmless_activations)
 
     Args:
         model: Language model
         tokenizer: Tokenizer
         n_samples: Number of samples per category
         layer_idx: Layer to extract from (-1 = last)
-        normalize: Whether to normalize r̂ to unit length
+        normalize: Whether to normalize r_hat to unit length
 
     Returns:
         (r_hat, harmful_acts, harmless_acts)
@@ -130,7 +118,7 @@ def compute(model, tokenizer, n_samples=100, layer_idx=-1, normalize=True):
 
     # Load prompts
     harmful, harmless = load_prompts(n_samples)
-    print(f"  ✓ Loaded {len(harmful)} harmful and {len(harmless)} harmless prompts")
+    print(f"  OK Loaded {len(harmful)} harmful and {len(harmless)} harmless prompts")
 
     # Extract activations
     print("\n[1/3] Extracting harmful activations...")
@@ -147,9 +135,9 @@ def compute(model, tokenizer, n_samples=100, layer_idx=-1, normalize=True):
 
     if normalize:
         r_hat = r_hat / torch.norm(r_hat)
-        print(f"  ✓ Normalized refusal direction (||r̂|| = 1.0)")
+        print(f"  OK Normalized refusal direction (||r_hat|| = 1.0)")
     else:
-        print(f"  ✓ Unnormalized refusal direction (||r̂|| = {torch.norm(r_hat):.2f})")
+        print(f"  OK Unnormalized refusal direction (||r_hat|| = {torch.norm(r_hat):.2f})")
 
     print(f"\n  Refusal direction computed:")
     print(f"    Shape: {r_hat.shape}")
@@ -188,4 +176,4 @@ if __name__ == "__main__":
         'n_samples': args.n_samples
     }, output_path)
 
-    print(f"\n✓ Saved to {output_path}")
+    print(f"\nOK Saved to {output_path}")

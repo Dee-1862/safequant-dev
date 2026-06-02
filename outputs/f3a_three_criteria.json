@@ -1,0 +1,187 @@
+{
+  "thresholds": {
+    "tau_damage_pp": 10.0,
+    "tau_rec_lo_pct": 0.0,
+    "tau_rec_hi_pct": 130.0,
+    "tau_arc_pp": 15.0
+  },
+  "well_posed_cells": [
+    "Llama-aqlm2"
+  ],
+  "rows": [
+    {
+      "fp32_asr": 41.0,
+      "quantized_asr": 38.0,
+      "damage_pp": -3.0,
+      "both_restored_asr": 39.0,
+      "arc_fp32": 62.0,
+      "arc_min": 52.0,
+      "arc_drop_pp": 10.0,
+      "read_recovery_pct": -66.66666666666667,
+      "write_recovery_pct": -16.666666666666668,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": false,
+      "C3_arc_stable": true,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -3.0pp)",
+        "C2 (R%=-67, W%=-17 outside [0,130])"
+      ],
+      "label": "Llama",
+      "model": "llama7b",
+      "quantizer": "gptq4"
+    },
+    {
+      "fp32_asr": 41.0,
+      "quantized_asr": 13.5,
+      "damage_pp": -27.5,
+      "both_restored_asr": 39.0,
+      "arc_fp32": 62.0,
+      "arc_min": 42.0,
+      "arc_drop_pp": 20.0,
+      "read_recovery_pct": -25.454545454545453,
+      "write_recovery_pct": 130.9090909090909,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": false,
+      "C3_arc_stable": false,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -27.5pp)",
+        "C2 (R%=-25, W%=+131 outside [0,130])",
+        "C3 (ARC drop +20.0pp > \u03c4=15.0)"
+      ],
+      "label": "Llama",
+      "model": "llama7b",
+      "quantizer": "gptq3"
+    },
+    {
+      "fp32_asr": 41.0,
+      "quantized_asr": 19.5,
+      "damage_pp": -21.5,
+      "both_restored_asr": 39.0,
+      "arc_fp32": 62.0,
+      "arc_min": 20.0,
+      "arc_drop_pp": 42.0,
+      "read_recovery_pct": -65.11627906976744,
+      "write_recovery_pct": -65.11627906976744,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": false,
+      "C3_arc_stable": false,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -21.5pp)",
+        "C2 (R%=-65, W%=-65 outside [0,130])",
+        "C3 (ARC drop +42.0pp > \u03c4=15.0)"
+      ],
+      "label": "Llama",
+      "model": "llama7b",
+      "quantizer": "gptq2"
+    },
+    {
+      "fp32_asr": 41.0,
+      "quantized_asr": 62.5,
+      "damage_pp": 21.5,
+      "both_restored_asr": 43.0,
+      "arc_fp32": 62.0,
+      "arc_min": 50.0,
+      "arc_drop_pp": 12.0,
+      "read_recovery_pct": 83.72093023255815,
+      "write_recovery_pct": 55.81395348837209,
+      "C1_positive_damage": true,
+      "C2_interpretable_recovery": true,
+      "C3_arc_stable": true,
+      "all_pass": true,
+      "fail_reasons": [],
+      "label": "Llama",
+      "model": "llama7b",
+      "quantizer": "aqlm2"
+    },
+    {
+      "fp32_asr": 74.5,
+      "quantized_asr": 70.5,
+      "damage_pp": -4.0,
+      "both_restored_asr": 74.5,
+      "arc_fp32": 62.0,
+      "arc_min": 60.0,
+      "arc_drop_pp": 2.0,
+      "read_recovery_pct": 125.0,
+      "write_recovery_pct": 100.0,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": true,
+      "C3_arc_stable": true,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -4.0pp)"
+      ],
+      "label": "Mistral",
+      "model": "mistral7b-v02",
+      "quantizer": "gptq4"
+    },
+    {
+      "fp32_asr": 74.5,
+      "quantized_asr": 73.5,
+      "damage_pp": -1.0,
+      "both_restored_asr": 74.5,
+      "arc_fp32": 62.0,
+      "arc_min": 40.0,
+      "arc_drop_pp": 22.0,
+      "read_recovery_pct": 250.0,
+      "write_recovery_pct": -450.0,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": false,
+      "C3_arc_stable": false,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -1.0pp)",
+        "C2 (R%=+250, W%=-450 outside [0,130])",
+        "C3 (ARC drop +22.0pp > \u03c4=15.0)"
+      ],
+      "label": "Mistral",
+      "model": "mistral7b-v02",
+      "quantizer": "gptq3"
+    },
+    {
+      "fp32_asr": 74.5,
+      "quantized_asr": 5.0,
+      "damage_pp": -69.5,
+      "both_restored_asr": 74.5,
+      "arc_fp32": 62.0,
+      "arc_min": 32.0,
+      "arc_drop_pp": 30.0,
+      "read_recovery_pct": 88.48920863309353,
+      "write_recovery_pct": 79.13669064748201,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": true,
+      "C3_arc_stable": false,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -69.5pp)",
+        "C3 (ARC drop +30.0pp > \u03c4=15.0)"
+      ],
+      "label": "Mistral",
+      "model": "mistral7b-v02",
+      "quantizer": "gptq2"
+    },
+    {
+      "fp32_asr": 74.5,
+      "quantized_asr": 67.0,
+      "damage_pp": -7.5,
+      "both_restored_asr": 75.5,
+      "arc_fp32": 62.0,
+      "arc_min": 52.0,
+      "arc_drop_pp": 10.0,
+      "read_recovery_pct": 73.33333333333333,
+      "write_recovery_pct": 53.333333333333336,
+      "C1_positive_damage": false,
+      "C2_interpretable_recovery": true,
+      "C3_arc_stable": true,
+      "all_pass": false,
+      "fail_reasons": [
+        "C1 (no positive damage: -7.5pp)"
+      ],
+      "label": "Mistral",
+      "model": "mistral7b-v02",
+      "quantizer": "aqlm2"
+    }
+  ]
+}

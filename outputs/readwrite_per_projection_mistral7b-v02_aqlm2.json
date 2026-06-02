@@ -1,0 +1,50 @@
+{
+  "model": "mistral7b-v02",
+  "quantizer": "aqlm2",
+  "n_eval": 200,
+  "n_reasoning": 50,
+  "seed": 42,
+  "fp32_asr": 74.5,
+  "quantized_asr": 67.0,
+  "damage_pp": -7.5,
+  "asr_per_condition": {
+    "fp32": 74.5,
+    "aqlm2": 67.0,
+    "only_self_attn_q_proj": 76.0,
+    "only_self_attn_k_proj": 73.5,
+    "only_self_attn_v_proj": 66.0,
+    "only_self_attn_o_proj": 73.0,
+    "only_mlp_gate_proj": 69.5,
+    "only_mlp_up_proj": 76.0,
+    "only_mlp_down_proj": 69.5
+  },
+  "arc_per_condition": {
+    "fp32": 62.0,
+    "aqlm2": 56.0,
+    "only_self_attn_q_proj": 60.0,
+    "only_self_attn_k_proj": 54.0,
+    "only_self_attn_v_proj": 58.0,
+    "only_self_attn_o_proj": 54.0,
+    "only_mlp_gate_proj": 54.0,
+    "only_mlp_up_proj": 60.0,
+    "only_mlp_down_proj": 54.0
+  },
+  "recovery_pp_per_projection": {
+    "self_attn.q_proj": -9.0,
+    "self_attn.k_proj": -6.5,
+    "self_attn.v_proj": 1.0,
+    "self_attn.o_proj": -6.0,
+    "mlp.gate_proj": -2.5,
+    "mlp.up_proj": -9.0,
+    "mlp.down_proj": -2.5
+  },
+  "recovery_pct_per_projection": {
+    "self_attn.q_proj": 120.0,
+    "self_attn.k_proj": 86.66666666666667,
+    "self_attn.v_proj": -13.333333333333334,
+    "self_attn.o_proj": 80.0,
+    "mlp.gate_proj": 33.33333333333333,
+    "mlp.up_proj": 120.0,
+    "mlp.down_proj": 33.33333333333333
+  }
+}

@@ -1,325 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:128: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [01:02<03:08, 62.83s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:02<02:02, 61.17s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:09<01:03, 63.70s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:20<00:00, 43.01s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:20<00:00, 50.21s/it]
-FP32:   0%|          | 0/100 [00:00<?, ?it/s]/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(
-FP32:   1%|          | 1/100 [00:07<12:19,  7.47s/it]FP32:   2%|▏         | 2/100 [00:11<09:04,  5.56s/it]FP32:   3%|▎         | 3/100 [00:15<08:00,  4.95s/it]FP32:   4%|▍         | 4/100 [00:16<05:03,  3.16s/it]FP32:   5%|▌         | 5/100 [00:20<05:35,  3.53s/it]FP32:   6%|▌         | 6/100 [00:24<05:59,  3.82s/it]FP32:   7%|▋         | 7/100 [00:29<06:07,  3.95s/it]FP32:   8%|▊         | 8/100 [00:33<06:13,  4.06s/it]FP32:   9%|▉         | 9/100 [00:37<06:13,  4.10s/it]FP32:  10%|█         | 10/100 [00:38<04:28,  2.98s/it]FP32:  11%|█         | 11/100 [00:42<04:58,  3.35s/it]FP32:  12%|█▏        | 12/100 [00:46<05:15,  3.59s/it]FP32:  13%|█▎        | 13/100 [00:46<03:42,  2.56s/it]FP32:  14%|█▍        | 14/100 [00:51<04:29,  3.14s/it]FP32:  15%|█▌        | 15/100 [00:51<03:16,  2.31s/it]FP32:  16%|█▌        | 16/100 [00:52<02:42,  1.94s/it]FP32:  17%|█▋        | 17/100 [00:52<01:57,  1.41s/it]FP32:  18%|█▊        | 18/100 [00:56<03:03,  2.24s/it]FP32:  19%|█▉        | 19/100 [00:57<02:17,  1.69s/it]FP32:  20%|██        | 20/100 [00:57<01:44,  1.30s/it]FP32:  21%|██        | 21/100 [01:02<02:55,  2.23s/it]FP32:  22%|██▏       | 22/100 [01:02<02:13,  1.71s/it]FP32:  23%|██▎       | 23/100 [01:06<03:09,  2.46s/it]FP32:  24%|██▍       | 24/100 [01:11<03:52,  3.06s/it]FP32:  25%|██▌       | 25/100 [01:15<04:17,  3.43s/it]FP32:  26%|██▌       | 26/100 [01:19<04:31,  3.67s/it]FP32:  27%|██▋       | 27/100 [01:23<04:39,  3.83s/it]FP32:  28%|██▊       | 28/100 [01:24<03:18,  2.75s/it]FP32:  29%|██▉       | 29/100 [01:28<03:47,  3.21s/it]FP32:  30%|███       | 30/100 [01:29<02:47,  2.40s/it]FP32:  31%|███       | 31/100 [01:33<03:22,  2.94s/it]FP32:  32%|███▏      | 32/100 [01:37<03:47,  3.35s/it]FP32:  33%|███▎      | 33/100 [01:41<04:01,  3.61s/it]FP32:  34%|███▍      | 34/100 [01:46<04:11,  3.82s/it]FP32:  35%|███▌      | 35/100 [01:50<04:22,  4.03s/it]FP32:  36%|███▌      | 36/100 [01:54<04:22,  4.10s/it]FP32:  37%|███▋      | 37/100 [01:58<04:18,  4.11s/it]FP32:  38%|███▊      | 38/100 [01:59<03:09,  3.06s/it]FP32:  39%|███▉      | 39/100 [02:03<03:26,  3.38s/it]FP32:  40%|████      | 40/100 [02:08<03:40,  3.68s/it]FP32:  41%|████      | 41/100 [02:08<02:42,  2.75s/it]FP32:  42%|████▏     | 42/100 [02:09<01:58,  2.04s/it]FP32:  43%|████▎     | 43/100 [02:13<02:34,  2.70s/it]FP32:  44%|████▍     | 44/100 [02:13<01:50,  1.97s/it]FP32:  45%|████▌     | 45/100 [02:17<02:25,  2.65s/it]FP32:  46%|████▌     | 46/100 [02:18<01:50,  2.05s/it]FP32:  47%|████▋     | 47/100 [02:18<01:23,  1.57s/it]FP32:  48%|████▊     | 48/100 [02:23<02:06,  2.44s/it]FP32:  49%|████▉     | 49/100 [02:23<01:33,  1.83s/it]FP32:  50%|█████     | 50/100 [02:27<02:06,  2.54s/it]FP32:  51%|█████     | 51/100 [02:28<01:31,  1.87s/it]FP32:  52%|█████▏    | 52/100 [02:28<01:10,  1.47s/it]FP32:  53%|█████▎    | 53/100 [02:29<00:53,  1.14s/it]FP32:  54%|█████▍    | 54/100 [02:33<01:34,  2.05s/it]FP32:  55%|█████▌    | 55/100 [02:33<01:07,  1.51s/it]FP32:  56%|█████▌    | 56/100 [02:37<01:41,  2.31s/it]FP32:  57%|█████▋    | 57/100 [02:41<02:02,  2.85s/it]FP32:  58%|█████▊    | 58/100 [02:46<02:16,  3.25s/it]FP32:  59%|█████▉    | 59/100 [02:50<02:25,  3.54s/it]FP32:  60%|██████    | 60/100 [02:50<01:43,  2.58s/it]FP32:  61%|██████    | 61/100 [02:54<01:59,  3.07s/it]FP32:  62%|██████▏   | 62/100 [02:59<02:10,  3.44s/it]FP32:  63%|██████▎   | 63/100 [03:03<02:16,  3.68s/it]FP32:  64%|██████▍   | 64/100 [03:04<01:42,  2.83s/it]FP32:  65%|██████▌   | 65/100 [03:08<01:53,  3.25s/it]FP32:  66%|██████▌   | 66/100 [03:12<02:01,  3.59s/it]FP32:  67%|██████▋   | 67/100 [03:13<01:24,  2.57s/it]FP32:  68%|██████▊   | 68/100 [03:13<01:03,  1.99s/it]FP32:  69%|██████▉   | 69/100 [03:14<00:46,  1.50s/it]FP32:  70%|███████   | 70/100 [03:18<01:09,  2.32s/it]FP32:  71%|███████   | 71/100 [03:18<00:48,  1.68s/it]FP32:  72%|███████▏  | 72/100 [03:22<01:08,  2.46s/it]FP32:  73%|███████▎  | 73/100 [03:27<01:21,  3.02s/it]FP32:  74%|███████▍  | 74/100 [03:31<01:27,  3.38s/it]FP32:  75%|███████▌  | 75/100 [03:35<01:30,  3.61s/it]FP32:  76%|███████▌  | 76/100 [03:35<01:02,  2.60s/it]FP32:  77%|███████▋  | 77/100 [03:39<01:10,  3.07s/it]FP32:  78%|███████▊  | 78/100 [03:40<00:50,  2.30s/it]FP32:  79%|███████▉  | 79/100 [03:44<01:01,  2.94s/it]FP32:  80%|████████  | 80/100 [03:45<00:44,  2.20s/it]FP32:  81%|████████  | 81/100 [03:49<00:53,  2.83s/it]FP32:  82%|████████▏ | 82/100 [03:54<01:00,  3.35s/it]FP32:  83%|████████▎ | 83/100 [03:58<01:02,  3.65s/it]FP32:  84%|████████▍ | 84/100 [04:02<01:01,  3.84s/it]FP32:  85%|████████▌ | 85/100 [04:06<00:59,  3.95s/it]FP32:  86%|████████▌ | 86/100 [04:07<00:39,  2.83s/it]FP32:  87%|████████▋ | 87/100 [04:11<00:42,  3.25s/it]FP32:  88%|████████▊ | 88/100 [04:15<00:43,  3.61s/it]FP32:  89%|████████▉ | 89/100 [04:16<00:28,  2.60s/it]FP32:  90%|█████████ | 90/100 [04:16<00:19,  1.96s/it]FP32:  91%|█████████ | 91/100 [04:20<00:23,  2.63s/it]FP32:  92%|█████████▏| 92/100 [04:24<00:24,  3.09s/it]FP32:  93%|█████████▎| 93/100 [04:29<00:23,  3.42s/it]FP32:  94%|█████████▍| 94/100 [04:29<00:15,  2.61s/it]FP32:  95%|█████████▌| 95/100 [04:34<00:15,  3.08s/it]FP32:  96%|█████████▌| 96/100 [04:38<00:13,  3.47s/it]FP32:  97%|█████████▋| 97/100 [04:42<00:11,  3.69s/it]FP32:  98%|█████████▊| 98/100 [04:43<00:05,  2.73s/it]FP32:  99%|█████████▉| 99/100 [04:47<00:03,  3.17s/it]FP32: 100%|██████████| 100/100 [04:47<00:00,  2.43s/it]FP32: 100%|██████████| 100/100 [04:47<00:00,  2.88s/it]
-Generating test split:   0%|          | 0/4358 [00:00<?, ? examples/s]Generating test split:  23%|██▎       | 1000/4358 [00:01<00:04, 795.17 examples/s]Generating test split: 100%|██████████| 4358/4358 [00:01<00:00, 3404.38 examples/s]
-Generating train split:   0%|          | 0/36718 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 36718/36718 [00:00<00:00, 1245009.70 examples/s]
-Generating validation split:   0%|          | 0/3760 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 3760/3760 [00:00<00:00, 239590.77 examples/s]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:410: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
-  @custom_fwd
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:418: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
-  @custom_bwd
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:461: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
-  @custom_fwd(cast_inputs=torch.float16)
-CUDA extension not installed.
-CUDA extension not installed.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.58s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.58s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.64s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.17s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.33s/it]
-Quantizing model.layers blocks :   0%|          | 0/32 [00:00<?, ?it/s]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:08<00:50,  8.34s/it][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:09<00:19,  3.90s/it][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:09<00:09,  2.48s/it][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:10<00:05,  1.81s/it][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:11<00:02,  1.46s/it][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:12<00:01,  1.25s/it][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:15<00:00,  1.85s/it][A
-                                                                                 [AQuantizing model.layers blocks :   3%|▎         | 1/32 [00:15<08:01, 15.53s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.56s/it][A
-                                                                                 [AQuantizing model.layers blocks :   6%|▋         | 2/32 [00:23<05:33, 11.10s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.56s/it][A
-                                                                                 [AQuantizing model.layers blocks :   9%|▉         | 3/32 [00:31<04:40,  9.68s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.27it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.27it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.27it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  12%|█▎        | 4/32 [00:39<04:12,  9.01s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.56s/it][A
-                                                                                 [AQuantizing model.layers blocks :  16%|█▌        | 5/32 [00:47<03:53,  8.64s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.25it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.58s/it][A
-                                                                                 [AQuantizing model.layers blocks :  19%|█▉        | 6/32 [00:55<03:39,  8.44s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  22%|██▏       | 7/32 [01:03<03:27,  8.29s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.25it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.25it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.25it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  25%|██▌       | 8/32 [01:11<03:17,  8.21s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.27it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.27it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.27it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  28%|██▊       | 9/32 [01:19<03:07,  8.14s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.27it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.56s/it][A
-                                                                                 [AQuantizing model.layers blocks :  31%|███▏      | 10/32 [01:27<02:58,  8.10s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.58s/it][A
-                                                                                 [AQuantizing model.layers blocks :  34%|███▍      | 11/32 [01:35<02:49,  8.08s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  38%|███▊      | 12/32 [01:43<02:41,  8.06s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.25it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.25it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.25it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.25it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.21it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.58s/it][A
-                                                                                 [AQuantizing model.layers blocks :  41%|████      | 13/32 [01:51<02:33,  8.06s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  44%|████▍     | 14/32 [01:59<02:24,  8.05s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:04,  1.24it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.23it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.22it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.20it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.19it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.62s/it][A
-                                                                                 [AQuantizing model.layers blocks :  47%|████▋     | 15/32 [02:07<02:17,  8.12s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.20it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:04,  1.20it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.21it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.20it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.19it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:05<00:00,  1.18it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.62s/it][A
-                                                                                 [AQuantizing model.layers blocks :  50%|█████     | 16/32 [02:16<02:10,  8.17s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.21it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:04,  1.21it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.20it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.21it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.19it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:05<00:00,  1.18it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.63s/it][A
-                                                                                 [AQuantizing model.layers blocks :  53%|█████▎    | 17/32 [02:24<02:03,  8.22s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:05,  1.20it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:04,  1.20it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.20it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.21it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.19it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:05<00:00,  1.18it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.63s/it][A
-                                                                                 [AQuantizing model.layers blocks :  56%|█████▋    | 18/32 [02:32<01:55,  8.25s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.21it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:04,  1.20it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.21it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.21it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.19it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:05<00:00,  1.18it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.60s/it][A
-                                                                                 [AQuantizing model.layers blocks :  59%|█████▉    | 19/32 [02:41<01:47,  8.24s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.24it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:04,  1.24it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.25it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.24it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.22it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:08<00:00,  1.58s/it][A
-                                                                                 [AQuantizing model.layers blocks :  62%|██████▎   | 20/32 [02:49<01:38,  8.19s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.25it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.25it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.25it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.25it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  66%|██████▌   | 21/32 [02:57<01:29,  8.14s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  69%|██████▉   | 22/32 [03:05<01:21,  8.10s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.25it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.25it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  72%|███████▏  | 23/32 [03:13<01:12,  8.08s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  75%|███████▌  | 24/32 [03:21<01:04,  8.06s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.25it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.25it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.25it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  78%|███████▊  | 25/32 [03:29<00:56,  8.05s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  81%|████████▏ | 26/32 [03:37<00:48,  8.04s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.25it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.25it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  84%|████████▍ | 27/32 [03:45<00:40,  8.03s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.56s/it][A
-                                                                                 [AQuantizing model.layers blocks :  88%|████████▊ | 28/32 [03:53<00:32,  8.02s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  91%|█████████ | 29/32 [04:01<00:24,  8.01s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  94%|█████████▍| 30/32 [04:09<00:16,  8.01s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.26it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.26it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:04<00:01,  1.23it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.22it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.57s/it][A
-                                                                                 [AQuantizing model.layers blocks :  97%|█████████▋| 31/32 [04:17<00:08,  8.01s/it]
-Quantizing layers inside the block:   0%|          | 0/7 [00:00<?, ?it/s][A
-Quantizing layers inside the block:  14%|█▍        | 1/7 [00:00<00:04,  1.26it/s][A
-Quantizing layers inside the block:  29%|██▊       | 2/7 [00:01<00:03,  1.27it/s][A
-Quantizing layers inside the block:  43%|████▎     | 3/7 [00:02<00:03,  1.27it/s][A
-Quantizing layers inside the block:  57%|█████▋    | 4/7 [00:03<00:02,  1.26it/s][A
-Quantizing layers inside the block:  71%|███████▏  | 5/7 [00:03<00:01,  1.24it/s][A
-Quantizing layers inside the block:  86%|████████▌ | 6/7 [00:04<00:00,  1.23it/s][A
-Quantizing layers inside the block: 100%|██████████| 7/7 [00:07<00:00,  1.56s/it][A
-                                                                                 [AQuantizing model.layers blocks : 100%|██████████| 32/32 [04:25<00:00,  8.00s/it]Quantizing model.layers blocks : 100%|██████████| 32/32 [04:25<00:00,  8.29s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_utils.py:5055: FutureWarning: `_is_quantized_training_enabled` is going to be deprecated in transformers 4.39.0. Please use `model.hf_quantizer.is_trainable` instead
-  warnings.warn(
-`loss_type=None` was set in the config but it is unrecognised.Using the default loss: `ForCausalLMLoss`.
-gptq3:   0%|          | 0/100 [00:00<?, ?it/s]/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(
-gptq3:   1%|          | 1/100 [00:47<1:18:12, 47.40s/it]gptq3:   2%|▏         | 2/100 [01:34<1:17:17, 47.32s/it]gptq3:   3%|▎         | 3/100 [02:21<1:16:27, 47.29s/it]gptq3:   4%|▍         | 4/100 [03:09<1:15:38, 47.27s/it]gptq3:   5%|▌         | 5/100 [03:56<1:14:50, 47.27s/it]gptq3:   6%|▌         | 6/100 [04:43<1:14:03, 47.27s/it]gptq3:   7%|▋         | 7/100 [05:30<1:13:15, 47.27s/it]gptq3:   8%|▊         | 8/100 [06:18<1:12:28, 47.27s/it]gptq3:   9%|▉         | 9/100 [07:05<1:11:41, 47.26s/it]gptq3:  10%|█         | 10/100 [07:52<1:10:53, 47.27s/it]gptq3:  11%|█         | 11/100 [08:40<1:10:06, 47.26s/it]gptq3:  12%|█▏        | 12/100 [09:27<1:09:18, 47.25s/it]gptq3:  13%|█▎        | 13/100 [10:14<1:08:30, 47.25s/it]gptq3:  14%|█▍        | 14/100 [11:01<1:07:44, 47.27s/it]gptq3:  15%|█▌        | 15/100 [11:49<1:06:57, 47.26s/it]gptq3:  16%|█▌        | 16/100 [12:36<1:06:09, 47.26s/it]gptq3:  17%|█▋        | 17/100 [13:23<1:05:23, 47.27s/it]gptq3:  18%|█▊        | 18/100 [14:10<1:04:35, 47.26s/it]gptq3:  19%|█▉        | 19/100 [14:58<1:03:47, 47.26s/it]gptq3:  20%|██        | 20/100 [15:45<1:02:59, 47.25s/it]gptq3:  21%|██        | 21/100 [16:32<1:02:13, 47.26s/it]gptq3:  22%|██▏       | 22/100 [17:19<1:01:26, 47.26s/it]gptq3:  23%|██▎       | 23/100 [18:07<1:00:39, 47.26s/it]gptq3:  24%|██▍       | 24/100 [18:54<59:52, 47.27s/it]  gptq3:  25%|██▌       | 25/100 [19:41<59:05, 47.27s/it]gptq3:  26%|██▌       | 26/100 [20:28<58:17, 47.27s/it]gptq3:  27%|██▋       | 27/100 [21:16<57:30, 47.26s/it]gptq3:  28%|██▊       | 28/100 [22:03<56:43, 47.27s/it]gptq3:  29%|██▉       | 29/100 [22:50<55:56, 47.27s/it]gptq3:  30%|███       | 30/100 [23:38<55:08, 47.26s/it]gptq3:  31%|███       | 31/100 [24:25<54:20, 47.26s/it]gptq3:  32%|███▏      | 32/100 [25:12<53:33, 47.26s/it]gptq3:  33%|███▎      | 33/100 [25:59<52:46, 47.26s/it]gptq3:  34%|███▍      | 34/100 [26:47<51:59, 47.26s/it]gptq3:  35%|███▌      | 35/100 [27:34<51:13, 47.28s/it]gptq3:  36%|███▌      | 36/100 [28:21<50:25, 47.27s/it]gptq3:  37%|███▋      | 37/100 [29:08<49:37, 47.26s/it]gptq3:  38%|███▊      | 38/100 [29:56<48:50, 47.27s/it]gptq3:  39%|███▉      | 39/100 [30:43<48:02, 47.26s/it]gptq3:  40%|████      | 40/100 [31:30<47:15, 47.27s/it]gptq3:  41%|████      | 41/100 [32:17<46:28, 47.26s/it]gptq3:  42%|████▏     | 42/100 [33:05<45:41, 47.26s/it]gptq3:  43%|████▎     | 43/100 [33:52<44:53, 47.26s/it]gptq3:  44%|████▍     | 44/100 [34:39<44:06, 47.26s/it]gptq3:  45%|████▌     | 45/100 [35:26<43:19, 47.26s/it]gptq3:  46%|████▌     | 46/100 [36:14<42:32, 47.27s/it]gptq3:  47%|████▋     | 47/100 [37:01<41:45, 47.27s/it]gptq3:  48%|████▊     | 48/100 [37:48<40:58, 47.28s/it]gptq3:  49%|████▉     | 49/100 [38:36<40:10, 47.27s/it]gptq3:  50%|█████     | 50/100 [39:23<39:23, 47.28s/it]gptq3:  51%|█████     | 51/100 [40:10<38:36, 47.28s/it]gptq3:  52%|█████▏    | 52/100 [40:57<37:49, 47.28s/it]gptq3:  53%|█████▎    | 53/100 [41:45<37:01, 47.27s/it]gptq3:  54%|█████▍    | 54/100 [42:32<36:14, 47.26s/it]gptq3:  55%|█████▌    | 55/100 [43:19<35:27, 47.27s/it]gptq3:  56%|█████▌    | 56/100 [44:06<34:39, 47.26s/it]gptq3:  57%|█████▋    | 57/100 [44:54<33:51, 47.25s/it]gptq3:  58%|█████▊    | 58/100 [45:41<33:04, 47.25s/it]gptq3:  59%|█████▉    | 59/100 [46:28<32:17, 47.25s/it]gptq3:  60%|██████    | 60/100 [47:16<31:32, 47.32s/it]gptq3:  61%|██████    | 61/100 [48:03<30:44, 47.29s/it]gptq3:  62%|██████▏   | 62/100 [48:50<29:56, 47.29s/it]gptq3:  63%|██████▎   | 63/100 [49:37<29:09, 47.28s/it]gptq3:  64%|██████▍   | 64/100 [50:25<28:21, 47.27s/it]gptq3:  65%|██████▌   | 65/100 [51:12<27:34, 47.26s/it]gptq3:  66%|██████▌   | 66/100 [51:59<26:47, 47.27s/it]gptq3:  67%|██████▋   | 67/100 [52:46<25:59, 47.27s/it]gptq3:  68%|██████▊   | 68/100 [53:34<25:12, 47.26s/it]gptq3:  69%|██████▉   | 69/100 [54:21<24:25, 47.26s/it]gptq3:  70%|███████   | 70/100 [55:08<23:37, 47.26s/it]gptq3:  71%|███████   | 71/100 [55:55<22:50, 47.26s/it]gptq3:  72%|███████▏  | 72/100 [56:43<22:03, 47.26s/it]gptq3:  73%|███████▎  | 73/100 [57:30<21:16, 47.26s/it]gptq3:  74%|███████▍  | 74/100 [58:17<20:28, 47.26s/it]gptq3:  75%|███████▌  | 75/100 [59:05<19:41, 47.26s/it]gptq3:  76%|███████▌  | 76/100 [59:52<18:54, 47.26s/it]gptq3:  77%|███████▋  | 77/100 [1:00:39<18:06, 47.25s/it]gptq3:  78%|███████▊  | 78/100 [1:01:26<17:19, 47.25s/it]gptq3:  79%|███████▉  | 79/100 [1:02:14<16:32, 47.27s/it]gptq3:  80%|████████  | 80/100 [1:03:01<15:45, 47.28s/it]gptq3:  81%|████████  | 81/100 [1:03:48<14:58, 47.27s/it]gptq3:  82%|████████▏ | 82/100 [1:04:35<14:11, 47.29s/it]gptq3:  83%|████████▎ | 83/100 [1:05:23<13:23, 47.29s/it]gptq3:  84%|████████▍ | 84/100 [1:06:10<12:36, 47.29s/it]gptq3:  85%|████████▌ | 85/100 [1:06:57<11:49, 47.28s/it]gptq3:  86%|████████▌ | 86/100 [1:07:45<11:01, 47.27s/it]gptq3:  87%|████████▋ | 87/100 [1:08:32<10:14, 47.27s/it]gptq3:  88%|████████▊ | 88/100 [1:09:19<09:27, 47.28s/it]gptq3:  89%|████████▉ | 89/100 [1:10:06<08:40, 47.28s/it]gptq3:  90%|█████████ | 90/100 [1:10:54<07:52, 47.28s/it]gptq3:  91%|█████████ | 91/100 [1:11:41<07:05, 47.27s/it]gptq3:  92%|█████████▏| 92/100 [1:12:28<06:18, 47.26s/it]gptq3:  93%|█████████▎| 93/100 [1:13:15<05:30, 47.26s/it]gptq3:  94%|█████████▍| 94/100 [1:14:03<04:43, 47.26s/it]gptq3:  95%|█████████▌| 95/100 [1:14:50<03:56, 47.25s/it]gptq3:  96%|█████████▌| 96/100 [1:15:37<03:09, 47.26s/it]gptq3:  97%|█████████▋| 97/100 [1:16:24<02:21, 47.26s/it]gptq3:  98%|█████████▊| 98/100 [1:17:12<01:34, 47.27s/it]gptq3:  99%|█████████▉| 99/100 [1:17:59<00:47, 47.26s/it]gptq3: 100%|██████████| 100/100 [1:18:46<00:00, 47.27s/it]gptq3: 100%|██████████| 100/100 [1:18:46<00:00, 47.27s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:186: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config', 'disable_exllama']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
-  warnings.warn(warning_msg)
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_utils.py:5055: FutureWarning: `_is_quantized_training_enabled` is going to be deprecated in transformers 4.39.0. Please use `model.hf_quantizer.is_trainable` instead
-  warnings.warn(
-Write-Restored:   0%|          | 0/100 [00:00<?, ?it/s]Write-Restored:   1%|          | 1/100 [00:02<03:46,  2.29s/it]Write-Restored:   2%|▏         | 2/100 [00:34<32:22, 19.82s/it]Write-Restored:   3%|▎         | 3/100 [01:06<41:06, 25.43s/it]Write-Restored:   4%|▍         | 4/100 [01:38<44:54, 28.06s/it]Write-Restored:   5%|▌         | 5/100 [02:10<46:44, 29.52s/it]Write-Restored:   6%|▌         | 6/100 [02:42<47:38, 30.41s/it]Write-Restored:   7%|▋         | 7/100 [03:14<48:00, 30.98s/it]Write-Restored:   8%|▊         | 8/100 [03:47<48:03, 31.34s/it]Write-Restored:   9%|▉         | 9/100 [04:19<47:56, 31.61s/it]Write-Restored:  10%|█         | 10/100 [04:51<47:41, 31.79s/it]Write-Restored:  11%|█         | 11/100 [05:23<47:20, 31.91s/it]Write-Restored:  12%|█▏        | 12/100 [05:55<46:55, 32.00s/it]Write-Restored:  13%|█▎        | 13/100 [05:56<32:46, 22.61s/it]Write-Restored:  14%|█▍        | 14/100 [06:29<36:34, 25.52s/it]Write-Restored:  15%|█▌        | 15/100 [07:00<38:47, 27.38s/it]Write-Restored:  16%|█▌        | 16/100 [07:33<40:21, 28.83s/it]Write-Restored:  17%|█▋        | 17/100 [08:05<41:17, 29.84s/it]Write-Restored:  18%|█▊        | 18/100 [08:37<41:44, 30.55s/it]Write-Restored:  19%|█▉        | 19/100 [09:09<41:54, 31.04s/it]Write-Restored:  20%|██        | 20/100 [09:28<36:21, 27.27s/it]Write-Restored:  21%|██        | 21/100 [10:00<37:51, 28.76s/it]Write-Restored:  22%|██▏       | 22/100 [10:01<26:33, 20.43s/it]Write-Restored:  23%|██▎       | 23/100 [10:33<30:47, 23.99s/it]Write-Restored:  24%|██▍       | 24/100 [11:05<33:33, 26.49s/it]Write-Restored:  25%|██▌       | 25/100 [11:38<35:17, 28.23s/it]Write-Restored:  26%|██▌       | 26/100 [12:10<36:19, 29.45s/it]Write-Restored:  27%|██▋       | 27/100 [12:42<36:51, 30.30s/it]Write-Restored:  28%|██▊       | 28/100 [12:43<25:48, 21.51s/it]Write-Restored:  29%|██▉       | 29/100 [13:16<29:16, 24.74s/it]Write-Restored:  30%|███       | 30/100 [13:18<21:07, 18.11s/it]Write-Restored:  31%|███       | 31/100 [13:50<25:41, 22.33s/it]Write-Restored:  32%|███▏      | 32/100 [14:23<28:40, 25.30s/it]Write-Restored:  33%|███▎      | 33/100 [14:55<30:33, 27.37s/it]Write-Restored:  34%|███▍      | 34/100 [15:27<31:42, 28.83s/it]Write-Restored:  35%|███▌      | 35/100 [15:59<32:21, 29.86s/it]Write-Restored:  36%|███▌      | 36/100 [16:02<23:18, 21.85s/it]Write-Restored:  37%|███▋      | 37/100 [16:35<26:12, 24.95s/it]Write-Restored:  38%|███▊      | 38/100 [17:07<28:02, 27.14s/it]Write-Restored:  39%|███▉      | 39/100 [17:39<29:07, 28.65s/it]Write-Restored:  40%|████      | 40/100 [18:11<29:43, 29.73s/it]Write-Restored:  41%|████      | 41/100 [18:44<29:57, 30.47s/it]Write-Restored:  42%|████▏     | 42/100 [19:16<29:57, 30.99s/it]Write-Restored:  43%|████▎     | 43/100 [19:48<29:47, 31.35s/it]Write-Restored:  44%|████▍     | 44/100 [20:20<29:29, 31.60s/it]Write-Restored:  45%|████▌     | 45/100 [20:52<29:07, 31.78s/it]Write-Restored:  46%|████▌     | 46/100 [20:53<20:17, 22.55s/it]Write-Restored:  47%|████▋     | 47/100 [20:57<14:52, 16.84s/it]Write-Restored:  48%|████▊     | 48/100 [21:29<18:36, 21.47s/it]Write-Restored:  49%|████▉     | 49/100 [21:32<13:28, 15.86s/it]Write-Restored:  50%|█████     | 50/100 [22:04<17:17, 20.76s/it]Write-Restored:  51%|█████     | 51/100 [22:07<12:38, 15.48s/it]Write-Restored:  52%|█████▏    | 52/100 [22:39<16:23, 20.49s/it]Write-Restored:  53%|█████▎    | 53/100 [23:12<18:48, 24.01s/it]Write-Restored:  54%|█████▍    | 54/100 [23:44<20:21, 26.56s/it]Write-Restored:  55%|█████▌    | 55/100 [24:05<18:36, 24.81s/it]Write-Restored:  56%|█████▌    | 56/100 [24:37<19:49, 27.02s/it]Write-Restored:  57%|█████▋    | 57/100 [25:09<20:28, 28.57s/it]Write-Restored:  58%|█████▊    | 58/100 [25:41<20:45, 29.66s/it]Write-Restored:  59%|█████▉    | 59/100 [26:14<20:47, 30.42s/it]Write-Restored:  60%|██████    | 60/100 [26:15<14:23, 21.60s/it]Write-Restored:  61%|██████    | 61/100 [26:47<16:06, 24.78s/it]Write-Restored:  62%|██████▏   | 62/100 [27:19<17:06, 27.01s/it]Write-Restored:  63%|██████▎   | 63/100 [27:51<17:36, 28.56s/it]Write-Restored:  64%|██████▍   | 64/100 [27:52<12:10, 20.30s/it]Write-Restored:  65%|██████▌   | 65/100 [28:24<13:55, 23.87s/it]Write-Restored:  66%|██████▌   | 66/100 [28:57<14:56, 26.37s/it]Write-Restored:  67%|██████▋   | 67/100 [28:58<10:20, 18.80s/it]Write-Restored:  68%|██████▊   | 68/100 [29:01<07:28, 14.03s/it]Write-Restored:  69%|██████▉   | 69/100 [29:02<05:13, 10.12s/it]Write-Restored:  70%|███████   | 70/100 [29:05<04:02,  8.07s/it]Write-Restored:  71%|███████   | 71/100 [29:08<03:14,  6.70s/it]Write-Restored:  72%|███████▏  | 72/100 [29:41<06:41, 14.35s/it]Write-Restored:  73%|███████▎  | 73/100 [30:13<08:52, 19.71s/it]Write-Restored:  74%|███████▍  | 74/100 [30:45<10:09, 23.46s/it]Write-Restored:  75%|███████▌  | 75/100 [31:17<10:51, 26.07s/it]Write-Restored:  76%|███████▌  | 76/100 [31:49<11:10, 27.92s/it]Write-Restored:  77%|███████▋  | 77/100 [32:22<11:11, 29.20s/it]Write-Restored:  78%|███████▊  | 78/100 [32:54<11:02, 30.09s/it]Write-Restored:  79%|███████▉  | 79/100 [33:26<10:45, 30.74s/it]Write-Restored:  80%|████████  | 80/100 [33:27<07:16, 21.82s/it]Write-Restored:  81%|████████  | 81/100 [33:59<07:53, 24.94s/it]Write-Restored:  82%|████████▏ | 82/100 [34:32<08:08, 27.13s/it]Write-Restored:  83%|████████▎ | 83/100 [35:04<08:07, 28.66s/it]Write-Restored:  84%|████████▍ | 84/100 [35:36<07:55, 29.72s/it]Write-Restored:  85%|████████▌ | 85/100 [36:08<07:36, 30.46s/it]Write-Restored:  86%|████████▌ | 86/100 [36:09<05:02, 21.63s/it]Write-Restored:  87%|████████▋ | 87/100 [36:41<05:22, 24.80s/it]Write-Restored:  88%|████████▊ | 88/100 [37:14<05:24, 27.03s/it]Write-Restored:  89%|████████▉ | 89/100 [37:17<03:39, 19.94s/it]Write-Restored:  90%|█████████ | 90/100 [37:49<03:56, 23.63s/it]Write-Restored:  91%|█████████ | 91/100 [38:21<03:55, 26.19s/it]Write-Restored:  92%|█████████▏| 92/100 [38:54<03:43, 27.99s/it]Write-Restored:  93%|█████████▎| 93/100 [39:26<03:24, 29.25s/it]Write-Restored:  94%|█████████▍| 94/100 [39:58<03:00, 30.13s/it]Write-Restored:  95%|█████████▌| 95/100 [39:59<01:46, 21.40s/it]Write-Restored:  96%|█████████▌| 96/100 [40:31<01:38, 24.64s/it]Write-Restored:  97%|█████████▋| 97/100 [41:03<01:20, 26.91s/it]Write-Restored:  98%|█████████▊| 98/100 [41:36<00:57, 28.50s/it]Write-Restored:  99%|█████████▉| 99/100 [42:08<00:29, 29.61s/it]Write-Restored: 100%|██████████| 100/100 [42:12<00:00, 21.86s/it]Write-Restored: 100%|██████████| 100/100 [42:12<00:00, 25.32s/it]
-Read-Restored:   0%|          | 0/100 [00:00<?, ?it/s]Read-Restored:   1%|          | 1/100 [00:18<29:44, 18.02s/it]Read-Restored:   2%|▏         | 2/100 [00:36<29:24, 18.01s/it]Read-Restored:   3%|▎         | 3/100 [00:54<29:06, 18.00s/it]Read-Restored:   4%|▍         | 4/100 [01:11<28:47, 17.99s/it]Read-Restored:   5%|▌         | 5/100 [01:29<28:29, 17.99s/it]Read-Restored:   6%|▌         | 6/100 [01:48<28:12, 18.00s/it]Read-Restored:   7%|▋         | 7/100 [02:06<27:54, 18.00s/it]Read-Restored:   8%|▊         | 8/100 [02:24<27:36, 18.00s/it]Read-Restored:   9%|▉         | 9/100 [02:42<27:17, 18.00s/it]Read-Restored:  10%|█         | 10/100 [03:00<27:00, 18.00s/it]Read-Restored:  11%|█         | 11/100 [03:17<26:41, 18.00s/it]Read-Restored:  12%|█▏        | 12/100 [03:35<26:23, 17.99s/it]Read-Restored:  13%|█▎        | 13/100 [03:53<26:04, 17.99s/it]Read-Restored:  14%|█▍        | 14/100 [04:12<25:49, 18.02s/it]Read-Restored:  15%|█▌        | 15/100 [04:30<25:32, 18.03s/it]Read-Restored:  16%|█▌        | 16/100 [04:48<25:14, 18.03s/it]Read-Restored:  17%|█▋        | 17/100 [05:06<24:57, 18.04s/it]Read-Restored:  18%|█▊        | 18/100 [05:24<24:39, 18.04s/it]Read-Restored:  19%|█▉        | 19/100 [05:42<24:21, 18.04s/it]Read-Restored:  20%|██        | 20/100 [06:00<24:02, 18.04s/it]Read-Restored:  21%|██        | 21/100 [06:18<23:45, 18.05s/it]Read-Restored:  22%|██▏       | 22/100 [06:36<23:27, 18.05s/it]Read-Restored:  23%|██▎       | 23/100 [06:54<23:09, 18.05s/it]Read-Restored:  24%|██▍       | 24/100 [07:12<22:52, 18.06s/it]Read-Restored:  25%|██▌       | 25/100 [07:30<22:34, 18.06s/it]Read-Restored:  26%|██▌       | 26/100 [07:48<22:16, 18.06s/it]Read-Restored:  27%|██▋       | 27/100 [08:06<21:58, 18.06s/it]Read-Restored:  28%|██▊       | 28/100 [08:24<21:40, 18.07s/it]Read-Restored:  29%|██▉       | 29/100 [08:42<21:22, 18.06s/it]Read-Restored:  30%|███       | 30/100 [09:00<21:04, 18.06s/it]Read-Restored:  31%|███       | 31/100 [09:18<20:45, 18.06s/it]Read-Restored:  32%|███▏      | 32/100 [09:37<20:28, 18.07s/it]Read-Restored:  33%|███▎      | 33/100 [09:55<20:11, 18.08s/it]Read-Restored:  34%|███▍      | 34/100 [10:13<19:53, 18.08s/it]Read-Restored:  35%|███▌      | 35/100 [10:31<19:35, 18.09s/it]Read-Restored:  36%|███▌      | 36/100 [10:49<19:16, 18.08s/it]Read-Restored:  37%|███▋      | 37/100 [11:07<18:58, 18.06s/it]Read-Restored:  38%|███▊      | 38/100 [11:25<18:40, 18.07s/it]Read-Restored:  39%|███▉      | 39/100 [11:43<18:21, 18.06s/it]Read-Restored:  40%|████      | 40/100 [12:01<18:03, 18.06s/it]Read-Restored:  41%|████      | 41/100 [12:19<17:45, 18.06s/it]Read-Restored:  42%|████▏     | 42/100 [12:37<17:27, 18.06s/it]Read-Restored:  43%|████▎     | 43/100 [12:55<17:09, 18.06s/it]Read-Restored:  44%|████▍     | 44/100 [13:13<16:50, 18.05s/it]Read-Restored:  45%|████▌     | 45/100 [13:31<16:32, 18.05s/it]Read-Restored:  46%|████▌     | 46/100 [13:49<16:15, 18.06s/it]Read-Restored:  47%|████▋     | 47/100 [14:08<15:57, 18.06s/it]Read-Restored:  48%|████▊     | 48/100 [14:26<15:39, 18.07s/it]Read-Restored:  49%|████▉     | 49/100 [14:44<15:21, 18.06s/it]Read-Restored:  50%|█████     | 50/100 [15:02<15:02, 18.06s/it]Read-Restored:  51%|█████     | 51/100 [15:20<14:45, 18.07s/it]Read-Restored:  52%|█████▏    | 52/100 [15:38<14:26, 18.06s/it]Read-Restored:  53%|█████▎    | 53/100 [15:56<14:08, 18.06s/it]Read-Restored:  54%|█████▍    | 54/100 [16:14<13:50, 18.06s/it]Read-Restored:  55%|█████▌    | 55/100 [16:32<13:32, 18.06s/it]Read-Restored:  56%|█████▌    | 56/100 [16:50<13:14, 18.06s/it]Read-Restored:  57%|█████▋    | 57/100 [17:08<12:55, 18.05s/it]Read-Restored:  58%|█████▊    | 58/100 [17:26<12:37, 18.05s/it]Read-Restored:  59%|█████▉    | 59/100 [17:44<12:19, 18.04s/it]Read-Restored:  60%|██████    | 60/100 [18:02<12:01, 18.04s/it]Read-Restored:  61%|██████    | 61/100 [18:20<11:43, 18.05s/it]Read-Restored:  62%|██████▏   | 62/100 [18:38<11:25, 18.05s/it]Read-Restored:  63%|██████▎   | 63/100 [18:56<11:07, 18.05s/it]Read-Restored:  64%|██████▍   | 64/100 [19:14<10:49, 18.05s/it]Read-Restored:  65%|██████▌   | 65/100 [19:32<10:31, 18.05s/it]Read-Restored:  66%|██████▌   | 66/100 [19:51<10:13, 18.06s/it]Read-Restored:  67%|██████▋   | 67/100 [20:09<09:55, 18.06s/it]Read-Restored:  68%|██████▊   | 68/100 [20:27<09:37, 18.06s/it]Read-Restored:  69%|██████▉   | 69/100 [20:45<09:19, 18.05s/it]Read-Restored:  70%|███████   | 70/100 [21:03<09:01, 18.05s/it]Read-Restored:  71%|███████   | 71/100 [21:21<08:43, 18.05s/it]Read-Restored:  72%|███████▏  | 72/100 [21:39<08:25, 18.05s/it]Read-Restored:  73%|███████▎  | 73/100 [21:57<08:07, 18.06s/it]Read-Restored:  74%|███████▍  | 74/100 [22:15<07:49, 18.06s/it]Read-Restored:  75%|███████▌  | 75/100 [22:33<07:31, 18.05s/it]Read-Restored:  76%|███████▌  | 76/100 [22:51<07:13, 18.06s/it]Read-Restored:  77%|███████▋  | 77/100 [23:09<06:55, 18.05s/it]Read-Restored:  78%|███████▊  | 78/100 [23:27<06:37, 18.05s/it]Read-Restored:  79%|███████▉  | 79/100 [23:45<06:19, 18.06s/it]Read-Restored:  80%|████████  | 80/100 [24:03<06:01, 18.07s/it]Read-Restored:  81%|████████  | 81/100 [24:21<05:43, 18.07s/it]Read-Restored:  82%|████████▏ | 82/100 [24:40<05:25, 18.08s/it]Read-Restored:  83%|████████▎ | 83/100 [24:58<05:07, 18.08s/it]Read-Restored:  84%|████████▍ | 84/100 [25:16<04:49, 18.07s/it]Read-Restored:  85%|████████▌ | 85/100 [25:34<04:30, 18.06s/it]Read-Restored:  86%|████████▌ | 86/100 [25:52<04:12, 18.06s/it]Read-Restored:  87%|████████▋ | 87/100 [26:10<03:54, 18.05s/it]Read-Restored:  88%|████████▊ | 88/100 [26:28<03:36, 18.07s/it]Read-Restored:  89%|████████▉ | 89/100 [26:46<03:18, 18.07s/it]Read-Restored:  90%|█████████ | 90/100 [27:04<03:00, 18.07s/it]Read-Restored:  91%|█████████ | 91/100 [27:22<02:42, 18.06s/it]Read-Restored:  92%|█████████▏| 92/100 [27:40<02:24, 18.06s/it]Read-Restored:  93%|█████████▎| 93/100 [27:58<02:06, 18.05s/it]Read-Restored:  94%|█████████▍| 94/100 [28:16<01:48, 18.05s/it]Read-Restored:  95%|█████████▌| 95/100 [28:34<01:30, 18.05s/it]Read-Restored:  96%|█████████▌| 96/100 [28:52<01:12, 18.05s/it]Read-Restored:  97%|█████████▋| 97/100 [29:10<00:54, 18.05s/it]Read-Restored:  98%|█████████▊| 98/100 [29:28<00:36, 18.06s/it]Read-Restored:  99%|█████████▉| 99/100 [29:46<00:18, 18.05s/it]Read-Restored: 100%|██████████| 100/100 [30:05<00:00, 18.06s/it]Read-Restored: 100%|██████████| 100/100 [30:05<00:00, 18.05s/it]
-Both-Restored:   0%|          | 0/100 [00:00<?, ?it/s]Both-Restored:   1%|          | 1/100 [00:00<00:20,  4.81it/s]Both-Restored:   2%|▏         | 2/100 [00:03<03:24,  2.09s/it]Both-Restored:   3%|▎         | 3/100 [00:06<04:19,  2.68s/it]Both-Restored:   4%|▍         | 4/100 [00:07<02:47,  1.74s/it]Both-Restored:   5%|▌         | 5/100 [00:10<03:41,  2.33s/it]Both-Restored:   6%|▌         | 6/100 [00:14<04:13,  2.70s/it]Both-Restored:   7%|▋         | 7/100 [00:17<04:32,  2.93s/it]Both-Restored:   8%|▊         | 8/100 [00:20<04:43,  3.08s/it]Both-Restored:   9%|▉         | 9/100 [00:24<04:49,  3.18s/it]Both-Restored:  10%|█         | 10/100 [00:24<03:27,  2.30s/it]Both-Restored:  11%|█         | 11/100 [00:28<03:54,  2.64s/it]Both-Restored:  12%|█▏        | 12/100 [00:31<04:11,  2.86s/it]Both-Restored:  13%|█▎        | 13/100 [00:31<02:56,  2.03s/it]Both-Restored:  14%|█▍        | 14/100 [00:34<03:30,  2.44s/it]Both-Restored:  15%|█▌        | 15/100 [00:35<02:32,  1.80s/it]Both-Restored:  16%|█▌        | 16/100 [00:36<02:06,  1.51s/it]Both-Restored:  17%|█▋        | 17/100 [00:36<01:30,  1.09s/it]Both-Restored:  18%|█▊        | 18/100 [00:39<02:26,  1.78s/it]Both-Restored:  19%|█▉        | 19/100 [00:39<01:48,  1.34s/it]Both-Restored:  20%|██        | 20/100 [00:40<01:22,  1.03s/it]Both-Restored:  21%|██        | 21/100 [00:43<02:17,  1.74s/it]Both-Restored:  22%|██▏       | 22/100 [00:43<01:43,  1.33s/it]Both-Restored:  23%|██▎       | 23/100 [00:47<02:29,  1.95s/it]Both-Restored:  24%|██▍       | 24/100 [00:50<03:01,  2.38s/it]Both-Restored:  25%|██▌       | 25/100 [00:54<03:29,  2.80s/it]Both-Restored:  26%|██▌       | 26/100 [00:57<03:41,  2.99s/it]Both-Restored:  27%|██▋       | 27/100 [01:01<03:49,  3.15s/it]Both-Restored:  28%|██▊       | 28/100 [01:01<02:41,  2.24s/it]Both-Restored:  29%|██▉       | 29/100 [01:06<03:26,  2.90s/it]Both-Restored:  30%|███       | 30/100 [01:06<02:30,  2.15s/it]Both-Restored:  31%|███       | 31/100 [01:11<03:38,  3.16s/it]Both-Restored:  32%|███▏      | 32/100 [01:15<03:39,  3.23s/it]Both-Restored:  33%|███▎      | 33/100 [01:18<03:39,  3.28s/it]Both-Restored:  34%|███▍      | 34/100 [01:22<03:38,  3.31s/it]Both-Restored:  35%|███▌      | 35/100 [01:25<03:37,  3.34s/it]Both-Restored:  36%|███▌      | 36/100 [01:28<03:35,  3.37s/it]Both-Restored:  37%|███▋      | 37/100 [01:32<03:32,  3.37s/it]Both-Restored:  38%|███▊      | 38/100 [01:32<02:34,  2.49s/it]Both-Restored:  39%|███▉      | 39/100 [01:36<02:48,  2.76s/it]Both-Restored:  40%|████      | 40/100 [01:39<02:56,  2.95s/it]Both-Restored:  41%|████      | 41/100 [01:40<02:09,  2.20s/it]Both-Restored:  42%|████▏     | 42/100 [01:40<01:33,  1.62s/it]Both-Restored:  43%|████▎     | 43/100 [01:43<02:02,  2.16s/it]Both-Restored:  44%|████▍     | 44/100 [01:43<01:27,  1.56s/it]Both-Restored:  45%|████▌     | 45/100 [01:47<01:55,  2.11s/it]Both-Restored:  46%|████▌     | 46/100 [01:47<01:26,  1.61s/it]Both-Restored:  47%|████▋     | 47/100 [01:47<01:04,  1.22s/it]Both-Restored:  48%|████▊     | 48/100 [01:51<01:37,  1.87s/it]Both-Restored:  49%|████▉     | 49/100 [01:51<01:11,  1.40s/it]Both-Restored:  50%|█████     | 50/100 [01:55<01:40,  2.01s/it]Both-Restored:  51%|█████     | 51/100 [01:55<01:11,  1.46s/it]Both-Restored:  52%|█████▏    | 52/100 [01:55<00:54,  1.14s/it]Both-Restored:  53%|█████▎    | 53/100 [01:55<00:41,  1.14it/s]Both-Restored:  54%|█████▍    | 54/100 [01:59<01:15,  1.64s/it]Both-Restored:  55%|█████▌    | 55/100 [01:59<00:53,  1.18s/it]Both-Restored:  56%|█████▌    | 56/100 [02:02<01:21,  1.85s/it]Both-Restored:  57%|█████▋    | 57/100 [02:06<01:39,  2.31s/it]Both-Restored:  58%|█████▊    | 58/100 [02:09<01:50,  2.63s/it]Both-Restored:  59%|█████▉    | 59/100 [02:13<01:57,  2.87s/it]Both-Restored:  60%|██████    | 60/100 [02:13<01:23,  2.09s/it]Both-Restored:  61%|██████    | 61/100 [02:16<01:36,  2.48s/it]Both-Restored:  62%|██████▏   | 62/100 [02:20<01:44,  2.75s/it]Both-Restored:  63%|██████▎   | 63/100 [02:23<01:48,  2.94s/it]Both-Restored:  64%|██████▍   | 64/100 [02:24<01:21,  2.26s/it]Both-Restored:  65%|██████▌   | 65/100 [02:27<01:30,  2.59s/it]Both-Restored:  66%|██████▌   | 66/100 [02:30<01:36,  2.83s/it]Both-Restored:  67%|██████▋   | 67/100 [02:31<01:06,  2.02s/it]Both-Restored:  68%|██████▊   | 68/100 [02:31<00:49,  1.55s/it]Both-Restored:  69%|██████▉   | 69/100 [02:31<00:36,  1.16s/it]Both-Restored:  70%|███████   | 70/100 [02:35<00:54,  1.82s/it]Both-Restored:  71%|███████   | 71/100 [02:35<00:38,  1.31s/it]Both-Restored:  72%|███████▏  | 72/100 [02:38<00:54,  1.93s/it]Both-Restored:  73%|███████▎  | 73/100 [02:42<01:03,  2.37s/it]Both-Restored:  74%|███████▍  | 74/100 [02:45<01:09,  2.67s/it]Both-Restored:  75%|███████▌  | 75/100 [02:48<01:12,  2.88s/it]Both-Restored:  76%|███████▌  | 76/100 [02:48<00:49,  2.05s/it]Both-Restored:  77%|███████▋  | 77/100 [02:52<00:56,  2.45s/it]Both-Restored:  78%|███████▊  | 78/100 [02:52<00:40,  1.83s/it]Both-Restored:  79%|███████▉  | 79/100 [02:56<00:48,  2.29s/it]Both-Restored:  80%|████████  | 80/100 [02:56<00:34,  1.70s/it]Both-Restored:  81%|████████  | 81/100 [02:59<00:41,  2.21s/it]Both-Restored:  82%|████████▏ | 82/100 [03:03<00:46,  2.56s/it]Both-Restored:  83%|████████▎ | 83/100 [03:06<00:47,  2.80s/it]Both-Restored:  84%|████████▍ | 84/100 [03:09<00:47,  2.98s/it]Both-Restored:  85%|████████▌ | 85/100 [03:13<00:46,  3.10s/it]Both-Restored:  86%|████████▌ | 86/100 [03:13<00:30,  2.21s/it]Both-Restored:  87%|████████▋ | 87/100 [03:16<00:33,  2.56s/it]Both-Restored:  88%|████████▊ | 88/100 [03:20<00:33,  2.81s/it]Both-Restored:  89%|████████▉ | 89/100 [03:20<00:22,  2.00s/it]Both-Restored:  90%|█████████ | 90/100 [03:20<00:14,  1.50s/it]Both-Restored:  91%|█████████ | 91/100 [03:23<00:18,  2.06s/it]Both-Restored:  92%|█████████▏| 92/100 [03:27<00:19,  2.46s/it]Both-Restored:  93%|█████████▎| 93/100 [03:30<00:19,  2.74s/it]Both-Restored:  94%|█████████▍| 94/100 [03:31<00:12,  2.09s/it]Both-Restored:  95%|█████████▌| 95/100 [03:34<00:12,  2.47s/it]Both-Restored:  96%|█████████▌| 96/100 [03:38<00:10,  2.75s/it]Both-Restored:  97%|█████████▋| 97/100 [03:41<00:08,  2.94s/it]Both-Restored:  98%|█████████▊| 98/100 [03:41<00:04,  2.16s/it]Both-Restored:  99%|█████████▉| 99/100 [03:45<00:02,  2.53s/it]Both-Restored: 100%|██████████| 100/100 [03:45<00:00,  1.92s/it]Both-Restored: 100%|██████████| 100/100 [03:45<00:00,  2.26s/it]
-Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [01:00<02:00, 60.29s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [02:05<01:03, 63.06s/it]Loading checkpoint shards: 100%|██████████| 3/3 [03:03<00:00, 60.80s/it]Loading checkpoint shards: 100%|██████████| 3/3 [03:03<00:00, 61.13s/it]

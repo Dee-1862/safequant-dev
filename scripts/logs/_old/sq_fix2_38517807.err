@@ -1,51 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:128: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:128: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-Generating train split:   0%|          | 0/1119 [00:00<?, ? examples/s]Generating train split:  89%|████████▉ | 1000/1119 [00:01<00:00, 849.77 examples/s]Generating train split: 100%|██████████| 1119/1119 [00:01<00:00, 916.96 examples/s]
-Generating test split:   0%|          | 0/1172 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 1172/1172 [00:00<00:00, 61330.03 examples/s]
-Generating validation split:   0%|          | 0/299 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 299/299 [00:00<00:00, 95187.62 examples/s]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [01:00<03:01, 60.53s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:11<02:13, 66.63s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:10<01:03, 63.23s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:21<00:00, 42.58s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:21<00:00, 50.38s/it]
-fp32:   0%|          | 0/5 [00:00<?, ?it/s]/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(
-fp32:  20%|██        | 1/5 [00:09<00:36,  9.06s/it]fp32:  40%|████      | 2/5 [00:13<00:18,  6.20s/it]fp32:  60%|██████    | 3/5 [00:17<00:10,  5.28s/it]fp32:  80%|████████  | 4/5 [00:17<00:03,  3.36s/it]fp32: 100%|██████████| 5/5 [00:22<00:00,  3.65s/it]fp32: 100%|██████████| 5/5 [00:22<00:00,  4.41s/it]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.31s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:03,  1.96s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.82s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.29s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.54s/it]
-nf4:   0%|          | 0/5 [00:00<?, ?it/s]/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:628: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.6` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:633: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.9` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
-  warnings.warn(
-nf4:  20%|██        | 1/5 [00:01<00:07,  1.77s/it]nf4:  40%|████      | 2/5 [00:07<00:12,  4.32s/it]nf4:  60%|██████    | 3/5 [00:13<00:10,  5.03s/it]nf4:  80%|████████  | 4/5 [00:19<00:05,  5.37s/it]nf4: 100%|██████████| 5/5 [00:25<00:00,  5.54s/it]nf4: 100%|██████████| 5/5 [00:25<00:00,  5.10s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:410: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
-  @custom_fwd
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:418: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
-  @custom_bwd
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:461: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
-  @custom_fwd(cast_inputs=torch.float16)
-CUDA extension not installed.
-CUDA extension not installed.
-WARNING - Exllamav2 kernel is not installed, reset disable_exllamav2 to True. This may because you installed auto_gptq using a pre-build wheel on Windows, in which exllama_kernels are not compiled. To use exllama_kernels to further speedup inference, you can re-install auto_gptq from source.
-WARNING - CUDA kernels for auto_gptq are not installed, this will result in very slow inference speed. This may because:
-1. You disabled CUDA extensions compilation by setting BUILD_CUDA_EXT=0 when install auto_gptq from source.
-2. You are using pytorch without CUDA support.
-3. CUDA and nvcc are not installed in your device.
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:795: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-WARNING - ignoring unknown parameter in quantize_config.json: lm_head.
-WARNING - ignoring unknown parameter in quantize_config.json: quant_method.
-WARNING - ignoring unknown parameter in quantize_config.json: checkpoint_format.
-WARNING - ignoring unknown parameter in quantize_config.json: meta.
-INFO - The layer lm_head is not quantized.
-gptq4:   0%|          | 0/5 [00:00<?, ?it/s]gptq4:  20%|██        | 1/5 [00:02<00:08,  2.19s/it]gptq4:  40%|████      | 2/5 [00:27<00:47, 15.92s/it]gptq4:  60%|██████    | 3/5 [00:53<00:40, 20.32s/it]gptq4:  80%|████████  | 4/5 [00:55<00:13, 13.24s/it]gptq4: 100%|██████████| 5/5 [00:58<00:00,  9.44s/it]gptq4: 100%|██████████| 5/5 [00:58<00:00, 11.67s/it]
-WARNING - Exllamav2 kernel is not installed, reset disable_exllamav2 to True. This may because you installed auto_gptq using a pre-build wheel on Windows, in which exllama_kernels are not compiled. To use exllama_kernels to further speedup inference, you can re-install auto_gptq from source.
-WARNING - CUDA kernels for auto_gptq are not installed, this will result in very slow inference speed. This may because:
-1. You disabled CUDA extensions compilation by setting BUILD_CUDA_EXT=0 when install auto_gptq from source.
-2. You are using pytorch without CUDA support.
-3. CUDA and nvcc are not installed in your device.
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:186: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config', 'disable_exllama']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
-  warnings.warn(warning_msg)
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_utils.py:5055: FutureWarning: `_is_quantized_training_enabled` is going to be deprecated in transformers 4.39.0. Please use `model.hf_quantizer.is_trainable` instead
-  warnings.warn(
-`loss_type=None` was set in the config but it is unrecognised.Using the default loss: `ForCausalLMLoss`.
-gptq3:   0%|          | 0/5 [00:00<?, ?it/s]gptq3:  20%|██        | 1/5 [00:05<00:20,  5.21s/it]gptq3:  40%|████      | 2/5 [00:52<01:29, 29.67s/it]gptq3:  60%|██████    | 3/5 [01:38<01:14, 37.50s/it]gptq3:  80%|████████  | 4/5 [02:25<00:41, 41.17s/it]gptq3: 100%|██████████| 5/5 [03:12<00:00, 43.20s/it]gptq3: 100%|██████████| 5/5 [03:12<00:00, 38.48s/it]

@@ -1,21 +1,8 @@
-"""
-Benchmark dataset loaders for SafeQuant.
-
-Datasets:
-  Safety (harmful):  JailbreakBench/JBB-Behaviors (primary), HarmBench (secondary)
-  Safety (harmless): Alpaca-cleaned — used for refusal direction computation
-  Utility:           HellaSwag, BoolQ, RTE, ARC-Challenge, WinoGrande
-
-No fallback prompts. If a dataset fails to load, a RuntimeError is raised
-with the exact HuggingFace ID and a fix hint. Callers must not catch these
-errors silently — let the job fail fast so the user knows what to fix.
-"""
-
 import random
 from datasets import load_dataset
 
 
-# ── Safety: harmful prompts ───────────────────────────────────────────────────
+# -- Safety: harmful prompts ---------------------------------------------------
 
 def load_harmful_prompts(n_samples=None, split="harmful", cache_dir=None):
     """
@@ -52,7 +39,7 @@ def load_harmful_prompts(n_samples=None, split="harmful", cache_dir=None):
         if item.get("Goal", "").strip()
     ]
     if not items:
-        raise RuntimeError("JBB-Behaviors loaded but returned 0 items — check dataset schema.")
+        raise RuntimeError("JBB-Behaviors loaded but returned 0 items -- check dataset schema.")
 
     if n_samples:
         items = items[:n_samples]
@@ -83,14 +70,14 @@ def load_harmbench_prompts(n_samples=None, cache_dir=None):
 
     prompts = [item["Behavior"] for item in dataset if item.get("Behavior", "").strip()]
     if not prompts:
-        raise RuntimeError("HarmBench loaded but 'Behavior' field is empty — check dataset schema.")
+        raise RuntimeError("HarmBench loaded but 'Behavior' field is empty -- check dataset schema.")
 
     if n_samples:
         prompts = prompts[:n_samples]
     return prompts
 
 
-# ── Safety: adversarial jailbreak prompts ────────────────────────────────────
+# -- Safety: adversarial jailbreak prompts ------------------------------------
 
 def load_wildjailbreak_prompts(n_samples=None, config="train", cache_dir=None):
     """
@@ -98,7 +85,7 @@ def load_wildjailbreak_prompts(n_samples=None, config="train", cache_dir=None):
 
     Dataset: allenai/wildjailbreak
     Configs: "train" (262K examples, has vanilla+adversarial) or "eval" (2,210, no vanilla)
-    Uses the adversarial_harmful subset — prompts with jailbreak tactics composed in.
+    Uses the adversarial_harmful subset -- prompts with jailbreak tactics composed in.
 
     Returns list of dicts: {"prompt": str, "vanilla": str, "data_type": str}
       - prompt:  the adversarial (jailbroken) prompt to send to the model
@@ -189,7 +176,7 @@ def load_strongreject_prompts(n_samples=None, cache_dir=None):
     return items
 
 
-# ── Safety: harmless prompts (for refusal direction) ─────────────────────────
+# -- Safety: harmless prompts (for refusal direction) -------------------------
 
 def load_harmless_prompts(n_samples=None, split="train", cache_dir=None):
     """
@@ -218,15 +205,15 @@ def load_harmless_prompts(n_samples=None, split="train", cache_dir=None):
         prompts.append(f"{instr}\n{inp}" if inp else instr)
 
     if not prompts:
-        raise RuntimeError("Alpaca-cleaned loaded but no instruction fields found — check dataset schema.")
+        raise RuntimeError("Alpaca-cleaned loaded but no instruction fields found -- check dataset schema.")
 
-    random.shuffle(prompts)
+    random.Random(42).shuffle(prompts)
     if n_samples:
         prompts = prompts[:n_samples]
     return prompts
 
 
-# ── Utility benchmarks ────────────────────────────────────────────────────────
+# -- Utility benchmarks --------------------------------------------------------
 
 def load_hellaswag(n_samples=None, split="validation", cache_dir=None):
     """
@@ -298,7 +285,7 @@ def load_rte(n_samples=None, split="validation", cache_dir=None):
 
     Dataset: super_glue / rte
     Returns: list of {"premise": str, "hypothesis": str, "label": int}
-             label — 0: entailment, 1: not_entailment
+             label -- 0: entailment, 1: not_entailment
 
     Raises RuntimeError if the dataset cannot be loaded.
     """
@@ -367,7 +354,7 @@ def load_winogrande(n_samples=None, split="validation", cache_dir=None):
 
     Dataset: winogrande / winogrande_xl
     Returns: list of {"sentence": str, "options": [str, str], "answer_idx": int}
-             answer_idx — 0 for option1, 1 for option2
+             answer_idx -- 0 for option1, 1 for option2
 
     Raises RuntimeError if the dataset cannot be loaded.
     """
@@ -383,7 +370,7 @@ def load_winogrande(n_samples=None, split="validation", cache_dir=None):
         items.append({
             "sentence":   item["sentence"],
             "options":    [item["option1"], item["option2"]],
-            "answer_idx": int(item["answer"]) - 1,  # "1"/"2" → 0/1
+            "answer_idx": int(item["answer"]) - 1,  # "1"/"2" -> 0/1
         })
 
     if not items:
@@ -394,7 +381,86 @@ def load_winogrande(n_samples=None, split="validation", cache_dir=None):
     return items
 
 
-# ── CLI: prefetch all datasets ────────────────────────────────────────────────
+# -- XSTest: over-refusal benchmark (Rottger et al. 2024) ---------------------
+
+def load_xstest(n_samples=None, cache_dir=None):
+    """
+    XSTest: 250 prompts (200 'safe' designed-to-trick benign + 50 'unsafe' genuinely
+    harmful) used to measure exaggerated safety behavior (over-refusal).
+
+    Dataset: natolambert/xstest-v2-copy
+    Returns list of dicts: {"prompt": str, "type": "safe"|"unsafe", "category": str}
+      - "safe":   should ANSWER (refusing these counts as over-refusal)
+      - "unsafe": should REFUSE (refusing these is correct)
+
+    Raises RuntimeError if dataset cannot be loaded.
+    """
+    try:
+        ds = load_dataset("natolambert/xstest-v2-copy", split="prompts",
+                          cache_dir=cache_dir)
+    except Exception as e:
+        raise RuntimeError(
+            f"Cannot load XSTest (natolambert/xstest-v2-copy, split='prompts'): {e}\n"
+            f"Fix: ensure HF_HOME points to Ocean and the job has network access."
+        ) from e
+
+    items = []
+    for row in ds:
+        prompt = (row.get("prompt") or "").strip()
+        if not prompt:
+            continue
+        t = (row.get("type") or "").lower()
+        # XSTest v2 labels 'safe' prompts as starting with "safe" (e.g. "homonyms_safe")
+        # and unsafe with "_contrast" type variants. Use type starting "safe" => safe,
+        # otherwise unsafe.
+        is_safe = t.startswith("safe") or t == "safe"
+        items.append({
+            "prompt": prompt,
+            "type": "safe" if is_safe else "unsafe",
+            "category": row.get("category") or row.get("focus") or "",
+        })
+    if not items:
+        raise RuntimeError("XSTest loaded but returned 0 items -- check schema.")
+    if n_samples:
+        items = items[:n_samples]
+    return items
+
+
+# -- C4: generic web text for the perplexity-only calibration baseline --------
+
+def load_c4_calibration(n_samples=64, max_chars=1000, cache_dir=None):
+    """
+    Random C4 (Colossal Clean Crawled Corpus) passages for use as
+    perplexity-style (no harmful/harmless contrast) calibration data.
+
+    Returns a list of strings, each <= max_chars characters, suitable as the
+    'user turn' in a chat template. The teacher will generate continuations.
+
+    Streams allenai/c4 English split to avoid downloading the full corpus.
+    """
+    try:
+        ds = load_dataset("allenai/c4", "en", split="train",
+                          streaming=True, cache_dir=cache_dir)
+    except Exception as e:
+        raise RuntimeError(
+            f"Cannot load C4 (allenai/c4, 'en'): {e}\n"
+            f"Fix: ensure HF_HOME points to Ocean and the job has network access."
+        ) from e
+
+    prompts = []
+    for doc in ds:
+        text = (doc.get("text") or "").strip()
+        if len(text) < 100:
+            continue  # skip very short documents
+        prompts.append(text[:max_chars])
+        if len(prompts) >= n_samples:
+            break
+    if not prompts:
+        raise RuntimeError("C4 streamed but returned 0 usable documents.")
+    return prompts
+
+
+# -- CLI: prefetch all datasets ------------------------------------------------
 
 if __name__ == "__main__":
     import argparse
@@ -428,18 +494,18 @@ if __name__ == "__main__":
         try:
             data = loader()
             first = data[0] if data else None
-            print(f"  ✓ {name}: {len(data)} items loaded")
+            print(f"  OK {name}: {len(data)} items loaded")
             if first:
                 preview = str(first)[:120]
                 print(f"    Preview: {preview}")
         except RuntimeError as e:
-            print(f"  ✗ {name}: FAILED\n    {e}")
+            print(f"  FAIL {name}: FAILED\n    {e}")
             errors += 1
         print()
 
     print("=" * 70)
     if errors == 0:
-        print("✓ All datasets accessible.")
+        print("OK All datasets accessible.")
     else:
-        print(f"✗ {errors} dataset(s) failed — fix before submitting jobs.")
+        print(f"FAIL {errors} dataset(s) failed -- fix before submitting jobs.")
     print("=" * 70)

@@ -1,21 +1,3 @@
-"""
-Read-Side vs Write-Side Restoration — generalized for any quantizer.
-
-Tests whether quantization damages read-side (detection) or write-side
-(refusal) matrices more, using FP32 weight restoration experiments.
-
-Conditions tested:
-  1. FP32 baseline
-  2. Quantized baseline (nf4, gptq4, gptq3, etc.)
-  3. Quantized + write matrices restored (o_proj, down_proj)
-  4. Quantized + read matrices restored (q/k/v/gate/up_proj)
-  5. Quantized + both restored
-
-Usage:
-    python diagnostics/readwrite_restoration.py --model llama7b --quantizer gptq4 --n_eval 100
-    python diagnostics/readwrite_restoration.py --model mistral7b --quantizer nf4 --n_eval 100
-"""
-
 import argparse
 import json
 import sys
@@ -26,16 +8,16 @@ import random
 import numpy as np
 from pathlib import Path
 
-# ── Reproducibility ──────────────────────────────────────────────────────────
-SEED = 42
-torch.manual_seed(SEED)
-torch.cuda.manual_seed_all(SEED)
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# -- Reproducibility ----------------------------------------------------------
+from core.seeds import set_global_seed, DEFAULT_SEED, fixed_rng, torch_gen
+SEED = set_global_seed(DEFAULT_SEED)
 random.seed(SEED)
 np.random.seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from core.model_loader import load_fp32, load_quantized, get_weight
 from core.datasets import load_wildjailbreak_prompts, load_arc_challenge
 from core.evaluation import generate_only, classify_batch, _extract_behavior, _logprob_score
@@ -94,7 +76,7 @@ def _transform_fp32_to_awq_space(fp32_weight, awq_module):
     """
     Transform FP32 weight into AWQ's scaled weight space.
 
-    AWQ stores: W_quantized ≈ (W_fp32 * scale), then quantizes.
+    AWQ stores: W_quantized ~ (W_fp32 * scale), then quantizes.
     During inference: Y = (X / scale) @ W_quantized^T
     So to put FP32 weights into AWQ space, we multiply by scale.
 
@@ -110,7 +92,7 @@ def _transform_fp32_to_awq_space(fp32_weight, awq_module):
     in_features = fp32_weight.shape[1]
 
     # Expand scales to match weight dimensions
-    # scales: [n_groups, out_features] → [in_features, out_features]
+    # scales: [n_groups, out_features] -> [in_features, out_features]
     scales_expanded = scales.repeat_interleave(group_size, dim=0)  # [in_features, out_features]
 
     # Transform: W_awq_space = W_fp32 * scale (per input group, per output channel)
@@ -160,7 +142,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="Model alias (llama7b, mistral7b, gemma9b)")
     parser.add_argument("--quantizer", default="nf4", help="Quantizer: nf4, gptq4, gptq3, int8")
-    parser.add_argument("--n_eval", type=int, default=100, help="WildJailbreak prompts for ASR")
+    parser.add_argument("--n_eval", type=int, default=1000, help="WildJailbreak prompts for ASR")
     parser.add_argument("--n_reasoning", type=int, default=50, help="ARC-Challenge questions")
     parser.add_argument("--output", default=None, help="Output path (auto-generated if not set)")
     args = parser.parse_args()
@@ -189,14 +171,12 @@ def main():
     all_responses = {}
     all_arc = {}
 
-    # ========================================================================
     # Phase A: Generate responses + measure ARC for all 5 conditions
-    # ========================================================================
     print(f"\n{'='*70}")
     print("  Phase A: Generating responses for all conditions")
     print("=" * 70)
 
-    # ── Condition 1: FP32 baseline ────────────────────────────────────────
+    # -- Condition 1: FP32 baseline ----------------------------------------
     print(f"\n[1/5] FP32 baseline...")
     fp32_model, tokenizer = load_fp32(args.model)
 
@@ -210,7 +190,7 @@ def main():
     print(f"  ARC: {all_arc['fp32']:.0f}%")
     del fp32_model; gc.collect(); torch.cuda.empty_cache()
 
-    # ── Condition 2: Quantized baseline ───────────────────────────────────
+    # -- Condition 2: Quantized baseline -----------------------------------
     print(f"\n[2/5] {qtz} baseline...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
@@ -218,7 +198,7 @@ def main():
     print(f"  ARC: {all_arc[qtz]:.0f}%")
     del q_model; gc.collect(); torch.cuda.empty_cache()
 
-    # ── Condition 3: Write restored ───────────────────────────────────────
+    # -- Condition 3: Write restored ---------------------------------------
     print(f"\n[3/5] {qtz} + write restored (o_proj, down_proj)...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     restore_projections(q_model, write_weights, WRITE_PROJS)
@@ -227,7 +207,7 @@ def main():
     print(f"  ARC: {all_arc['write_restored']:.0f}%")
     del q_model; gc.collect(); torch.cuda.empty_cache()
 
-    # ── Condition 4: Read restored ────────────────────────────────────────
+    # -- Condition 4: Read restored ----------------------------------------
     print(f"\n[4/5] {qtz} + read restored (q/k/v/gate/up)...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     restore_projections(q_model, read_weights, READ_PROJS)
@@ -236,7 +216,7 @@ def main():
     print(f"  ARC: {all_arc['read_restored']:.0f}%")
     del q_model; gc.collect(); torch.cuda.empty_cache()
 
-    # ── Condition 5: Both restored ────────────────────────────────────────
+    # -- Condition 5: Both restored ----------------------------------------
     print(f"\n[5/5] {qtz} + both restored...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     restore_projections(q_model, write_weights, WRITE_PROJS)
@@ -248,9 +228,7 @@ def main():
 
     del write_weights, read_weights
 
-    # ========================================================================
     # Phase B: Classify all responses in one batch
-    # ========================================================================
     print(f"\n{'='*70}")
     print("  Phase B: Classifying all responses (single classifier load)")
     print(f"{'='*70}\n")
@@ -274,15 +252,13 @@ def main():
         asr = 100.0 * n_complied / n
         asr_results[cond] = asr
 
-    # ========================================================================
     # Summary
-    # ========================================================================
     fp32_asr = asr_results["fp32"]
     q_asr = asr_results[qtz]
     damage = q_asr - fp32_asr
 
     print(f"\n{'='*70}")
-    print(f"  Read-Side vs Write-Side — {args.model} / {qtz}")
+    print(f"  Read-Side vs Write-Side -- {args.model} / {qtz}")
     print(f"  {args.n_eval} WildJailbreak prompts | {args.n_reasoning} ARC questions")
     print(f"{'='*70}")
     print(f"{'Condition':<20} {'ASR':>7} {'D ASR':>8} {'Recovery':>10} {'ARC':>6}")
@@ -314,7 +290,7 @@ def main():
     else:
         print("=> Write-side appears more important")
 
-    # ── Save ──────────────────────────────────────────────────────────────
+    # -- Save --------------------------------------------------------------
     out_data = {
         "model": args.model,
         "quantizer": qtz,

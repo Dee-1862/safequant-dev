@@ -1,8 +1,3 @@
-"""
-Model loading utilities for SafeQuant.
-Handles FP32 and NF4 model loading with proper device handling.
-"""
-
 import os
 # Force gptqmodel to use pure-pytorch backend (no triton/exllama kernel issues)
 os.environ["GPTQMODEL_FORCE_BACKEND"] = "torch"
@@ -61,7 +56,7 @@ def load_fp32(model_name: str, device: str = None):
         cache_dir=HF_HOME,
     )
 
-    print(f"  ✓ Loaded ({sum(p.numel() for p in model.parameters())/1e9:.2f}B params)")
+    print(f"  OK Loaded ({sum(p.numel() for p in model.parameters())/1e9:.2f}B params)")
     print(f"  Cache: {HF_HOME}")
 
     return model, tokenizer
@@ -107,7 +102,7 @@ def load_nf4(model_name: str, device: str = None):
         cache_dir=HF_HOME,
     )
 
-    print(f"  ✓ Loaded in 4-bit NF4 (compute dtype: {compute_dtype})")
+    print(f"  OK Loaded in 4-bit NF4 (compute dtype: {compute_dtype})")
     print(f"  Cache: {HF_HOME}")
 
     return model, tokenizer
@@ -116,7 +111,7 @@ def load_nf4(model_name: str, device: str = None):
 def load_int8(model_name: str, device: str = None):
     """
     Load model in INT8 quantization (bitsandbytes 8-bit).
-    Less aggressive than NF4 — useful for ablation: does 8-bit also collapse?
+    Less aggressive than NF4 -- useful for ablation: does 8-bit also collapse?
 
     Args:
         model_name: Short alias or any HF model ID.
@@ -145,7 +140,7 @@ def load_int8(model_name: str, device: str = None):
         cache_dir=HF_HOME,
     )
 
-    print(f"  ✓ Loaded in 8-bit INT8")
+    print(f"  OK Loaded in 8-bit INT8")
     print(f"  Cache: {HF_HOME}")
 
     return model, tokenizer
@@ -219,7 +214,7 @@ def _load_awq(model_name: str, device: str = None):
     ckpt_key = (model_name, "awq")
     if ckpt_key in QUANTIZED_CHECKPOINTS:
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
-        print(f"Loading AWQ model: {model_name} → {model_path}")
+        print(f"Loading AWQ model: {model_name} -> {model_path}")
     else:
         model_path = _resolve_model_path(model_name)
         print(f"Loading AWQ model: {model_path}")
@@ -236,7 +231,7 @@ def _load_awq(model_name: str, device: str = None):
     )
 
     model.eval()
-    print(f"  ✓ Loaded AWQ 4-bit model")
+    print(f"  OK Loaded AWQ 4-bit model")
     return model, tokenizer
 
 
@@ -339,7 +334,7 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
     Load an AQLM-quantized model (SOTA for 2-bit).
 
     Checks for pre-quantized checkpoint first. AQLM models load natively
-    through transformers — just needs `pip install aqlm[gpu]`.
+    through transformers -- just needs `pip install aqlm[gpu]`.
 
     Args:
         model_name: model alias or HF ID
@@ -353,7 +348,7 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
     ckpt_key = (model_name, bit_suffix)
     if ckpt_key in QUANTIZED_CHECKPOINTS:
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
-        print(f"Loading AQLM-{bits}bit model: {model_name} → {model_path}")
+        print(f"Loading AQLM-{bits}bit model: {model_name} -> {model_path}")
     else:
         # Check local aqlm_cache
         safe_name = model_name.replace("/", "_")
@@ -364,7 +359,7 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
         else:
             raise ValueError(
                 f"No pre-quantized AQLM checkpoint for ({model_name}, {bit_suffix}). "
-                f"AQLM requires pre-quantized checkpoints — on-the-fly quantization "
+                f"AQLM requires pre-quantized checkpoints -- on-the-fly quantization "
                 f"takes hours. Add the checkpoint to config.QUANTIZED_CHECKPOINTS."
             )
 
@@ -381,7 +376,7 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
         torch_dtype=torch.float16,
     )
     model.eval()
-    print(f"  ✓ Loaded AQLM {bits}-bit model")
+    print(f"  OK Loaded AQLM {bits}-bit model")
     return model, tokenizer
 
 
@@ -398,7 +393,7 @@ def _load_quip(model_name: str, device: str = None, bits: int = 4):
     ckpt_key = (model_name, bit_suffix)
     if ckpt_key in QUANTIZED_CHECKPOINTS:
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
-        print(f"Loading QuIP#-{bits}bit model: {model_name} → {model_path}")
+        print(f"Loading QuIP#-{bits}bit model: {model_name} -> {model_path}")
     else:
         raise ValueError(f"No pre-quantized QuIP# checkpoint for ({model_name}, {bit_suffix})")
 
@@ -415,7 +410,7 @@ def _load_quip(model_name: str, device: str = None, bits: int = 4):
         torch_dtype=torch.float16,
     )
     model.eval()
-    print(f"  ✓ Loaded QuIP# {bits}-bit model")
+    print(f"  OK Loaded QuIP# {bits}-bit model")
     return model, tokenizer
 
 
@@ -449,12 +444,12 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         revision = None
         if "compressed-llm" in pre_quantized:
             revision = f"{bits}bit_128g"
-            print(f"Loading GPTQ-{bits}bit model: {model_name} → {pre_quantized} (rev: {revision})")
+            print(f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized} (rev: {revision})")
         else:
-            print(f"Loading GPTQ-{bits}bit model: {model_name} → {pre_quantized}")
+            print(f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized}")
 
         # Load via transformers native GPTQ support (GPU dequantization, no
-        # extra CUDA/triton kernels needed — avoids auto_gptq version conflicts)
+        # extra CUDA/triton kernels needed -- avoids auto_gptq version conflicts)
         if "compressed-llm" in pre_quantized:
             base_path = _resolve_model_path(model_name)
             tokenizer = AutoTokenizer.from_pretrained(base_path, cache_dir=HF_HOME,
@@ -475,7 +470,7 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
             revision=revision,
         )
         model.eval()
-        print(f"  ✓ Loaded GPTQ {bits}-bit (pre-quantized)")
+        print(f"  OK Loaded GPTQ {bits}-bit (pre-quantized)")
         return model, tokenizer
 
     # On-the-fly quantization for 3-bit and 2-bit
@@ -486,7 +481,11 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
 
     if os.path.isdir(cache_path) and os.path.exists(os.path.join(cache_path, "config.json")):
         print(f"Loading GPTQ-{bits}bit model: {model_name} (cached at {cache_path})")
-        tokenizer = AutoTokenizer.from_pretrained(cache_path, trust_remote_code=True)
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(cache_path, trust_remote_code=True)
+        except Exception as e:
+            print(f"  cache-path tokenizer load failed ({type(e).__name__}); loading from base HF repo {model_path}")
+            tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         gptq_cfg = GPTQConfig(bits=bits, use_exllama=False)
         model = AutoModelForCausalLM.from_pretrained(
             cache_path,
@@ -496,7 +495,7 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
             torch_dtype=torch.float16,
         )
         model.eval()
-        print(f"  ✓ Loaded GPTQ {bits}-bit from cache")
+        print(f"  OK Loaded GPTQ {bits}-bit from cache")
         return model, tokenizer
 
     # Quantize from scratch
@@ -534,14 +533,14 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         cache_dir=HF_HOME,
     )
     model.eval()
-    print(f"  ✓ Quantized to GPTQ {bits}-bit on-the-fly")
+    print(f"  OK Quantized to GPTQ {bits}-bit on-the-fly")
 
     # Save to cache for future runs
     try:
         os.makedirs(cache_path, exist_ok=True)
         model.save_pretrained(cache_path)
         tokenizer.save_pretrained(cache_path)
-        print(f"  ✓ Saved to cache: {cache_path}")
+        print(f"  OK Saved to cache: {cache_path}")
     except Exception as e:
         print(f"  Warning: could not cache quantized model: {e}")
 
@@ -561,13 +560,13 @@ def get_weight(module, as_dtype=torch.float32):
     """
     import torch.nn as nn
 
-    # Get dimensions — different quantizers use different attribute names
+    # Get dimensions -- different quantizers use different attribute names
     in_f = getattr(module, 'in_features', None) or getattr(module, 'infeatures', None)
     out_f = getattr(module, 'out_features', None) or getattr(module, 'outfeatures', None)
 
     # Check if it's an auto_gptq QuantLinear
     if hasattr(module, 'qweight'):
-        # auto_gptq QuantLinear — use identity matrix forward pass to dequantize
+        # auto_gptq QuantLinear -- use identity matrix forward pass to dequantize
         device = module.qweight.device
         identity = torch.eye(in_f, device=device, dtype=torch.float16)
         with torch.no_grad():
@@ -576,14 +575,14 @@ def get_weight(module, as_dtype=torch.float32):
 
     # Check if it's a regular nn.Linear or bitsandbytes quantized
     if not isinstance(module, nn.Linear):
-        # Unknown module type — try identity matrix forward pass as fallback
+        # Unknown module type -- try identity matrix forward pass as fallback
         device = next(module.parameters()).device
         identity = torch.eye(in_f, device=device, dtype=torch.float16)
         with torch.no_grad():
             weight = module(identity).T.float()
         return weight.to(as_dtype)
 
-    # Check if quantized (BitsAndBytes Params4bit — NF4)
+    # Check if quantized (BitsAndBytes Params4bit -- NF4)
     if hasattr(module.weight, 'quant_type'):
         try:
             import bitsandbytes.functional as bnb_F
@@ -597,7 +596,7 @@ def get_weight(module, as_dtype=torch.float32):
                 weight = module(identity).T
         return weight.to(as_dtype)
 
-    # Check if quantized (BitsAndBytes Int8Params — LLM.int8)
+    # Check if quantized (BitsAndBytes Int8Params -- LLM.int8)
     if hasattr(module.weight, 'CB') or module.weight.dtype == torch.int8:
         # Int8 stores weights as int8 + row-wise absmax scales
         # Use identity matrix forward pass to get dequantized weight
@@ -625,7 +624,7 @@ if __name__ == "__main__":
     else:
         model, tokenizer = load_nf4(args.model)
 
-    print(f"\n✓ Model loaded successfully")
+    print(f"\nOK Model loaded successfully")
     print(f"  Vocab size: {len(tokenizer)}")
     print(f"  Hidden size: {model.config.hidden_size}")
     print(f"  Num layers: {model.config.num_hidden_layers}")

@@ -1,0 +1,31 @@
+{
+  "model": "mistral7b-v02",
+  "quantizer": "aqlm2",
+  "n_calib": 200,
+  "n_eval": 200,
+  "n_arc": 50,
+  "fp32_best_layer": 8,
+  "fp32_best_separation": 7.9858657708525405,
+  "quant_best_layer": 4,
+  "quant_best_separation": 7.579109459270939,
+  "cos_sim_self_vs_cross": 0.2550188899040222,
+  "results": {
+    "baseline": {
+      "asr": 67.0,
+      "arc": 56.0
+    },
+    "self_ablation": {
+      "asr": 40.5,
+      "arc": 54.0
+    },
+    "cross_ablation": {
+      "asr": 69.5,
+      "arc": 54.0
+    },
+    "random_control": {
+      "asr": 71.0,
+      "arc": 56.0
+    }
+  },
+  "decision": "MECHANISM-BROKEN \u2014 neither direction matters; model isn't using a single residual-stream direction"
+}

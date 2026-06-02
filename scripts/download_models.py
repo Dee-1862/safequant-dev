@@ -1,17 +1,15 @@
-"""
-Download pre-quantized models from HuggingFace.
-Run this on the LOGIN NODE (has internet access).
-
-Usage:
-    conda activate /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
-    python scripts/download_models.py
-"""
 import os
-os.environ["HF_HOME"] = "/ocean/projects/cis240116p/bhoomire/.cache/huggingface"
+
+_DEFAULT_OCEAN = "/ocean/projects/cis240116p/bhoomire/.cache/huggingface"
+CACHE_DIR = (
+    os.environ.get("HF_HOME")
+    or os.environ.get("OCEAN_CACHE")
+    or (_DEFAULT_OCEAN if os.path.isdir("/ocean/projects/cis240116p") else None)
+    or os.path.expanduser("~/.cache/huggingface")
+)
+os.environ.setdefault("HF_HOME", CACHE_DIR)
 
 from huggingface_hub import snapshot_download
-
-CACHE_DIR = "/ocean/projects/cis240116p/bhoomire/.cache/huggingface"
 
 MODELS_TO_DOWNLOAD = [
     # Llama-3.1-8B AWQ-4bit (re-download fresh)
@@ -40,9 +38,9 @@ def main():
                 model_id,
                 cache_dir=CACHE_DIR,
             )
-            print(f"  ✓ Downloaded to: {path}")
+            print(f"  OK Downloaded to: {path}")
         except Exception as e:
-            print(f"  ✗ Failed: {e}")
+            print(f"  FAIL Failed: {e}")
 
     print(f"\n{'='*60}")
     print("  All downloads complete!")

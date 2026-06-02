@@ -1,11 +1,3 @@
-"""
-On-the-fly GPTQ quantization for models that don't have pre-quantized checkpoints.
-Run on a GPU node via quantize_missing_gptq.sbatch.
-
-Quantizes and caches:
-  - Mistral-7B-v0.2: 3-bit, 2-bit
-  - Qwen2.5-7B:      3-bit, 2-bit
-"""
 import os
 import sys
 import gc
@@ -32,7 +24,7 @@ def quantize_and_cache(model_id, alias, bits):
 
     # Skip if already cached
     if os.path.isdir(cache_path) and os.path.exists(os.path.join(cache_path, "config.json")):
-        print(f"  ✓ Already cached: {cache_path}")
+        print(f"  OK Already cached: {cache_path}")
         return
 
     print(f"\n  Loading tokenizer for {model_id}...")
@@ -57,13 +49,13 @@ def quantize_and_cache(model_id, alias, bits):
         cache_dir=HF_HOME,
     )
     model.eval()
-    print(f"  ✓ Quantized to {bits}-bit")
+    print(f"  OK Quantized to {bits}-bit")
 
     # Save to cache
     os.makedirs(cache_path, exist_ok=True)
     model.save_pretrained(cache_path)
     tokenizer.save_pretrained(cache_path)
-    print(f"  ✓ Saved to: {cache_path}")
+    print(f"  OK Saved to: {cache_path}")
 
     # Free memory
     del model, tokenizer
@@ -83,7 +75,7 @@ def main():
         try:
             quantize_and_cache(model_id, alias, bits)
         except Exception as e:
-            print(f"  ✗ Failed: {e}")
+            print(f"  FAIL Failed: {e}")
             import traceback
             traceback.print_exc()
             # Continue to next job

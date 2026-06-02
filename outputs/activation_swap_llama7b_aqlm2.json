@@ -1,0 +1,29 @@
+{
+  "model": "llama7b",
+  "quantizer": "aqlm2",
+  "seed": 42,
+  "swap_layers": [
+    4,
+    11,
+    16,
+    22,
+    29
+  ],
+  "n_eval": 100,
+  "fp32_baseline_asr": 19.0,
+  "quant_baseline_asr": 39.0,
+  "swap_asr": {
+    "L4": 19.0,
+    "L11": 23.0,
+    "L16": 28.0,
+    "L22": 29.0,
+    "L29": 32.0
+  },
+  "swap_delta_from_fp32": {
+    "L4": 0.0,
+    "L11": 4.0,
+    "L16": 9.0,
+    "L22": 10.0,
+    "L29": 13.0
+  }
+}

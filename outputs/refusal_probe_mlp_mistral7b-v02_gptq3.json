@@ -1,0 +1,408 @@
+{
+  "model": "mistral7b-v02",
+  "quantizer": "gptq3",
+  "probe_type": "mlp",
+  "n_calib": 200,
+  "n_folds": 5,
+  "n_layers": 32,
+  "seed": 42,
+  "fp32_probe_per_layer": {
+    "0": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "1": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "2": {
+      "mean_acc": 0.99,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.985
+    },
+    "3": {
+      "mean_acc": 0.9875,
+      "std_acc": 0.007905694150420955,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.9800000000000001
+    },
+    "4": {
+      "mean_acc": 0.99,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.985
+    },
+    "5": {
+      "mean_acc": 0.9899999999999999,
+      "std_acc": 0.009354143466934856,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.985
+    },
+    "6": {
+      "mean_acc": 0.9899999999999999,
+      "std_acc": 0.009354143466934856,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.985
+    },
+    "7": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "8": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "9": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "10": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "11": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "12": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "13": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "14": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "15": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "16": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "17": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "18": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "19": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "20": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "21": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 1.0
+    },
+    "22": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 1.0
+    },
+    "23": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.9949999999999999
+    },
+    "24": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "25": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "26": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "27": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.9949999999999999
+    },
+    "28": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 1.0
+    },
+    "29": {
+      "mean_acc": 0.9875,
+      "std_acc": 0.013693063937629145,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.9800000000000001
+    },
+    "30": {
+      "mean_acc": 0.99,
+      "std_acc": 0.009354143466934856,
+      "harmful_acc": 0.985,
+      "harmless_acc": 0.9949999999999999
+    },
+    "31": {
+      "mean_acc": 0.9775,
+      "std_acc": 0.02000000000000001,
+      "harmful_acc": 0.97,
+      "harmless_acc": 0.985
+    }
+  },
+  "quant_probe_per_layer": {
+    "0": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.985
+    },
+    "1": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "2": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "3": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "4": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "5": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "6": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "7": {
+      "mean_acc": 0.9924999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "8": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "9": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "10": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "11": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "12": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "13": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "14": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "15": {
+      "mean_acc": 0.9974999999999999,
+      "std_acc": 0.004999999999999982,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.9949999999999999
+    },
+    "16": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "17": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "18": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "19": {
+      "mean_acc": 1.0,
+      "std_acc": 0.0,
+      "harmful_acc": 1.0,
+      "harmless_acc": 1.0
+    },
+    "20": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 1.0,
+      "harmless_acc": 0.99
+    },
+    "21": {
+      "mean_acc": 0.9925,
+      "std_acc": 0.010000000000000004,
+      "harmful_acc": 0.99,
+      "harmless_acc": 0.9949999999999999
+    },
+    "22": {
+      "mean_acc": 0.9925,
+      "std_acc": 0.010000000000000004,
+      "harmful_acc": 0.99,
+      "harmless_acc": 0.9949999999999999
+    },
+    "23": {
+      "mean_acc": 0.99,
+      "std_acc": 0.009354143466934856,
+      "harmful_acc": 0.99,
+      "harmless_acc": 0.99
+    },
+    "24": {
+      "mean_acc": 0.99,
+      "std_acc": 0.009354143466934856,
+      "harmful_acc": 0.99,
+      "harmless_acc": 0.99
+    },
+    "25": {
+      "mean_acc": 0.9925,
+      "std_acc": 0.010000000000000004,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "26": {
+      "mean_acc": 0.99,
+      "std_acc": 0.012247448713915901,
+      "harmful_acc": 0.985,
+      "harmless_acc": 0.9949999999999999
+    },
+    "27": {
+      "mean_acc": 0.9925,
+      "std_acc": 0.010000000000000004,
+      "harmful_acc": 0.985,
+      "harmless_acc": 1.0
+    },
+    "28": {
+      "mean_acc": 0.9949999999999999,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.9949999999999999
+    },
+    "29": {
+      "mean_acc": 0.9925,
+      "std_acc": 0.006123724356957924,
+      "harmful_acc": 0.9949999999999999,
+      "harmless_acc": 0.99
+    },
+    "30": {
+      "mean_acc": 0.9825000000000002,
+      "std_acc": 0.012747548783981965,
+      "harmful_acc": 0.985,
+      "harmless_acc": 0.9800000000000001
+    },
+    "31": {
+      "mean_acc": 0.96,
+      "std_acc": 0.009354143466934868,
+      "harmful_acc": 0.95,
+      "harmless_acc": 0.97
+    }
+  },
+  "summary": {
+    "fp32_mean_acc": 0.994453125,
+    "quant_mean_acc": 0.99296875,
+    "fp32_min_acc": 0.9775,
+    "quant_min_acc": 0.96,
+    "fp32_argmax_layer": 17,
+    "quant_argmax_layer": 16,
+    "layers_with_drop_gt_5pp": [],
+    "n_layers_with_drop": 0,
+    "interpretation": "preserved"
+  }
+}
