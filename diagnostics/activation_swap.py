@@ -55,7 +55,7 @@ def capture_quant_activations(q_model, q_tok, prompts, layer_idx):
     return captured, captured_attn_masks
 
 
-def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_acts, quant_input_ids, max_new_tokens=100):
+def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_acts, quant_input_ids, max_new_tokens=256):
     """For each prompt, generate from the FP32 model BUT replace the residual
     stream at layer_idx with the quantized model's captured activation.
 
@@ -105,7 +105,7 @@ def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_act
     return fp_responses
 
 
-def baseline_generate(model, tok, prompts, max_new_tokens=100):
+def baseline_generate(model, tok, prompts, max_new_tokens=256):
     out = []
     device = next(model.parameters()).device
     for p in prompts:
@@ -126,7 +126,8 @@ def main():
     ap.add_argument("--model", required=True)
     ap.add_argument("--quantizer", required=True)
     ap.add_argument("--swap_layers", default="4,11,16,22,29", help="Comma-sep layers to swap at")
-    ap.add_argument("--n_eval", type=int, default=100)
+    ap.add_argument("--n_eval", type=int, default=200)
+    ap.add_argument("--max_new_tokens", type=int, default=256)
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -150,7 +151,7 @@ def main():
         quant_acts_by_layer[L] = acts
     # Also generate quant baseline ASR
     print(f"  generating quant baseline responses ...")
-    quant_responses = baseline_generate(q_model, q_tok, items)
+    quant_responses = baseline_generate(q_model, q_tok, items, max_new_tokens=args.max_new_tokens)
     del q_model; gc.collect(); torch.cuda.empty_cache()
 
     # FP32 baseline + swap variants
@@ -158,12 +159,12 @@ def main():
     fp32_model, fp32_tok = load_fp32(args.model)
 
     print(f"  generating FP32 baseline responses ...")
-    fp32_responses = baseline_generate(fp32_model, fp32_tok, items)
+    fp32_responses = baseline_generate(fp32_model, fp32_tok, items, max_new_tokens=args.max_new_tokens)
 
     all_responses = {"fp32_baseline": fp32_responses, "quant_baseline": quant_responses}
     for L in swap_layers:
         print(f"\n  generating with quant-L{L} activation swapped INTO FP32 ...")
-        swap_responses = generate_with_layer_swap(fp32_model, fp32_tok, items, L, quant_acts_by_layer[L], None)
+        swap_responses = generate_with_layer_swap(fp32_model, fp32_tok, items, L, quant_acts_by_layer[L], None, max_new_tokens=args.max_new_tokens)
         all_responses[f"swap_q_into_fp32_L{L}"] = swap_responses
     del fp32_model; gc.collect(); torch.cuda.empty_cache()
 

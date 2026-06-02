@@ -41,7 +41,7 @@ def format_prompt(p, tok):
         return text
 
 
-def extract_last_token_residuals(model, tokenizer, prompts, layers, device):
+def extract_last_token_residuals(model, tokenizer, prompts, layers, device, token_pos=-1):
     """Returns {layer: list of (hidden,) CPU tensors, one per prompt}."""
     inner = _get_inner(model)
     buf = {}
@@ -50,7 +50,7 @@ def extract_last_token_residuals(model, tokenizer, prompts, layers, device):
         def hook(module, inputs, output):
             r = output[0] if isinstance(output, (tuple, list)) else output
             if r.dim() == 3:
-                buf[l] = r[:, -1, :].detach().cpu().float().squeeze(0)
+                buf[l] = r[:, token_pos, :].detach().cpu().float().squeeze(0)
         return hook
 
     handles = [inner.layers[l].register_forward_hook(make_hook(l)) for l in layers]
@@ -136,9 +136,14 @@ def main():
     layers = list(range(n_layers))
     print(f"  n_layers = {n_layers}")
 
+    token_pos = -1
+    if "llama" in args.model.lower():
+        token_pos = -5
+    print(f"  Mapped {args.model} to token_pos: {token_pos}")
+
     print("[FP32] extracting per-layer residuals ...")
-    fp_h_resid = extract_last_token_residuals(fp32_model, fp32_tok, harmful, layers, device)
-    fp_s_resid = extract_last_token_residuals(fp32_model, fp32_tok, harmless, layers, device)
+    fp_h_resid = extract_last_token_residuals(fp32_model, fp32_tok, harmful, layers, device, token_pos=token_pos)
+    fp_s_resid = extract_last_token_residuals(fp32_model, fp32_tok, harmless, layers, device, token_pos=token_pos)
 
     # Per-layer r_hat and sigma on FP32
     fp_r_hats = {L: compute_r_hat(fp_h_resid[L], fp_s_resid[L]) for L in layers}
@@ -157,8 +162,8 @@ def main():
     q_device = next(q_model.parameters()).device
 
     print(f"[{args.quantizer}] extracting per-layer residuals ...")
-    q_h_resid = extract_last_token_residuals(q_model, q_tok, harmful, layers, q_device)
-    q_s_resid = extract_last_token_residuals(q_model, q_tok, harmless, layers, q_device)
+    q_h_resid = extract_last_token_residuals(q_model, q_tok, harmful, layers, q_device, token_pos=token_pos)
+    q_s_resid = extract_last_token_residuals(q_model, q_tok, harmless, layers, q_device, token_pos=token_pos)
 
     q_r_hats = {L: compute_r_hat(q_h_resid[L], q_s_resid[L]) for L in layers}
     q_seps = {L: per_layer_separation(q_h_resid[L], q_s_resid[L], q_r_hats[L]) for L in layers}

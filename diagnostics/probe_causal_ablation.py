@@ -19,6 +19,9 @@ from core.datasets import load_wildjailbreak_prompts, load_harmless_prompts
 from core.evaluation import generate_only, classify_batch, _extract_behavior
 from sklearn.linear_model import LogisticRegression
 
+from diagnostics.directional_ablation import install_ablation, remove_handles
+from diagnostics.behavioral_outcome_probe import per_layer_probe_accuracy
+
 
 def fit_probe_get_directions(harmful_by_layer, harmless_by_layer):
     """Per layer: normalized weight vector of a logistic-regression probe."""
@@ -58,8 +61,8 @@ def main():
     ap.add_argument("--model", required=True)
     ap.add_argument("--quantizer", required=True)
     ap.add_argument("--n_calib", type=int, default=200)
-    ap.add_argument("--n_eval", type=int, default=100, help="ASR prompts; default 100 to keep this affordable across all 32 layers")
-    ap.add_argument("--layers_to_ablate", default=None, help="Comma-sep list, e.g. '4,11,16,22,29'. Default: every 4th layer")
+    ap.add_argument("--n_eval", type=int, default=200)
+    ap.add_argument("--max_new_tokens", type=int, default=256)
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
     if args.output is None:
@@ -84,29 +87,27 @@ def main():
     h_resid = extract_last_token_residuals(q_model, q_tok, calib_harmful,  layers, q_device)
     s_resid = extract_last_token_residuals(q_model, q_tok, calib_harmless, layers, q_device)
     directions = fit_probe_get_directions(h_resid, s_resid)
-    del h_resid, s_resid; gc.collect()
+    resid_by_layer = {L: h_resid[L] + s_resid[L] for L in layers}
+    labels = [1]*len(calib_harmful) + [0]*len(calib_harmless)
+    accs = per_layer_probe_accuracy(resid_by_layer, labels)
+    best_L = max(accs, key=lambda L: accs[L] if not np.isnan(accs[L]) else -1)
+    print(f"  best probe layer = {best_L} (CV acc {accs[best_L]:.3f})")
 
-    # Determine which layers to ablate
-    if args.layers_to_ablate:
-        ablate_layers = [int(x) for x in args.layers_to_ablate.split(",")]
-    else:
-        ablate_layers = list(range(0, n_layers, 4))   # every 4th: 0,4,8,12,...
-    print(f"  ablating layers: {ablate_layers}")
+    del h_resid, s_resid; gc.collect()
 
     # Baseline ASR (no ablation)
     print(f"\n  measuring baseline ASR (no ablation, n_eval={args.n_eval}) ...")
-    baseline_responses = generate_only(q_model, q_tok, eval_items, desc=f"{args.quantizer} baseline")
+    baseline_responses = generate_only(q_model, q_tok, eval_items, desc=f"{args.quantizer} baseline", max_new_tokens=args.max_new_tokens)
 
-    # Per-layer ablation
+    # Multi-layer ablation (Arditi style)
     all_responses = {"baseline": baseline_responses}
-    for L in ablate_layers:
-        direction_t = torch.tensor(directions[L], dtype=torch.float32)
-        print(f"\n  measuring ASR with probe-direction ablation at L={L} ...")
-        h = install_ablation_hook(q_model, L, direction_t)
-        try:
-            all_responses[f"ablate_L{L}"] = generate_only(q_model, q_tok, eval_items, desc=f"abl L{L}")
-        finally:
-            h.remove()
+    best_dir = torch.tensor(directions[best_L], dtype=torch.float32)
+    print(f"\n  measuring ASR with probe-direction (from L{best_L}) ablated at all layers ...")
+    handles = install_ablation(q_model, best_dir, layers)
+    try:
+        all_responses["multilayer_ablation"] = generate_only(q_model, q_tok, eval_items, desc="multilayer-abl", max_new_tokens=args.max_new_tokens)
+    finally:
+        remove_handles(handles)
 
     del q_model; gc.collect(); torch.cuda.empty_cache()
 
@@ -125,25 +126,23 @@ def main():
 
     # Report
     base = asr_results["baseline"]
+    abl = asr_results["multilayer_ablation"]
     print()
     print("="*70)
     print(f"  Causal probe ablation -- {args.model} / {args.quantizer}")
     print(f"  baseline ASR (no ablation): {base:.1f}%")
+    print(f"  multilayer ablation ASR:    {abl:.1f}%")
+    print(f"  Delta ASR:                  {abl - base:+.1f}pp")
     print("="*70)
-    print(f"  {'Layer':>6}  {'ASR':>7}  {'Delta from base':>13}")
-    print("  " + "-"*40)
-    for L in ablate_layers:
-        a = asr_results[f"ablate_L{L}"]
-        d = a - base
-        print(f"  L={L:<4} {a:>6.1f}% {d:>+11.1f}pp")
 
     out = {
         "model": args.model, "quantizer": args.quantizer,
         "n_calib": args.n_calib, "n_eval": args.n_eval, "seed": SEED,
-        "ablated_layers": ablate_layers,
+        "best_probe_layer": best_L,
+        "best_probe_cv_acc": accs[best_L],
         "baseline_asr": base,
-        "asr_per_layer": {f"L{L}": asr_results[f"ablate_L{L}"] for L in ablate_layers},
-        "delta_per_layer": {f"L{L}": asr_results[f"ablate_L{L}"] - base for L in ablate_layers},
+        "multilayer_ablation_asr": abl,
+        "delta_asr": abl - base,
     }
     Path("outputs").mkdir(exist_ok=True)
     with open(args.output, "w") as f:

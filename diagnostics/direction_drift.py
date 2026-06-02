@@ -9,7 +9,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core.model_loader import load_fp32, load_quantized
-from core.datasets import load_wildjailbreak_prompts, load_harmless_prompts
+from core.datasets import load_wildjailbreak_prompts, load_harmless_prompts, load_harmbench_prompts
 
 
 from core.seeds import set_global_seed, DEFAULT_SEED, fixed_rng, torch_gen
@@ -32,7 +32,7 @@ def format_prompt(p, tok):
         return p
 
 
-def extract_last_token_residuals(model, tokenizer, prompts, layers, device):
+def extract_last_token_residuals(model, tokenizer, prompts, layers, device, token_pos=-1):
     """Returns {layer: list of (hidden,) CPU tensors, one per prompt}."""
     inner = _get_inner(model)
     buf = {}
@@ -41,7 +41,7 @@ def extract_last_token_residuals(model, tokenizer, prompts, layers, device):
         def hook(module, inputs, output):
             r = output[0] if isinstance(output, (tuple, list)) else output
             if r.dim() == 3:
-                buf[l] = r[:, -1, :].detach().cpu().float().squeeze(0)
+                buf[l] = r[:, token_pos, :].detach().cpu().float().squeeze(0)
         return hook
 
     handles = [inner.layers[l].register_forward_hook(make_hook(l)) for l in layers]
@@ -78,12 +78,12 @@ def per_layer_separation(harmful_lasts, harmless_lasts, r_hat):
     return float(sep), float(h_scores.mean()), float(s_scores.mean())
 
 
-def run_for_model(model, tokenizer, harmful, harmless, layers, device, label):
-    print(f"\n[{label}] extracting last-token residuals across {len(layers)} layers")
+def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, token_pos=-1):
+    print(f"\n[{label}] extracting residuals across {len(layers)} layers (token_pos={token_pos})")
     print(f"    forwarding harmful ({len(harmful)} prompts)...")
-    h_caps = extract_last_token_residuals(model, tokenizer, harmful, layers, device)
+    h_caps = extract_last_token_residuals(model, tokenizer, harmful, layers, device, token_pos=token_pos)
     print(f"    forwarding harmless ({len(harmless)} prompts)...")
-    s_caps = extract_last_token_residuals(model, tokenizer, harmless, layers, device)
+    s_caps = extract_last_token_residuals(model, tokenizer, harmless, layers, device, token_pos=token_pos)
     r_hats, seps = {}, {}
     for L in layers:
         r = compute_r_hat(h_caps[L], s_caps[L])
@@ -164,6 +164,7 @@ def main():
                     help="single quantizer or comma-separated list "
                          "(e.g. 'gptq2,gptq3,gptq4')")
     ap.add_argument("--n_calib", type=int, default=50)
+    ap.add_argument("--dataset", default="wildjailbreak", choices=["wildjailbreak", "harmbench"])
     ap.add_argument("--output", default=None,
                     help="output path (only valid for single quantizer)")
     args = ap.parse_args()
@@ -181,13 +182,19 @@ def main():
     print("=" * 70)
 
     print("Loading calibration prompts...")
-    harmful_items = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
-    harmful = []
-    for it in harmful_items:
-        if isinstance(it, dict):
-            harmful.append(it.get("behavior") or it.get("prompt") or "")
-        else:
-            harmful.append(str(it))
+    if args.dataset == "wildjailbreak":
+        harmful_items = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
+        harmful = []
+        for it in harmful_items:
+            if isinstance(it, dict):
+                harmful.append(it.get("behavior") or it.get("prompt") or "")
+            else:
+                harmful.append(str(it))
+    else:
+        # Harmbench (direct harmful instructions)
+        harmful_items = load_harmbench_prompts(n_samples=args.n_calib)
+        harmful = harmful_items
+
     harmless = load_harmless_prompts(n_samples=args.n_calib)
 
     fp32_model, tokenizer = load_fp32(args.model)
@@ -195,8 +202,14 @@ def main():
     layers = list(range(n_layers))
     print(f"  num_hidden_layers: {n_layers}")
 
+    # Determine post-instruction token position offset
+    token_pos = -1
+    if "llama" in args.model.lower():
+        token_pos = -5  # <|eot_id|> in Llama 3
+    print(f"  Mapped {args.model} to token_pos: {token_pos}")
+
     fp32_r_hats, fp32_seps = run_for_model(
-        fp32_model, tokenizer, harmful, harmless, layers, device, "FP32")
+        fp32_model, tokenizer, harmful, harmless, layers, device, "FP32", token_pos=token_pos)
 
     del fp32_model
     gc.collect()
@@ -209,7 +222,7 @@ def main():
         print(f"{'#' * 70}")
         q_model, _ = load_quantized(args.model, quantizer=q)
         q_r_hats, q_seps = run_for_model(
-            q_model, tokenizer, harmful, harmless, layers, device, q)
+            q_model, tokenizer, harmful, harmless, layers, device, q, token_pos=token_pos)
 
         del q_model
         gc.collect()
