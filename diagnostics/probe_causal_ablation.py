@@ -20,7 +20,7 @@ from core.evaluation import generate_only, classify_batch, _extract_behavior
 from sklearn.linear_model import LogisticRegression
 
 from diagnostics.directional_ablation import install_ablation, remove_handles
-from diagnostics.behavioral_outcome_probe import per_layer_probe_accuracy
+from diagnostics.probe_utils import per_layer_probe_accuracy
 
 
 def fit_probe_get_directions(harmful_by_layer, harmless_by_layer):

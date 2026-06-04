@@ -48,29 +48,22 @@ def load_harmful_prompts(n_samples=None, split="harmful", cache_dir=None):
 
 def load_harmbench_prompts(n_samples=None, cache_dir=None):
     """
-    Load harmful behaviors from HarmBench (secondary safety benchmark).
-
-    Dataset: harmbench/HarmBench  (standard_behaviors config)
-    Format:  {"Behavior": str, "Category": str, ...}
-
-    Raises RuntimeError if the dataset cannot be loaded.
+    Load harmful behaviors from HarmBench (secondary safety benchmark) directly from GitHub.
     """
+    import pandas as pd
     try:
-        dataset = load_dataset(
-            "harmbench/HarmBench",
-            "standard_behaviors",
-            split="train",
-            cache_dir=cache_dir,
-        )
+        url = "https://raw.githubusercontent.com/centerforaisafety/HarmBench/main/data/behavior_datasets/harmbench_behaviors_text_all.csv"
+        df = pd.read_csv(url)
     except Exception as e:
         raise RuntimeError(
-            f"Cannot load HarmBench (harmbench/HarmBench, config='standard_behaviors'): {e}\n"
-            "Fix: ensure HF_HOME points to Ocean and run the job with network access."
+            f"Cannot load HarmBench CSV from GitHub: {e}\n"
+            "Fix: ensure network access to raw.githubusercontent.com."
         ) from e
 
-    prompts = [item["Behavior"] for item in dataset if item.get("Behavior", "").strip()]
+    # The CSV usually has 'Behavior' column
+    prompts = [str(b).strip() for b in df["Behavior"].dropna() if str(b).strip()]
     if not prompts:
-        raise RuntimeError("HarmBench loaded but 'Behavior' field is empty -- check dataset schema.")
+        raise RuntimeError("HarmBench loaded but 'Behavior' field is empty -- check CSV schema.")
 
     if n_samples:
         prompts = prompts[:n_samples]

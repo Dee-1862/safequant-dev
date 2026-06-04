@@ -2,7 +2,7 @@
   "model": "llama7b",
   "quantizer": "aqlm2",
   "n_train_prompts": 200,
-  "n_eval_ablation": 100,
+  "n_eval_ablation": 200,
   "n_layers": 32,
   "seed": 42,
   "n_jailbroken_train": 71,
@@ -44,8 +44,8 @@
   },
   "best_layer": 0,
   "best_layer_accuracy": 0.645,
-  "baseline_asr": 63.0,
+  "baseline_asr": 62.5,
   "behavioral_ablation_asr": 61.0,
-  "delta_asr": -2.0,
+  "delta_asr": -1.5,
   "operative": false
 }

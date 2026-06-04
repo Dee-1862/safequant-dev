@@ -2,37 +2,11 @@
   "model": "llama7b",
   "quantizer": "aqlm2",
   "n_calib": 200,
-  "n_eval": 100,
+  "n_eval": 200,
   "seed": 42,
-  "ablated_layers": [
-    0,
-    4,
-    8,
-    12,
-    16,
-    20,
-    24,
-    28
-  ],
-  "baseline_asr": 63.0,
-  "asr_per_layer": {
-    "L0": 64.0,
-    "L4": 66.0,
-    "L8": 59.0,
-    "L12": 61.0,
-    "L16": 61.0,
-    "L20": 63.0,
-    "L24": 59.0,
-    "L28": 59.0
-  },
-  "delta_per_layer": {
-    "L0": 1.0,
-    "L4": 3.0,
-    "L8": -4.0,
-    "L12": -2.0,
-    "L16": -2.0,
-    "L20": 0.0,
-    "L24": -4.0,
-    "L28": -4.0
-  }
+  "best_probe_layer": 19,
+  "best_probe_cv_acc": 1.0,
+  "baseline_asr": 62.5,
+  "multilayer_ablation_asr": 63.0,
+  "delta_asr": 0.5
 }
