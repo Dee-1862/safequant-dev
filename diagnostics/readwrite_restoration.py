@@ -27,6 +27,20 @@ WRITE_PROJS = ["self_attn.o_proj", "mlp.down_proj"]
 READ_PROJS = ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj",
               "mlp.gate_proj", "mlp.up_proj"]
 
+# Phi-3 fuses q/k/v into qkv_proj and gate/up into gate_up_proj. The read/write
+# split is the same concept (read = reads the residual stream, write = writes it
+# back), only the module names differ, so detect the architecture and pick the set.
+PHI3_READ_PROJS = ["self_attn.qkv_proj", "mlp.gate_up_proj"]
+PHI3_WRITE_PROJS = ["self_attn.o_proj", "mlp.down_proj"]
+
+
+def get_proj_sets(model):
+    """Return (read_projs, write_projs) matching the model's projection layout."""
+    submods = {n.rsplit(".", 1)[-1] for n, _ in model.named_modules()}
+    if "qkv_proj" in submods or "gate_up_proj" in submods:
+        return list(PHI3_READ_PROJS), list(PHI3_WRITE_PROJS)
+    return list(READ_PROJS), list(WRITE_PROJS)
+
 
 def _get_submodule(layer, proj_path):
     parts = proj_path.split(".")
@@ -96,8 +110,9 @@ def _transform_fp32_to_awq_space(fp32_weight, awq_module):
     scales_expanded = scales.repeat_interleave(group_size, dim=0)  # [in_features, out_features]
 
     # Transform: W_awq_space = W_fp32 * scale (per input group, per output channel)
-    # fp32_weight is [out, in], scales_expanded is [in, out]
-    w_transformed = fp32_weight.float() * scales_expanded.T  # [out, in] * [out, in]
+    # fp32_weight is [out, in], scales_expanded is [in, out]. fp32 weights were
+    # extracted to CPU; move to the AWQ scales' device before the multiply.
+    w_transformed = fp32_weight.float().to(scales_expanded.device) * scales_expanded.T
 
     return w_transformed
 
@@ -179,10 +194,12 @@ def main():
     # -- Condition 1: FP32 baseline ----------------------------------------
     print(f"\n[1/5] FP32 baseline...")
     fp32_model, tokenizer = load_fp32(args.model)
+    read_projs, write_projs = get_proj_sets(fp32_model)
+    print(f"  projection layout: READ={read_projs}  WRITE={write_projs}")
 
     print("  Extracting FP32 weights...")
-    write_weights = extract_fp32_weights(fp32_model, WRITE_PROJS)
-    read_weights = extract_fp32_weights(fp32_model, READ_PROJS)
+    write_weights = extract_fp32_weights(fp32_model, write_projs)
+    read_weights = extract_fp32_weights(fp32_model, read_projs)
     print("  Done extracting weights")
 
     all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
@@ -201,7 +218,7 @@ def main():
     # -- Condition 3: Write restored ---------------------------------------
     print(f"\n[3/5] {qtz} + write restored (o_proj, down_proj)...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
-    restore_projections(q_model, write_weights, WRITE_PROJS)
+    restore_projections(q_model, write_weights, write_projs)
     all_responses["write_restored"] = generate_only(q_model, tokenizer, items, desc="Write-Restored")
     all_arc["write_restored"] = measure_arc(q_model, tokenizer, arc_items)
     print(f"  ARC: {all_arc['write_restored']:.0f}%")
@@ -210,7 +227,7 @@ def main():
     # -- Condition 4: Read restored ----------------------------------------
     print(f"\n[4/5] {qtz} + read restored (q/k/v/gate/up)...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
-    restore_projections(q_model, read_weights, READ_PROJS)
+    restore_projections(q_model, read_weights, read_projs)
     all_responses["read_restored"] = generate_only(q_model, tokenizer, items, desc="Read-Restored")
     all_arc["read_restored"] = measure_arc(q_model, tokenizer, arc_items)
     print(f"  ARC: {all_arc['read_restored']:.0f}%")
@@ -219,8 +236,8 @@ def main():
     # -- Condition 5: Both restored ----------------------------------------
     print(f"\n[5/5] {qtz} + both restored...")
     q_model, _ = load_quantized(args.model, quantizer=qtz)
-    restore_projections(q_model, write_weights, WRITE_PROJS)
-    restore_projections(q_model, read_weights, READ_PROJS)
+    restore_projections(q_model, write_weights, write_projs)
+    restore_projections(q_model, read_weights, read_projs)
     all_responses["both_restored"] = generate_only(q_model, tokenizer, items, desc="Both-Restored")
     all_arc["both_restored"] = measure_arc(q_model, tokenizer, arc_items)
     print(f"  ARC: {all_arc['both_restored']:.0f}%")
@@ -280,13 +297,36 @@ def main():
 
     write_recovery = q_asr - asr_results["write_restored"]
     read_recovery = q_asr - asr_results["read_restored"]
+
+    # -- HARD VALIDATION GATE -------------------------------------------------
+    # both_restored swaps FP weights into EVERY read+write projection, so the
+    # model MUST behave like FP32. If both_restored ASR is not within noise of
+    # FP32, the weight injection is broken and the per-side recovery numbers are
+    # meaningless -- a broken swap once printed a "303% recovery" that looked like
+    # a finding. ARC sanity: no restored condition should fall below the quantized
+    # baseline (clean weights cannot make the model dumber than quantized).
+    import math as _math
+    both_asr = asr_results["both_restored"]
+    swap_tol = max(8.0, 2 * _math.sqrt(2 * 0.25 / max(args.n_eval, 1)) * 100)
+    swap_delta = both_asr - fp32_asr
+    arc_floor_ok = min(all_arc["write_restored"], all_arc["read_restored"],
+                       all_arc["both_restored"]) >= all_arc[qtz] - 7.0
+    swap_valid = (abs(swap_delta) <= swap_tol) and arc_floor_ok
+    print(f"\n[SWAP GATE] both_restored={both_asr:.1f}% vs FP32={fp32_asr:.1f}% "
+          f"(|Δ|={abs(swap_delta):.1f}pp, tol={swap_tol:.1f}pp); "
+          f"restored ARC floor vs quant({all_arc[qtz]:.0f}%): {'ok' if arc_floor_ok else 'BELOW'} "
+          f"-> {'VALID' if swap_valid else 'INVALID'}")
+
     print(f"\nTotal damage: {damage:+.1f}pp")
     print(f"Write restoration: {write_recovery:+.1f}pp ({100*write_recovery/damage if damage else 0:.0f}% of damage)")
     print(f"Read  restoration: {read_recovery:+.1f}pp ({100*read_recovery/damage if damage else 0:.0f}% of damage)")
-    if abs(read_recovery) > abs(write_recovery):
-        print("=> Read-Side Collapse CONFIRMED")
+    if not swap_valid:
+        print("=> *** SWAP INVALID: full restoration does not reproduce FP32 -> the weight "
+              "injection is broken; recovery numbers are NOT a finding. Fix before interpreting. ***")
     elif damage == 0:
         print("=> No quantization damage detected")
+    elif abs(read_recovery) > abs(write_recovery):
+        print("=> Read-Side Collapse CONFIRMED")
     else:
         print("=> Write-side appears more important")
 
@@ -306,6 +346,9 @@ def main():
         "read_recovery_pp": read_recovery,
         "write_recovery_pct": 100 * write_recovery / damage if damage else 0,
         "read_recovery_pct": 100 * read_recovery / damage if damage else 0,
+        "swap_valid": swap_valid,
+        "swap_delta_pp": swap_delta,
+        "swap_tol_pp": swap_tol,
         "arc": all_arc,
     }
     out_path = Path(args.output)

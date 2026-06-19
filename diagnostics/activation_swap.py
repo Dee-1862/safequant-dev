@@ -191,7 +191,12 @@ def main():
     for L in swap_layers:
         a = asr[f"swap_q_into_fp32_L{L}"]
         d = a - fp_b
-        interp = "consumption-damage" if d > 5 else ("activation-damage" if d < -3 else "neutral")
+        if d > 5:
+            interp = "consumption-damage"
+        elif d < -3:
+            interp = "activation-damage"
+        else:
+            interp = "neutral"
         print(f"  swap L{L} q->FP32                   {a:>6.1f}% {d:>+11.1f}pp   ({interp})")
 
     out = {

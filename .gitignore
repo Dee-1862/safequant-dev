@@ -2,4 +2,5 @@ repos/
 _trash/
 docs/
 __pycache__/
-scripts/
+scripts/outputs/*.pt
+outputs/*adapter*

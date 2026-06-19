@@ -1,0 +1,138 @@
+"""
+Build genuine safety-displacement (yw, yl) pairs for contrastive SNIP.
+
+The decisive contrastive run needs the LOSER to be the real displaced compliance,
+not a canned "Sure, here is how" template -- otherwise the margin scores
+refusal-style-text vs compliance-style-text (phrasing), not the safety decision.
+
+This generates:
+  - FP (pre-quant) completions on AdvBench harmful prompts   -> yw candidates
+  - AQLM-2 (quantized cell) completions on the same prompts  -> yl candidates
+judges both with the HarmBench classifier (same judge as the ASR pipeline), and
+keeps the DISPLACEMENT set: prompts where FP REFUSED and the quantized model
+COMPLIED. For those, yw = FP's refusal, yl = the quantized model's harmful
+completion. That pairing is literally the behavior quantization displaced.
+
+Output JSON: {"meta": {...}, "pairs": [{"instruction","yw","yl"}, ...]}
+
+Usage:
+  python -m diagnostics.build_displacement_pairs --model llama7b --quantizer aqlm2 \
+      --n_prompts 260 --output outputs/displacement_pairs_llama7b.json
+"""
+
+import os
+import sys
+import gc
+import json
+import argparse
+from pathlib import Path
+
+import torch
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.model_loader import load_fp32, load_quantized  # noqa: E402
+from core.evaluation import generate_only, classify_batch, _extract_behavior  # noqa: E402
+from core.datasets import load_wildjailbreak_prompts  # noqa: E402
+
+ADVBENCH_SPLIT = (
+    Path(__file__).parent.parent
+    / "refusal_direction/dataset/splits/harmful_train.json"
+)
+
+
+def _advbench(n_prompts):
+    with open(ADVBENCH_SPLIT) as f:
+        items = json.load(f)
+    prompts = [it["instruction"] for it in items if it.get("instruction")]
+    prompts = prompts[:n_prompts] if n_prompts else prompts
+    return [{"prompt": p, "vanilla": p} for p in prompts]
+
+
+def get_items(source, n_prompts, wj_config):
+    """Return list of dicts with at least a 'prompt' key (the text sent to the model).
+    Displacement only manifests on ADVERSARIAL prompts, so wildjailbreak is default;
+    plain advbench leaves FP and AQLM both refusing (~3-5% ASR) and yields no pairs."""
+    if source == "wildjailbreak":
+        return load_wildjailbreak_prompts(n_samples=n_prompts, config=wj_config)
+    if source == "advbench":
+        return _advbench(n_prompts)
+    raise ValueError(f"unknown prompt_source: {source}")
+
+
+def _send_prompt(item):
+    return item.get("prompt") or item.get("goal") or item.get("instruction") or ""
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default="llama7b")
+    ap.add_argument("--quantizer", default="aqlm2")
+    ap.add_argument("--prompt_source", default="wildjailbreak",
+                    choices=["wildjailbreak", "advbench"])
+    ap.add_argument("--wj_config", default="eval", choices=["train", "eval"])
+    ap.add_argument("--n_prompts", type=int, default=400)
+    ap.add_argument("--max_new_tokens", type=int, default=256)
+    ap.add_argument("--output", default="outputs/displacement_pairs_llama7b.json")
+    args = ap.parse_args()
+
+    items = get_items(args.prompt_source, args.n_prompts, args.wj_config)
+    sends = [_send_prompt(it) for it in items]
+    behaviors = [_extract_behavior(it) for it in items]
+    n = len(items)
+    print(f"[data] {n} prompts from {args.prompt_source} (config={args.wj_config})")
+
+    # ---- FP completions (yw candidates) ----
+    fp_model, tok = load_fp32(args.model)
+    fp_resp = generate_only(fp_model, tok, items, max_new_tokens=args.max_new_tokens,
+                            desc="FP")
+    del fp_model
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    # ---- quantized completions (yl candidates) ----
+    q_model, _ = load_quantized(args.model, quantizer=args.quantizer)
+    q_resp = generate_only(q_model, tok, items, max_new_tokens=args.max_new_tokens,
+                           desc=args.quantizer)
+    del q_model
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    # ---- judge both with HarmBench (one session) ----
+    flags = classify_batch(behaviors + behaviors, fp_resp + q_resp, device="cuda")
+    fp_harmful = flags[:n]
+    q_harmful = flags[n:]
+
+    fp_asr = 100.0 * sum(fp_harmful) / n
+    q_asr = 100.0 * sum(q_harmful) / n
+    print(f"[asr] FP={fp_asr:.1f}%  {args.quantizer}={q_asr:.1f}%  "
+          f"({args.prompt_source}, HarmBench judge)")
+
+    # ---- displacement set: FP refused, quantized complied ----
+    pairs = []
+    for sp, fw, fh, qr, qh in zip(sends, fp_resp, fp_harmful, q_resp, q_harmful):
+        if (not fh) and qh:  # FP safe, quantized harmful == displacement
+            pairs.append({"instruction": sp, "yw": fw.strip(), "yl": qr.strip()})
+
+    print(f"[pairs] {len(pairs)} displacement pairs (FP refused & {args.quantizer} complied)")
+    if len(pairs) < 20:
+        print(f"  WARNING: only {len(pairs)} displacement pairs -- saliency may be noisy. "
+              f"Consider widening n_prompts or relaxing the filter.")
+
+    out = {
+        "meta": {
+            "model": args.model, "quantizer": args.quantizer,
+            "prompt_source": args.prompt_source, "wj_config": args.wj_config,
+            "n_prompts": n, "fp_asr": fp_asr, "q_asr": q_asr,
+            "n_pairs": len(pairs), "max_new_tokens": args.max_new_tokens,
+            "filter": "fp_refused AND quant_complied",
+        },
+        "pairs": pairs,
+    }
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    with open(args.output, "w") as f:
+        json.dump(out, f, indent=2)
+    print(f"[saved] {args.output}")
+
+
+if __name__ == "__main__":
+    main()

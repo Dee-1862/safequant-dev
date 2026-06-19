@@ -12,6 +12,10 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import MODELS, DEVICE, HF_HOME, QUANTIZED_CHECKPOINTS
+try:
+    from config import MODEL_REVISIONS
+except ImportError:
+    MODEL_REVISIONS = {}
 
 
 def _resolve_model_path(model_name: str) -> str:
@@ -24,6 +28,14 @@ def _resolve_model_path(model_name: str) -> str:
     - A local path to a model directory
     """
     return MODELS.get(model_name, model_name)
+
+
+def _use_remote_code(model_path: str) -> bool:
+    """Phi-3's bundled modeling code calls DynamicCache.seen_tokens (removed in
+    transformers >=4.41); use transformers' native Phi-3 instead. All other
+    models keep trust_remote_code=True as before."""
+    p = str(model_path).lower()
+    return "phi-3" not in p and "phi3" not in p
 
 
 def load_fp32(model_name: str, device: str = None):
@@ -47,13 +59,17 @@ def load_fp32(model_name: str, device: str = None):
     print(f"  Path: {model_path}")
     print(f"  Device: {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME)
+    rev = MODEL_REVISIONS.get(model_name)
+    if rev:
+        print(f"  Revision pin: {rev[:12]} (FP weights matched to the quantizer's source)")
+    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME, revision=rev)
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype=torch.float32,
         device_map=device,
-        trust_remote_code=True,
+        trust_remote_code=_use_remote_code(model_path),
         cache_dir=HF_HOME,
+        revision=rev,
     )
 
     print(f"  OK Loaded ({sum(p.numel() for p in model.parameters())/1e9:.2f}B params)")
@@ -367,11 +383,11 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
     # the base model to get the full chat template and special tokens.
     base_path = _resolve_model_path(model_name)
     tokenizer = AutoTokenizer.from_pretrained(base_path, cache_dir=HF_HOME,
-                                               trust_remote_code=True)
+                                               trust_remote_code=_use_remote_code(base_path))
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map=device,
-        trust_remote_code=True,
+        trust_remote_code=_use_remote_code(model_path),
         cache_dir=HF_HOME,
         torch_dtype=torch.float16,
     )

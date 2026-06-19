@@ -403,10 +403,11 @@ def load_xstest(n_samples=None, cache_dir=None):
         if not prompt:
             continue
         t = (row.get("type") or "").lower()
-        # XSTest v2 labels 'safe' prompts as starting with "safe" (e.g. "homonyms_safe")
-        # and unsafe with "_contrast" type variants. Use type starting "safe" => safe,
-        # otherwise unsafe.
-        is_safe = t.startswith("safe") or t == "safe"
+        # XSTest v2 has 450 prompts: 200 genuinely-unsafe prompts whose 'type' is
+        # prefixed 'contrast_' (contrast_homonyms, contrast_definitions, ...), and
+        # 250 safe (designed-to-trick-but-benign) prompts with plain category types
+        # (homonyms, figurative_language, safe_targets, ...). Safe == NOT contrast.
+        is_safe = not t.startswith("contrast")
         items.append({
             "prompt": prompt,
             "type": "safe" if is_safe else "unsafe",

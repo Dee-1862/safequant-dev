@@ -43,6 +43,7 @@ MODELS = {
     # Mistral (for cross-architecture validation)
     "mistral7b": "mistralai/Mistral-7B-Instruct-v0.3",
     "mistral7b-v02": "mistralai/Mistral-7B-Instruct-v0.2",
+    "mistral-nemo": "mistralai/Mistral-Nemo-Instruct-2407",
     # Gemma 2 (for cross-architecture validation)
     "gemma2b":  "google/gemma-2-2b-it",
     "gemma9b":  "google/gemma-2-9b-it",
@@ -54,6 +55,18 @@ MODELS = {
     "qwen3-8b": "Qwen/Qwen3-8B",
     # Gemma 7B (4th architecture, for cross-architecture validation)
     "gemma7b": "google/gemma-7b-it",
+    # Phi-3-mini (fused-projection architecture: qkv_proj / gate_up_proj)
+    "phi3": "microsoft/Phi-3-mini-4k-instruct",
+}
+
+# FP-base revision pins. Some HF repos updated their WEIGHTS after a pre-quantized
+# checkpoint was made, so HEAD no longer matches the quantizer's source weights.
+# Pin the FP base to the revision the AQLM checkpoint was quantized from, else the
+# read/write restoration injects mismatched weights (both_restored != FP32).
+#   phi3: AQLM created 2024-05-29; microsoft updated weights on 2024-07-01
+#         ("Update model #77"). ff07dc01 (2024-06-11) is the last original-weight commit.
+MODEL_REVISIONS = {
+    "phi3": "ff07dc01615f8113924aed013115ab2abd32115b",
 }
 
 # Pre-quantized checkpoint aliases (for multi-quantizer comparison)
@@ -81,6 +94,7 @@ QUANTIZED_CHECKPOINTS = {
     ("llama1b", "gptq4"):  "ModelCloud/Llama-3.2-1B-Instruct-gptq-4bit",
     # AQLM pre-quantized (SOTA 2-bit)
     ("llama3-8b", "aqlm2"): "ISTA-DASLab/Meta-Llama-3-8B-Instruct-AQLM-2Bit-1x16",
+    ("llama3b", "aqlm2"): "ISTA-DASLab/Llama-3.2-3B-Instruct-AQLM-PV-2Bit-2x8",
     # Llama-3.1-8B multi-quantizer comparison (matching arxiv 2502.15799)
     ("llama7b", "awq"):    "hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4",
     ("llama7b", "aqlm2"):  "ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf",
@@ -97,6 +111,9 @@ QUANTIZED_CHECKPOINTS = {
     ("mistral7b-v02", "gptq4"): "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ",
     ("mistral7b-v02", "awq"):   "TheBloke/Mistral-7B-Instruct-v0.2-AWQ",
     ("mistral7b-v02", "aqlm2"): "ISTA-DASLab/Mistral-7B-Instruct-v0.2-AQLM-2Bit-2x8",
+    ("mistral-nemo", "aqlm2"): "ISTA-DASLab/Mistral-Nemo-Instruct-2407-AQLM-PV-2Bit-1x16-hf",
+    # Phi-3-mini-4k-instruct AQLM-PV 2-bit (fused qkv/gate_up projections)
+    ("phi3", "aqlm2"): "ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf",
     # Gemma-2-9B-it
     ("gemma9b", "gptq4"): "ModelCloud/gemma-2-9b-it-gptq-4bit",
 }

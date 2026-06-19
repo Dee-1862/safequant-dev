@@ -1,0 +1,23 @@
+{
+  "model": "mistral7b-v02",
+  "quantizer": "awq",
+  "n_eval": 200,
+  "n_reasoning": 50,
+  "fp32_asr": 74.5,
+  "quantized_asr": 75.0,
+  "damage_pp": 0.5,
+  "write_restored_asr": 5.0,
+  "read_restored_asr": 15.0,
+  "both_restored_asr": 15.0,
+  "write_recovery_pp": 70.0,
+  "read_recovery_pp": 60.0,
+  "write_recovery_pct": 14000.0,
+  "read_recovery_pct": 12000.0,
+  "arc": {
+    "fp32": 62.0,
+    "awq": 58.0,
+    "write_restored": 22.0,
+    "read_restored": 22.0,
+    "both_restored": 22.0
+  }
+}

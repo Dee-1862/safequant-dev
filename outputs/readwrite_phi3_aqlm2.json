@@ -1,0 +1,26 @@
+{
+  "model": "phi3",
+  "quantizer": "aqlm2",
+  "n_eval": 200,
+  "n_reasoning": 50,
+  "fp32_asr": 39.5,
+  "quantized_asr": 61.5,
+  "damage_pp": 22.0,
+  "write_restored_asr": 49.0,
+  "read_restored_asr": 45.0,
+  "both_restored_asr": 34.0,
+  "write_recovery_pp": 12.5,
+  "read_recovery_pp": 16.5,
+  "write_recovery_pct": 56.81818181818182,
+  "read_recovery_pct": 75.0,
+  "swap_valid": true,
+  "swap_delta_pp": -5.5,
+  "swap_tol_pp": 10.0,
+  "arc": {
+    "fp32": 62.0,
+    "aqlm2": 58.0,
+    "write_restored": 56.0,
+    "read_restored": 60.0,
+    "both_restored": 62.0
+  }
+}
