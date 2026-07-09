@@ -1,0 +1,47 @@
+{
+  "model": "mistral7b-v02",
+  "n_eval": 500,
+  "n_reasoning": 500,
+  "fp32": {
+    "asr": 75.8,
+    "arc": 52.2
+  },
+  "configs": {
+    "A_read3_write4": {
+      "read_quant": "gptq3",
+      "write_quant": "gptq4",
+      "effective_bits": 3.35,
+      "asr": 71.4,
+      "arc": 48.0,
+      "damage_asr_pp": -4.3999999999999915,
+      "damage_arc_pp": 4.200000000000003
+    },
+    "B_read4_write3": {
+      "read_quant": "gptq4",
+      "write_quant": "gptq3",
+      "effective_bits": 3.65,
+      "asr": 77.0,
+      "arc": 50.6,
+      "damage_asr_pp": 1.2000000000000028,
+      "damage_arc_pp": 1.6000000000000014
+    },
+    "C_read3_write2aqlm": {
+      "read_quant": "gptq3",
+      "write_quant": "aqlm2",
+      "effective_bits": 2.65,
+      "asr": 53.0,
+      "arc": 36.4,
+      "damage_asr_pp": -22.799999999999997,
+      "damage_arc_pp": 15.800000000000004
+    },
+    "D_read4nf4_write2aqlm": {
+      "read_quant": "nf4",
+      "write_quant": "aqlm2",
+      "effective_bits": 3.31,
+      "asr": 70.4,
+      "arc": 46.2,
+      "damage_asr_pp": -5.3999999999999915,
+      "damage_arc_pp": 6.0
+    }
+  }
+}

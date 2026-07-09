@@ -1,0 +1,47 @@
+{
+  "model": "llama7b",
+  "n_eval": 100,
+  "n_reasoning": 50,
+  "fp32": {
+    "asr": 42.0,
+    "arc": 62.0
+  },
+  "configs": {
+    "A_read3_write4": {
+      "read_quant": "gptq3",
+      "write_quant": "gptq4",
+      "effective_bits": 3.35,
+      "asr": 45.0,
+      "arc": 42.0,
+      "damage_asr_pp": 3.0,
+      "damage_arc_pp": 20.0
+    },
+    "B_read4_write3": {
+      "read_quant": "gptq4",
+      "write_quant": "gptq3",
+      "effective_bits": 3.65,
+      "asr": 4.0,
+      "arc": 46.0,
+      "damage_asr_pp": -38.0,
+      "damage_arc_pp": 16.0
+    },
+    "C_read3_write2aqlm": {
+      "read_quant": "gptq3",
+      "write_quant": "aqlm2",
+      "effective_bits": 2.65,
+      "asr": 55.0,
+      "arc": 44.0,
+      "damage_asr_pp": 13.0,
+      "damage_arc_pp": 18.0
+    },
+    "D_read4nf4_write2aqlm": {
+      "read_quant": "nf4",
+      "write_quant": "aqlm2",
+      "effective_bits": 3.31,
+      "asr": 45.0,
+      "arc": 58.0,
+      "damage_asr_pp": 3.0,
+      "damage_arc_pp": 4.0
+    }
+  }
+}

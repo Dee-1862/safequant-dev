@@ -1,0 +1,321 @@
+{
+  "model": "llama7b",
+  "quantizer": "aqlm2",
+  "layers": [
+    6,
+    13,
+    14,
+    18,
+    27
+  ],
+  "projs": [
+    "self_attn.q_proj",
+    "mlp.down_proj"
+  ],
+  "n_clusters_list": [
+    128,
+    256,
+    512
+  ],
+  "group_size_list": [
+    16
+  ],
+  "thresholds": {
+    "safety_build": 0.95,
+    "safety_try_more": 0.85,
+    "effective_bits_cap": 2.5
+  },
+  "results": {
+    "layer6_self_attn_q_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.30127453804016113,
+        "safety_recovery": 0.5879668472210645,
+        "effective_bits": 2.439453125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.2949524223804474,
+        "safety_recovery": 0.6452638816636747,
+        "effective_bits": 2.50390625,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.2906023859977722,
+        "safety_recovery": 0.6762182479974671,
+        "effective_bits": 2.5703125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      }
+    ],
+    "layer6_mlp_down_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2707515060901642,
+        "safety_recovery": 0.6235235361038046,
+        "effective_bits": 2.4380580357142856,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.2615608274936676,
+        "safety_recovery": 0.6654042424085883,
+        "effective_bits": 2.5011160714285716,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.255424827337265,
+        "safety_recovery": 0.7004178182240143,
+        "effective_bits": 2.564732142857143,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      }
+    ],
+    "layer13_self_attn_q_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2946525514125824,
+        "safety_recovery": 0.6146898580360283,
+        "effective_bits": 2.439453125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.28812894225120544,
+        "safety_recovery": 0.6566815088349367,
+        "effective_bits": 2.50390625,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.2836320400238037,
+        "safety_recovery": 0.6819599809557274,
+        "effective_bits": 2.5703125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      }
+    ],
+    "layer13_mlp_down_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2718048095703125,
+        "safety_recovery": 0.6288460630312596,
+        "effective_bits": 2.4380580357142856,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.2632203698158264,
+        "safety_recovery": 0.6690190372080839,
+        "effective_bits": 2.5011160714285716,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.257056325674057,
+        "safety_recovery": 0.7131269208801782,
+        "effective_bits": 2.564732142857143,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      }
+    ],
+    "layer14_self_attn_q_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.29552310705184937,
+        "safety_recovery": 0.5978446705801191,
+        "effective_bits": 2.439453125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.2884601652622223,
+        "safety_recovery": 0.646509969376315,
+        "effective_bits": 2.50390625,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.28419768810272217,
+        "safety_recovery": 0.6776482700244616,
+        "effective_bits": 2.5703125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      }
+    ],
+    "layer14_mlp_down_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2720349133014679,
+        "safety_recovery": 0.6286298314695304,
+        "effective_bits": 2.4380580357142856,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.2630876302719116,
+        "safety_recovery": 0.6709571542148102,
+        "effective_bits": 2.5011160714285716,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.2572198808193207,
+        "safety_recovery": 0.7071959417405488,
+        "effective_bits": 2.564732142857143,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      }
+    ],
+    "layer18_self_attn_q_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2993660569190979,
+        "safety_recovery": 0.6116713541209078,
+        "effective_bits": 2.439453125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.2916450500488281,
+        "safety_recovery": 0.6654016070417061,
+        "effective_bits": 2.50390625,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.2865792214870453,
+        "safety_recovery": 0.7006333715160689,
+        "effective_bits": 2.5703125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      }
+    ],
+    "layer18_mlp_down_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2731700539588928,
+        "safety_recovery": 0.6236977030986954,
+        "effective_bits": 2.4380580357142856,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.26414889097213745,
+        "safety_recovery": 0.6757294013015238,
+        "effective_bits": 2.5011160714285716,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.25807493925094604,
+        "safety_recovery": 0.7110330180335636,
+        "effective_bits": 2.564732142857143,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      }
+    ],
+    "layer27_self_attn_q_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2957339286804199,
+        "safety_recovery": 0.6301655542329874,
+        "effective_bits": 2.439453125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.28682976961135864,
+        "safety_recovery": 0.6779197842675395,
+        "effective_bits": 2.50390625,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.28197237849235535,
+        "safety_recovery": 0.7156669793744541,
+        "effective_bits": 2.5703125,
+        "n_weights": 16777216,
+        "n_groups": 1048576
+      }
+    ],
+    "layer27_mlp_down_proj": [
+      {
+        "n_clusters": 128,
+        "group_size": 16,
+        "recon_error_rel": 0.2773336172103882,
+        "safety_recovery": 0.6333688736412597,
+        "effective_bits": 2.4380580357142856,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 256,
+        "group_size": 16,
+        "recon_error_rel": 0.26845720410346985,
+        "safety_recovery": 0.6685858510698597,
+        "effective_bits": 2.5011160714285716,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      },
+      {
+        "n_clusters": 512,
+        "group_size": 16,
+        "recon_error_rel": 0.2620949447154999,
+        "safety_recovery": 0.7133808093066935,
+        "effective_bits": 2.564732142857143,
+        "n_weights": 58720256,
+        "n_groups": 3670016
+      }
+    ]
+  },
+  "decision": "FALL BACK"
+}

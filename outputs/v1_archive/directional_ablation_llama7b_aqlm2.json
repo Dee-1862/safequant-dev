@@ -1,0 +1,31 @@
+{
+  "model": "llama7b",
+  "quantizer": "aqlm2",
+  "n_calib": 50,
+  "n_eval": 100,
+  "n_arc": 50,
+  "fp32_best_layer": 8,
+  "fp32_best_separation": 7.8030241646133724,
+  "quant_best_layer": 9,
+  "quant_best_separation": 7.912776429014949,
+  "cos_sim_self_vs_cross": 0.6026960015296936,
+  "results": {
+    "baseline": {
+      "asr": 63.0,
+      "arc": 56.0
+    },
+    "self_ablation": {
+      "asr": 64.0,
+      "arc": 54.0
+    },
+    "cross_ablation": {
+      "asr": 54.0,
+      "arc": 54.0
+    },
+    "random_control": {
+      "asr": 58.0,
+      "arc": 56.0
+    }
+  },
+  "decision": "MECHANISM-BROKEN \u2014 neither direction matters; model isn't using a single residual-stream direction"
+}

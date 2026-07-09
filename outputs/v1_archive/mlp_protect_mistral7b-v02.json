@@ -1,0 +1,83 @@
+{
+  "model": "mistral7b-v02",
+  "n_eval": 100,
+  "n_reasoning": 50,
+  "fp32": {
+    "asr": 74.0,
+    "arc": 62.0
+  },
+  "configs": {
+    "E_mlp_nf4_attn_aqlm2": {
+      "name": "E_mlp_nf4_attn_aqlm2",
+      "label": "MLP-Protect (E):  MLP=NF4, Attn=AQLM-2",
+      "effective_bits": 3.62,
+      "proj_map": {
+        "mlp.gate_proj": "nf4",
+        "mlp.up_proj": "nf4",
+        "mlp.down_proj": "nf4",
+        "self_attn.q_proj": "aqlm2",
+        "self_attn.k_proj": "aqlm2",
+        "self_attn.v_proj": "aqlm2",
+        "self_attn.o_proj": "aqlm2"
+      },
+      "asr": 70.0,
+      "arc": 56.0,
+      "asr_drift_pp": -4.0,
+      "arc_drift_pp": -6.0
+    },
+    "F_mlp_aqlm2_attn_nf4": {
+      "name": "F_mlp_aqlm2_attn_nf4",
+      "label": "Inverse (F):  MLP=AQLM-2, Attn=NF4   (control)",
+      "effective_bits": 2.39,
+      "proj_map": {
+        "mlp.gate_proj": "aqlm2",
+        "mlp.up_proj": "aqlm2",
+        "mlp.down_proj": "aqlm2",
+        "self_attn.q_proj": "nf4",
+        "self_attn.k_proj": "nf4",
+        "self_attn.v_proj": "nf4",
+        "self_attn.o_proj": "nf4"
+      },
+      "asr": 71.0,
+      "arc": 50.0,
+      "asr_drift_pp": -3.0,
+      "arc_drift_pp": -12.0
+    },
+    "G_down_only_nf4": {
+      "name": "G_down_only_nf4",
+      "label": "Down-Only (G):  down=NF4, rest=AQLM-2  (headline)",
+      "effective_bits": 2.54,
+      "proj_map": {
+        "mlp.gate_proj": "aqlm2",
+        "mlp.up_proj": "aqlm2",
+        "mlp.down_proj": "nf4",
+        "self_attn.q_proj": "aqlm2",
+        "self_attn.k_proj": "aqlm2",
+        "self_attn.v_proj": "aqlm2",
+        "self_attn.o_proj": "aqlm2"
+      },
+      "asr": 78.0,
+      "arc": 54.0,
+      "asr_drift_pp": 4.0,
+      "arc_drift_pp": -8.0
+    },
+    "H_down_up_nf4": {
+      "name": "H_down_up_nf4",
+      "label": "Down+Up (H):  down+up=NF4, rest=AQLM-2",
+      "effective_bits": 3.08,
+      "proj_map": {
+        "mlp.gate_proj": "aqlm2",
+        "mlp.up_proj": "nf4",
+        "mlp.down_proj": "nf4",
+        "self_attn.q_proj": "aqlm2",
+        "self_attn.k_proj": "aqlm2",
+        "self_attn.v_proj": "aqlm2",
+        "self_attn.o_proj": "aqlm2"
+      },
+      "asr": 79.0,
+      "arc": 54.0,
+      "asr_drift_pp": 5.0,
+      "arc_drift_pp": -8.0
+    }
+  }
+}

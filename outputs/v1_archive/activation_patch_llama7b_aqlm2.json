@@ -1,0 +1,93 @@
+{
+  "model": "llama7b",
+  "quantizer": "aqlm2",
+  "n_eval": 100,
+  "n_activation_prompts": 100,
+  "v2_top5_dims": [
+    2943,
+    782,
+    940,
+    1971,
+    910
+  ],
+  "v3_top5_dims": [
+    2943,
+    3965,
+    782,
+    4080,
+    940
+  ],
+  "top50_overlap": 39,
+  "results": {
+    "fp32": {
+      "asr": 42.0,
+      "arc": 62.0,
+      "n_complied": 42
+    },
+    "aqlm2": {
+      "asr": 63.0,
+      "arc": 56.0,
+      "n_complied": 63
+    },
+    "v2_5pct": {
+      "asr": 63.0,
+      "arc": 56.0,
+      "n_complied": 63
+    },
+    "v3_act_5pct": {
+      "asr": 61.0,
+      "arc": 54.0,
+      "n_complied": 61
+    },
+    "random_5pct": {
+      "asr": 63.0,
+      "arc": 58.0,
+      "n_complied": 63
+    },
+    "v2_15pct": {
+      "asr": 58.0,
+      "arc": 54.0,
+      "n_complied": 58
+    },
+    "v3_act_15pct": {
+      "asr": 56.0,
+      "arc": 54.0,
+      "n_complied": 56
+    },
+    "random_15pct": {
+      "asr": 55.0,
+      "arc": 58.0,
+      "n_complied": 55
+    },
+    "v2_25pct": {
+      "asr": 52.0,
+      "arc": 56.0,
+      "n_complied": 52
+    },
+    "v3_act_25pct": {
+      "asr": 57.0,
+      "arc": 56.0,
+      "n_complied": 57
+    },
+    "random_25pct": {
+      "asr": 69.0,
+      "arc": 54.0,
+      "n_complied": 69
+    },
+    "v2_50pct": {
+      "asr": 56.0,
+      "arc": 54.0,
+      "n_complied": 56
+    },
+    "v3_act_50pct": {
+      "asr": 51.0,
+      "arc": 54.0,
+      "n_complied": 51
+    },
+    "random_50pct": {
+      "asr": 61.0,
+      "arc": 52.0,
+      "n_complied": 61
+    }
+  }
+}

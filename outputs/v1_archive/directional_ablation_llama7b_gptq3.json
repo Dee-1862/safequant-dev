@@ -1,0 +1,31 @@
+{
+  "model": "llama7b",
+  "quantizer": "gptq3",
+  "n_calib": 50,
+  "n_eval": 50,
+  "n_arc": 25,
+  "fp32_best_layer": 8,
+  "fp32_best_separation": 7.8030241646133724,
+  "quant_best_layer": 20,
+  "quant_best_separation": 7.073354305464337,
+  "cos_sim_self_vs_cross": 0.019306115806102753,
+  "results": {
+    "baseline": {
+      "asr": 14.0,
+      "arc": 48.0
+    },
+    "self_ablation": {
+      "asr": 14.0,
+      "arc": 48.0
+    },
+    "cross_ablation": {
+      "asr": 8.0,
+      "arc": 44.0
+    },
+    "random_control": {
+      "asr": 10.0,
+      "arc": 48.0
+    }
+  },
+  "decision": "MECHANISM-BROKEN \u2014 neither direction matters; model isn't using a single residual-stream direction"
+}

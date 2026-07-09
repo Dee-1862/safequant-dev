@@ -1,0 +1,75 @@
+{
+  "model": "mistral7b-v02",
+  "quantizer": "aqlm2",
+  "n_eval": 100,
+  "n_reasoning": 50,
+  "fp32": {
+    "asr": 74.0,
+    "arc": 62.0
+  },
+  "aqlm2": {
+    "asr": 64.0,
+    "arc": 56.0
+  },
+  "asr_damage_pp": -10.0,
+  "per_projection": {
+    "q_proj": {
+      "proj_path": "self_attn.q_proj",
+      "asr": 74.0,
+      "arc": 60.0,
+      "asr_recovery_pp": -10.0,
+      "asr_recovery_pct": 100.0,
+      "arc_drift_pp": -2.0
+    },
+    "k_proj": {
+      "proj_path": "self_attn.k_proj",
+      "asr": 70.0,
+      "arc": 54.0,
+      "asr_recovery_pp": -6.0,
+      "asr_recovery_pct": 60.0,
+      "arc_drift_pp": -8.0
+    },
+    "v_proj": {
+      "proj_path": "self_attn.v_proj",
+      "asr": 67.0,
+      "arc": 58.0,
+      "asr_recovery_pp": -3.0,
+      "asr_recovery_pct": 30.0,
+      "arc_drift_pp": -4.0
+    },
+    "o_proj": {
+      "proj_path": "self_attn.o_proj",
+      "asr": 74.0,
+      "arc": 54.0,
+      "asr_recovery_pp": -10.0,
+      "asr_recovery_pct": 100.0,
+      "arc_drift_pp": -8.0
+    },
+    "gate_proj": {
+      "proj_path": "mlp.gate_proj",
+      "asr": 66.0,
+      "arc": 54.0,
+      "asr_recovery_pp": -2.0,
+      "asr_recovery_pct": 20.0,
+      "arc_drift_pp": -8.0
+    },
+    "up_proj": {
+      "proj_path": "mlp.up_proj",
+      "asr": 77.0,
+      "arc": 60.0,
+      "asr_recovery_pp": -13.0,
+      "asr_recovery_pct": 130.0,
+      "arc_drift_pp": -2.0
+    },
+    "down_proj": {
+      "proj_path": "mlp.down_proj",
+      "asr": 73.0,
+      "arc": 54.0,
+      "asr_recovery_pp": -9.0,
+      "asr_recovery_pct": 90.0,
+      "arc_drift_pp": -8.0
+    }
+  },
+  "max_recovery_pp": -2.0,
+  "decision": "DIFFUSE DAMAGE"
+}

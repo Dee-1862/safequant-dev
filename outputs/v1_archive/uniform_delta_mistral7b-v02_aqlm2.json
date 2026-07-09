@@ -1,0 +1,60 @@
+{
+  "model": "mistral7b-v02",
+  "quantizer": "aqlm2",
+  "n_eval": 100,
+  "fp32_asr": 74.0,
+  "quantized_asr": 64.0,
+  "damage_pp": -10.0,
+  "fp32_arc": 62.0,
+  "quantized_arc": 56.0,
+  "conditions": {
+    "uniform_int8_a25": {
+      "asr": 79.0,
+      "arc": 54.0,
+      "source": "int8",
+      "alpha": 0.25
+    },
+    "uniform_int8_a50": {
+      "asr": 75.0,
+      "arc": 58.0,
+      "source": "int8",
+      "alpha": 0.5
+    },
+    "uniform_int8_a75": {
+      "asr": 73.0,
+      "arc": 58.0,
+      "source": "int8",
+      "alpha": 0.75
+    },
+    "uniform_int8_a100": {
+      "asr": 71.0,
+      "arc": 60.0,
+      "source": "int8",
+      "alpha": 1.0
+    },
+    "uniform_nf4_a25": {
+      "asr": 73.0,
+      "arc": 56.0,
+      "source": "nf4",
+      "alpha": 0.25
+    },
+    "uniform_nf4_a50": {
+      "asr": 79.0,
+      "arc": 56.0,
+      "source": "nf4",
+      "alpha": 0.5
+    },
+    "uniform_nf4_a75": {
+      "asr": 76.0,
+      "arc": 58.0,
+      "source": "nf4",
+      "alpha": 0.75
+    },
+    "uniform_nf4_a100": {
+      "asr": 83.0,
+      "arc": 60.0,
+      "source": "nf4",
+      "alpha": 1.0
+    }
+  }
+}

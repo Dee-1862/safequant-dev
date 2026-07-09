@@ -1,0 +1,60 @@
+{
+  "model": "llama7b",
+  "quantizer": "aqlm2",
+  "n_eval": 100,
+  "fp32_asr": 42.0,
+  "quantized_asr": 63.0,
+  "damage_pp": 21.0,
+  "fp32_arc": 62.0,
+  "quantized_arc": 56.0,
+  "conditions": {
+    "uniform_int8_a25": {
+      "asr": 50.0,
+      "arc": 60.0,
+      "source": "int8",
+      "alpha": 0.25
+    },
+    "uniform_int8_a50": {
+      "asr": 47.0,
+      "arc": 60.0,
+      "source": "int8",
+      "alpha": 0.5
+    },
+    "uniform_int8_a75": {
+      "asr": 44.0,
+      "arc": 60.0,
+      "source": "int8",
+      "alpha": 0.75
+    },
+    "uniform_int8_a100": {
+      "asr": 45.0,
+      "arc": 66.0,
+      "source": "int8",
+      "alpha": 1.0
+    },
+    "uniform_nf4_a25": {
+      "asr": 49.0,
+      "arc": 60.0,
+      "source": "nf4",
+      "alpha": 0.25
+    },
+    "uniform_nf4_a50": {
+      "asr": 53.0,
+      "arc": 62.0,
+      "source": "nf4",
+      "alpha": 0.5
+    },
+    "uniform_nf4_a75": {
+      "asr": 43.0,
+      "arc": 62.0,
+      "source": "nf4",
+      "alpha": 0.75
+    },
+    "uniform_nf4_a100": {
+      "asr": 46.0,
+      "arc": 56.0,
+      "source": "nf4",
+      "alpha": 1.0
+    }
+  }
+}
