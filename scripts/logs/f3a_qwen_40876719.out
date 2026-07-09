@@ -1,0 +1,28 @@
+=== Job 40876719 | F3a Qwen — Static Restoration | Fri May 15 15:56:00 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# F3a — readwrite_restoration on qwen7b/gptq4
+# started: Fri May 15 15:56:00 EDT 2026
+########################################################################
+======================================================================
+  Read-Side vs Write-Side Restoration
+  Model: qwen7b | Quantizer: gptq4
+  ASR prompts: 200 | ARC questions: 50
+======================================================================
+
+Loading datasets...
+  WildJailbreak: 200 adversarial prompts
+  ARC-Challenge: 50 reasoning questions
+
+======================================================================
+  Phase A: Generating responses for all conditions
+======================================================================
+
+[1/5] FP32 baseline...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+FAILED (1): F3a — readwrite_restoration on qwen7b/gptq4 | Fri May 15 15:56:11 EDT 2026
+
+=== F3a Qwen complete | Fri May 15 15:56:11 EDT 2026 ===

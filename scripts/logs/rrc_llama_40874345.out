@@ -1,0 +1,69 @@
+=== Job 40874345 | Random-direction routing control Llama | Fri May 15 13:10:08 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# Random-direction routing control on llama7b/gptq4
+# started: Fri May 15 13:10:08 EDT 2026
+########################################################################
+=== Random-direction routing control | llama7b / gptq4 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq4] loading quantized model ...
+Loading GPTQ-4bit model: llama7b → ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-4bit
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+FAILED (1): Random-direction routing control on llama7b/gptq4 | Fri May 15 13:17:17 EDT 2026
+
+########################################################################
+# Random-direction routing control on llama7b/awq
+# started: Fri May 15 13:17:17 EDT 2026
+########################################################################
+=== Random-direction routing control | llama7b / awq | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[awq] loading quantized model ...
+Loading AWQ model: llama7b → hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  ✓ Loaded AWQ 4-bit model
+FAILED (1): Random-direction routing control on llama7b/awq | Fri May 15 13:20:12 EDT 2026
+
+########################################################################
+# Random-direction routing control on llama7b/gptq3
+# started: Fri May 15 13:20:12 EDT 2026
+########################################################################
+=== Random-direction routing control | llama7b / gptq3 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq3] loading quantized model ...
+Loading GPTQ-3bit model: llama7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/llama7b-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+FAILED (1): Random-direction routing control on llama7b/gptq3 | Fri May 15 13:25:39 EDT 2026
+
+########################################################################
+# Random-direction routing control on llama7b/gptq2
+# started: Fri May 15 13:25:39 EDT 2026
+########################################################################
+=== Random-direction routing control | llama7b / gptq2 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq2] loading quantized model ...
+Loading GPTQ-2bit model: llama7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/llama7b-gptq-2bit)
+  ✓ Loaded GPTQ 2-bit from cache
+FAILED (1): Random-direction routing control on llama7b/gptq2 | Fri May 15 13:28:20 EDT 2026
+
+########################################################################
+# Random-direction routing control on llama7b/aqlm2
+# started: Fri May 15 13:28:20 EDT 2026
+########################################################################
+=== Random-direction routing control | llama7b / aqlm2 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[aqlm2] loading quantized model ...
+Loading AQLM-2bit model: llama7b → ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  ✓ Loaded AQLM 2-bit model
+FAILED (1): Random-direction routing control on llama7b/aqlm2 | Fri May 15 13:31:04 EDT 2026
+
+=== Random-direction routing control Llama complete | Fri May 15 13:31:04 EDT 2026 ===

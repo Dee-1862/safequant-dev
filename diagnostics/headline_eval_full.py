@@ -41,7 +41,7 @@ from core.evaluation import (  # noqa: E402
     generate_only, classify_batch, _extract_behavior, eval_xstest,
 )
 from diagnostics.readwrite_restoration import (  # noqa: E402
-    WRITE_PROJS, READ_PROJS, extract_fp32_weights, restore_projections, measure_arc,
+    WRITE_PROJS, READ_PROJS, get_proj_sets, extract_fp32_weights, restore_projections, measure_arc,
 )
 
 
@@ -155,8 +155,12 @@ def main():
     # ---- Condition 1: FP ----
     print("\n[1/5] FP baseline")
     fp_model, tok = load_fp32(args.model)
-    write_w = extract_fp32_weights(fp_model, WRITE_PROJS)
-    read_w = extract_fp32_weights(fp_model, READ_PROJS)
+    # Use the model's actual projection sets (Phi-3 fuses qkv_proj / gate_up_proj),
+    # else the read/write swap would target non-existent Llama-style names.
+    READ_P, WRITE_P = get_proj_sets(fp_model)
+    print(f"  proj sets: READ={READ_P}  WRITE={WRITE_P}")
+    write_w = extract_fp32_weights(fp_model, WRITE_P)
+    read_w = extract_fp32_weights(fp_model, READ_P)
     all_resp["fp32"], all_arc["fp32"], all_xs["fp32"] = eval_condition(
         fp_model, tok, "fp32", wj_items, arc_items, xstest_items, args.asr_max_new_tokens)
     del fp_model; gc.collect(); torch.cuda.empty_cache(); checkpoint()
@@ -164,9 +168,9 @@ def main():
     # ---- the four quantized conditions ----
     plan = [
         (qtz, [], []),
-        ("write_restored", [(write_w, WRITE_PROJS)], []),
-        ("read_restored", [(read_w, READ_PROJS)], []),
-        ("both_restored", [(write_w, WRITE_PROJS), (read_w, READ_PROJS)], []),
+        ("write_restored", [(write_w, WRITE_P)], []),
+        ("read_restored", [(read_w, READ_P)], []),
+        ("both_restored", [(write_w, WRITE_P), (read_w, READ_P)], []),
     ]
     for i, (name, restores, _) in enumerate(plan, start=2):
         print(f"\n[{i}/5] {name}")

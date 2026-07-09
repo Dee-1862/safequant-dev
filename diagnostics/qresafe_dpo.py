@@ -83,8 +83,16 @@ def precompute_ref(model, tok, pairs, device):
     return ref
 
 
-def train_dpo(model, tok, pairs, ref, lora_params, beta, lr, epochs, device, log_every=50):
-    opt = torch.optim.AdamW(lora_params, lr=lr)
+def train_dpo(model, tok, pairs, ref, lora_params, beta, lr, epochs, device, log_every=50,
+              opt8bit=False):
+    # At large rank (r>=1024) the fp32 AdamW optimizer states (2x params) dominate GPU
+    # memory; 8-bit AdamW cuts that 4x so the paper's r=2048 fits on a single 80GB card.
+    if opt8bit:
+        import bitsandbytes as bnb
+        opt = bnb.optim.AdamW8bit(lora_params, lr=lr)
+        print("[opt] using bitsandbytes AdamW8bit")
+    else:
+        opt = torch.optim.AdamW(lora_params, lr=lr)
     set_lora_enabled(model, True)
     model.train()
     order = list(range(len(pairs)))
@@ -150,7 +158,23 @@ def main():
     ap.add_argument("--n_eval", type=int, default=400)
     ap.add_argument("--n_arc", type=int, default=100)
     ap.add_argument("--output", default=None)
+    ap.add_argument("--opt8bit", action="store_true", default=False,
+                    help="use 8-bit AdamW (bitsandbytes) to fit large rank (e.g. r=2048)")
+    ap.add_argument("--save_adapter", action="store_true", default=False,
+                    help="save the large LoRA adapter .pt (off by default; only for re-folding)")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="global RNG seed for reproducible LoRA init + DPO training")
     args = ap.parse_args()
+
+    # Seed every RNG BEFORE attach_masked_lora (kaiming LoRA init) and DPO, so the
+    # whole run is reproducible. Eval is greedy (deterministic) regardless.
+    import random as _random
+    import numpy as _np
+    _random.seed(args.seed)
+    _np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    print(f"[seed] global seed = {args.seed}")
 
     device = "cuda"
     out = args.output or f"outputs/qresafe_{args.mask}_{args.model}_{args.quantizer}.json"
@@ -167,7 +191,8 @@ def main():
     print("[dpo] precomputing reference log-probs...")
     ref = precompute_ref(model, tok, pairs, device)
     print(f"[dpo] training beta={args.beta} lr={args.lr} epochs={args.epochs}")
-    train_dpo(model, tok, pairs, ref, lora_params, args.beta, args.lr, args.epochs, device)
+    train_dpo(model, tok, pairs, ref, lora_params, args.beta, args.lr, args.epochs, device,
+              opt8bit=args.opt8bit)
 
     # branch (1) needs the FP+LoRA model evaluated BEFORE folding
     set_lora_enabled(model, True)
@@ -183,7 +208,13 @@ def main():
             adapter[n] = {"A": m.lora_A.detach().cpu(), "B": m.lora_B.detach().cpu(),
                           "scaling": m.scaling, "delta_relnorm": float(dw.norm() /
                           (dequantize_module(m.base, cfg["nbits"]).norm() + 1e-9))}
-    torch.save(adapter, out.replace(".json", "_adapter.pt"))
+    # The adapter .pt is large and only needed for a stronger re-fold; never let a
+    # disk failure here lose the result JSON. Opt-in, and guarded.
+    if args.save_adapter:
+        try:
+            torch.save(adapter, out.replace(".json", "_adapter.pt"))
+        except Exception as e:
+            print(f"[warn] adapter save failed ({type(e).__name__}: {e}); continuing")
     rel = [v["delta_relnorm"] for v in adapter.values()]
     print(f"[delta] trained LoRA delta rel-norm: mean={sum(rel)/len(rel):.4f} "
           f"min={min(rel):.4f} max={max(rel):.4f}  (vs ~0.016 snap threshold seen in smoke)")
@@ -198,6 +229,7 @@ def main():
 
     result = {
         "mask": args.mask, "r": args.r, "alpha": args.alpha, "beta": args.beta,
+        "seed": args.seed,
         "lr": args.lr, "epochs": args.epochs, "n_eval": args.n_eval,
         "n_pairs": len(pairs), "wrapped_modules": len(wrapped),
         "mean_codes_changed": mean_changed,

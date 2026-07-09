@@ -1,0 +1,29 @@
+=== Job 40833451 | Qwen3-8B downloads | Thu May 14 00:04:29 EDT 2026 ===
+
+=== Downloading Qwen/Qwen3-8B ===
+  ✓ Downloaded to: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218
+
+=== Downloading Qwen/Qwen3-8B-AWQ ===
+  ✓ Downloaded to: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--Qwen--Qwen3-8B-AWQ/snapshots/4da05a8edb55c6046cce958586c33b61da07bb79
+
+=== Downloading JunHowie/Qwen3-8B-GPTQ-Int4 ===
+  ✓ Downloaded to: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--JunHowie--Qwen3-8B-GPTQ-Int4/snapshots/f08c8ea5f60e1fe34ff4a45edb58e8ca958560c3
+
+=== All downloads complete ===
+
+=== Qwen3-8B downloads complete | Thu May 14 00:06:28 EDT 2026 ===
+/ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--Qwen--Qwen3-8B:
+total 24
+drwxr-xr-x  6 bhoomire cis250287p 4096 May 13 23:19 .
+drwxr-xr-x 31 bhoomire cis250287p 4096 May 14 00:05 ..
+drwxr-xr-x  3 bhoomire cis250287p 4096 May 13 23:19 .no_exist
+drwxr-xr-x  2 bhoomire cis250287p 4096 May 13 22:53 blobs
+drwxr-xr-x  2 bhoomire cis250287p 4096 May 13 22:48 refs
+drwxr-xr-x  3 bhoomire cis250287p 4096 May 13 22:48 snapshots
+
+/ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--Qwen--Qwen3-8B-AWQ:
+total 20
+drwxr-xr-x  5 bhoomire cis250287p 4096 May 14 00:06 .
+drwxr-xr-x 31 bhoomire cis250287p 4096 May 14 00:05 ..
+drwxr-xr-x  2 bhoomire cis250287p 4096 May 14 00:06 blobs
+drwxr-xr-x  2 bhoomire cis250287p 4096 May 14 00:05 refs

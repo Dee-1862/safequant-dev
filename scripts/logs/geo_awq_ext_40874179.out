@@ -1,0 +1,123 @@
+=== Job 40874179 | Probe-geometry AWQ extension (Llama + Mistral) | Fri May 15 12:58:20 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+###################################################################
+# Probe-geometry llama7b/awq
+# started: Fri May 15 12:58:20 EDT 2026
+###################################################################
+=== Probe-geometry comparison | llama7b / awq | n_calib=200, seed=42
+[FP32] loading + extracting residuals ...
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  ✓ Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[awq] loading + extracting residuals ...
+Loading AWQ model: llama7b → hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  ✓ Loaded AWQ 4-bit model
+
+    L | FP_train_acc Q_train_acc   cos(W_FP, W_q)  signal_status
+  ----------------------------------------------------------------------
+    0 |       98.8%      98.8%           0.9921  IN-PLACE
+    1 |       99.0%      99.0%           0.9854  IN-PLACE
+    2 |       99.5%      99.5%           0.9791  IN-PLACE
+    3 |       99.2%      99.2%           0.9760  IN-PLACE
+    4 |       99.2%      99.2%           0.9719  IN-PLACE
+    5 |       99.5%      99.5%           0.9677  IN-PLACE
+    6 |       99.8%      99.8%           0.9637  IN-PLACE
+    7 |       99.8%      99.8%           0.9617  IN-PLACE
+    8 |      100.0%     100.0%           0.9591  IN-PLACE
+    9 |      100.0%     100.0%           0.9575  IN-PLACE
+   10 |      100.0%     100.0%           0.9623  IN-PLACE
+   11 |      100.0%     100.0%           0.9640  IN-PLACE
+   12 |      100.0%     100.0%           0.9637  IN-PLACE
+   13 |      100.0%     100.0%           0.9635  IN-PLACE
+   14 |      100.0%     100.0%           0.9648  IN-PLACE
+   15 |      100.0%     100.0%           0.9679  IN-PLACE
+   16 |      100.0%     100.0%           0.9691  IN-PLACE
+   17 |      100.0%     100.0%           0.9713  IN-PLACE
+   18 |      100.0%     100.0%           0.9688  IN-PLACE
+   19 |      100.0%     100.0%           0.9694  IN-PLACE
+   20 |      100.0%     100.0%           0.9679  IN-PLACE
+   21 |      100.0%     100.0%           0.9654  IN-PLACE
+   22 |      100.0%     100.0%           0.9482  IN-PLACE
+   23 |      100.0%     100.0%           0.9540  IN-PLACE
+   24 |      100.0%     100.0%           0.9611  IN-PLACE
+   25 |      100.0%     100.0%           0.9576  IN-PLACE
+   26 |      100.0%     100.0%           0.9532  IN-PLACE
+   27 |      100.0%     100.0%           0.9491  IN-PLACE
+   28 |      100.0%     100.0%           0.9466  IN-PLACE
+   29 |      100.0%     100.0%           0.9470  IN-PLACE
+   30 |      100.0%     100.0%           0.9413  IN-PLACE
+   31 |      100.0%     100.0%           0.9267  IN-PLACE
+
+  cos_sim across layers: min=0.927  median=0.964  max=0.992
+  layers IN-PLACE (cos>0.9): 32/32
+  layers PARTIAL-ROTATION (0.5<cos<=0.9): 0/32
+  layers MOVED (cos<=0.5): 0/32
+
+  INTERPRETATION: PRESERVED-IN-PLACE
+
+Saved to outputs/probe_geometry_llama7b_awq.json
+DONE: Probe-geometry llama7b/awq | Fri May 15 13:03:46 EDT 2026
+
+###################################################################
+# Probe-geometry mistral7b-v02/awq
+# started: Fri May 15 13:03:46 EDT 2026
+###################################################################
+=== Probe-geometry comparison | mistral7b-v02 / awq | n_calib=200, seed=42
+[FP32] loading + extracting residuals ...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[awq] loading + extracting residuals ...
+Loading AWQ model: mistral7b-v02 → TheBloke/Mistral-7B-Instruct-v0.2-AWQ
+  ✓ Loaded AWQ 4-bit model
+
+    L | FP_train_acc Q_train_acc   cos(W_FP, W_q)  signal_status
+  ----------------------------------------------------------------------
+    0 |       99.5%      99.5%           0.9949  IN-PLACE
+    1 |       99.0%      99.0%           0.9918  IN-PLACE
+    2 |       99.0%      99.0%           0.9913  IN-PLACE
+    3 |       99.0%      99.0%           0.9906  IN-PLACE
+    4 |       99.0%      99.0%           0.9911  IN-PLACE
+    5 |       99.2%      99.2%           0.9905  IN-PLACE
+    6 |       99.2%      99.2%           0.9902  IN-PLACE
+    7 |       99.8%      99.8%           0.9897  IN-PLACE
+    8 |       99.8%      99.8%           0.9898  IN-PLACE
+    9 |       99.8%      99.8%           0.9894  IN-PLACE
+   10 |       99.8%      99.8%           0.9889  IN-PLACE
+   11 |      100.0%     100.0%           0.9888  IN-PLACE
+   12 |      100.0%     100.0%           0.9892  IN-PLACE
+   13 |      100.0%     100.0%           0.9897  IN-PLACE
+   14 |      100.0%     100.0%           0.9891  IN-PLACE
+   15 |      100.0%     100.0%           0.9897  IN-PLACE
+   16 |      100.0%     100.0%           0.9893  IN-PLACE
+   17 |      100.0%     100.0%           0.9884  IN-PLACE
+   18 |      100.0%     100.0%           0.9884  IN-PLACE
+   19 |      100.0%     100.0%           0.9867  IN-PLACE
+   20 |      100.0%     100.0%           0.9862  IN-PLACE
+   21 |      100.0%     100.0%           0.9866  IN-PLACE
+   22 |      100.0%     100.0%           0.9860  IN-PLACE
+   23 |      100.0%     100.0%           0.9852  IN-PLACE
+   24 |      100.0%     100.0%           0.9841  IN-PLACE
+   25 |      100.0%     100.0%           0.9829  IN-PLACE
+   26 |      100.0%     100.0%           0.9819  IN-PLACE
+   27 |      100.0%     100.0%           0.9814  IN-PLACE
+   28 |      100.0%     100.0%           0.9779  IN-PLACE
+   29 |      100.0%     100.0%           0.9806  IN-PLACE
+   30 |      100.0%     100.0%           0.9793  IN-PLACE
+   31 |      100.0%     100.0%           0.9742  IN-PLACE
+
+  cos_sim across layers: min=0.974  median=0.989  max=0.995
+  layers IN-PLACE (cos>0.9): 32/32
+  layers PARTIAL-ROTATION (0.5<cos<=0.9): 0/32
+  layers MOVED (cos<=0.5): 0/32
+
+  INTERPRETATION: PRESERVED-IN-PLACE
+
+Saved to outputs/probe_geometry_mistral7b-v02_awq.json
+DONE: Probe-geometry mistral7b-v02/awq | Fri May 15 13:06:50 EDT 2026
+=== Probe-geometry AWQ extension complete | Fri May 15 13:06:50 EDT 2026 ===

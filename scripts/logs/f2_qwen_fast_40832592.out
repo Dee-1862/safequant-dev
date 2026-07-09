@@ -1,0 +1,44 @@
+=== Job 40832592 | F2 Qwen FAST — Directional Ablation | Wed May 13 22:52:28 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# F2 — directional_ablation on qwen7b/gptq4
+# started: Wed May 13 22:52:28 EDT 2026
+########################################################################
+======================================================================
+  Directional ablation: qwen7b / gptq4
+  n_calib=200  n_eval=200  n_arc=50
+======================================================================
+
+Loading datasets...
+Loading calibration prompts...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  num_hidden_layers: 28
+
+[FP32] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+  FP32 best layer: 10  σ=9.567
+
+Loading gptq4 model...
+Loading GPTQ-4bit model: qwen7b → Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+
+[gptq4] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+  gptq4 best layer: 10  σ=9.669
+  cos_sim(FP32 r_hat[10], gptq4 r_hat[10]) = 0.9440
+
+######################################################################
+# Condition 1/4: Baseline (no ablation)
+######################################################################
+
+  --- evaluating: baseline ---
+  measuring ASR (n=200)...
+
+  Generating responses (200 prompts)...

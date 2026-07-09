@@ -1,0 +1,78 @@
+=== Job 40859861 | Layer routing Qwen SLOW | Thu May 14 20:30:22 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# Layer routing on qwen7b/gptq3 (slow Triton)
+# started: Thu May 14 20:30:23 EDT 2026
+########################################################################
+=== Layer routing analysis | qwen7b / gptq3 | n_calib=200 | seed=42
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[FP32] loading qwen7b FP32 ...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  n_layers = 28
+[FP32] extracting per-layer residuals ...
+  FP32 best-σ layer = 10 (σ=9.567)
+
+[gptq3] loading quantized model ...
+Loading GPTQ-3bit model: qwen7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen7b-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+[gptq3] extracting per-layer residuals ...
+  quant best-σ layer = 11 (σ=9.196)
+
+=== Computing per-prompt operative layers ===
+
+  Operative layer (peak |projection|) summary in quant model:
+    r̂_FP on harmful prompts:  mode=26 (99.5%), mean=26.0, std=0.07
+    r̂_FP on harmless prompts: mode=26 (99.5%)
+    r̂_q  on harmful prompts:  mode=11 (80.5%), mean=14.1, std=6.22
+    r̂_q  on harmless prompts: mode=26 (83.0%)
+
+  Script-chosen layers: fp32_best_layer=10, quant_best_layer=11
+
+Saved to outputs/layer_routing_qwen7b_gptq3.json
+DONE: Layer routing on qwen7b/gptq3 (slow Triton) | Thu May 14 21:06:32 EDT 2026
+
+########################################################################
+# Layer routing on qwen7b/gptq2 (slow Triton)
+# started: Thu May 14 21:06:32 EDT 2026
+########################################################################
+=== Layer routing analysis | qwen7b / gptq2 | n_calib=200 | seed=42
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[FP32] loading qwen7b FP32 ...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  n_layers = 28
+[FP32] extracting per-layer residuals ...
+  FP32 best-σ layer = 10 (σ=9.567)
+
+[gptq2] loading quantized model ...
+Loading GPTQ-2bit model: qwen7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen7b-gptq-2bit)
+  ✓ Loaded GPTQ 2-bit from cache
+[gptq2] extracting per-layer residuals ...
+  quant best-σ layer = 3 (σ=7.425)
+
+=== Computing per-prompt operative layers ===
+
+  Operative layer (peak |projection|) summary in quant model:
+    r̂_FP on harmful prompts:  mode=27 (57.0%), mean=26.2, std=1.41
+    r̂_FP on harmless prompts: mode=27 (54.0%)
+    r̂_q  on harmful prompts:  mode=27 (50.0%), mean=25.4, std=2.77
+    r̂_q  on harmless prompts: mode=27 (46.0%)
+
+  Script-chosen layers: fp32_best_layer=10, quant_best_layer=3
+
+Saved to outputs/layer_routing_qwen7b_gptq2.json
+DONE: Layer routing on qwen7b/gptq2 (slow Triton) | Thu May 14 21:10:25 EDT 2026
+
+=== Layer routing Qwen SLOW complete | Thu May 14 21:10:25 EDT 2026 ===

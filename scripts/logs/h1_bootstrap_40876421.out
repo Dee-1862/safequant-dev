@@ -1,0 +1,16 @@
+=== Job 40876421 | H1 bootstrap | Fri May 15 15:43:51 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== H1 bootstrap | seed=42 | bootstrap_seed=20260515
+  conditions: [('llama7b', 'fp32'), ('mistral7b-v02', 'fp32'), ('qwen7b', 'fp32'), ('llama7b', 'gptq4')]
+  n_calib=200  B=500  max_iter=500
+
+=== Stage 1: extract residuals ===
+  prompts: 200 harmful + 200 harmless
+  [extract] loading llama7b / fp32 ...
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  ✓ Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  [extract] n_layers=32, device=cuda:0
+=== H1 bootstrap complete | Fri May 15 15:55:09 EDT 2026 ===

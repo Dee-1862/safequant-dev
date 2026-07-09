@@ -1,0 +1,120 @@
+=== Job 40876654 | Random-direction routing control Qwen | Fri May 15 15:56:00 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# Random-direction routing control on qwen7b/gptq4
+# started: Fri May 15 15:56:00 EDT 2026
+########################################################################
+=== Random-direction routing control | qwen7b / gptq4 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq4] loading quantized model ...
+Loading GPTQ-4bit model: qwen7b → Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+  n_layers = 28, hidden_dim = 3584
+[gptq4] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=3584) ===
+  trial  1/20: harmful mode=27 (mean=25.0) | harmless mode=26 (mean=25.5)
+  trial  2/20: harmful mode=27 (mean=25.8) | harmless mode=27 (mean=25.7)
+  trial  3/20: harmful mode=27 (mean=25.4) | harmless mode=27 (mean=25.7)
+  trial  4/20: harmful mode=26 (mean=25.8) | harmless mode=26 (mean=25.7)
+  trial  5/20: harmful mode=27 (mean=26.5) | harmless mode=26 (mean=26.1)
+  trial 20/20: harmful mode=27 (mean=26.8) | harmless mode=27 (mean=26.4)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=26 (50.0% of trials)  mean-layer=25.8 ± 0.53 (min=24.8, max=26.8)
+  harmless: mode-of-modes=26 (60.0% of trials)  mean-layer=25.7 ± 0.50
+
+Saved to outputs/routing_random_control_qwen7b_gptq4.json
+DONE: Random-direction routing control on qwen7b/gptq4 | Fri May 15 16:05:07 EDT 2026
+
+########################################################################
+# Random-direction routing control on qwen7b/awq
+# started: Fri May 15 16:05:07 EDT 2026
+########################################################################
+=== Random-direction routing control | qwen7b / awq | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[awq] loading quantized model ...
+Loading AWQ model: qwen7b → Qwen/Qwen2.5-7B-Instruct-AWQ
+  ✓ Loaded AWQ 4-bit model
+  n_layers = 28, hidden_dim = 3584
+[awq] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=3584) ===
+  trial  1/20: harmful mode=27 (mean=25.0) | harmless mode=26 (mean=25.4)
+  trial  2/20: harmful mode=27 (mean=25.8) | harmless mode=27 (mean=25.9)
+  trial  3/20: harmful mode=27 (mean=25.5) | harmless mode=27 (mean=25.5)
+  trial  4/20: harmful mode=26 (mean=26.0) | harmless mode=26 (mean=25.7)
+  trial  5/20: harmful mode=27 (mean=26.2) | harmless mode=26 (mean=26.1)
+  trial 20/20: harmful mode=27 (mean=26.8) | harmless mode=27 (mean=26.4)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=27 (40.0% of trials)  mean-layer=25.8 ± 0.54 (min=24.5, max=26.9)
+  harmless: mode-of-modes=26 (55.0% of trials)  mean-layer=25.7 ± 0.50
+
+Saved to outputs/routing_random_control_qwen7b_awq.json
+DONE: Random-direction routing control on qwen7b/awq | Fri May 15 16:08:05 EDT 2026
+
+########################################################################
+# Random-direction routing control on qwen7b/gptq3
+# started: Fri May 15 16:08:05 EDT 2026
+########################################################################
+=== Random-direction routing control | qwen7b / gptq3 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq3] loading quantized model ...
+Loading GPTQ-3bit model: qwen7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen7b-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+  n_layers = 28, hidden_dim = 3584
+[gptq3] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=3584) ===
+  trial  1/20: harmful mode=27 (mean=25.3) | harmless mode=25 (mean=25.7)
+  trial  2/20: harmful mode=27 (mean=25.4) | harmless mode=25 (mean=25.3)
+  trial  3/20: harmful mode=26 (mean=25.3) | harmless mode=27 (mean=25.5)
+  trial  4/20: harmful mode=26 (mean=25.8) | harmless mode=27 (mean=25.8)
+  trial  5/20: harmful mode=27 (mean=26.4) | harmless mode=27 (mean=26.5)
+  trial 20/20: harmful mode=27 (mean=26.8) | harmless mode=27 (mean=26.2)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=27 (50.0% of trials)  mean-layer=25.8 ± 0.55 (min=25.1, max=26.8)
+  harmless: mode-of-modes=27 (50.0% of trials)  mean-layer=25.7 ± 0.34
+
+Saved to outputs/routing_random_control_qwen7b_gptq3.json
+DONE: Random-direction routing control on qwen7b/gptq3 | Fri May 15 16:12:16 EDT 2026
+
+########################################################################
+# Random-direction routing control on qwen7b/gptq2
+# started: Fri May 15 16:12:16 EDT 2026
+########################################################################
+=== Random-direction routing control | qwen7b / gptq2 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq2] loading quantized model ...
+Loading GPTQ-2bit model: qwen7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen7b-gptq-2bit)
+  ✓ Loaded GPTQ 2-bit from cache
+  n_layers = 28, hidden_dim = 3584
+[gptq2] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=3584) ===
+  trial  1/20: harmful mode=27 (mean=25.8) | harmless mode=27 (mean=25.6)
+  trial  2/20: harmful mode=27 (mean=25.8) | harmless mode=27 (mean=25.6)
+  trial  3/20: harmful mode=27 (mean=25.7) | harmless mode=27 (mean=25.7)
+  trial  4/20: harmful mode=27 (mean=25.3) | harmless mode=27 (mean=25.1)
+  trial  5/20: harmful mode=27 (mean=25.9) | harmless mode=27 (mean=25.7)
+  trial 20/20: harmful mode=27 (mean=25.7) | harmless mode=27 (mean=25.9)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=27 (100.0% of trials)  mean-layer=25.7 ± 0.20 (min=25.2, max=26.0)
+  harmless: mode-of-modes=27 (100.0% of trials)  mean-layer=25.6 ± 0.27
+
+Saved to outputs/routing_random_control_qwen7b_gptq2.json
+DONE: Random-direction routing control on qwen7b/gptq2 | Fri May 15 16:16:44 EDT 2026
+
+=== Random-direction routing control Qwen complete | Fri May 15 16:16:44 EDT 2026 ===

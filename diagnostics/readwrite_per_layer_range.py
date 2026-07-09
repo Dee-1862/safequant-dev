@@ -75,13 +75,17 @@ def main():
                     help="Layer range early=[0, early_end). Default: n_layers//3")
     ap.add_argument("--mid_end", type=int, default=None,
                     help="Layer range mid=[early_end, mid_end). Default: 2*n_layers//3")
+    ap.add_argument("--proj_group", choices=["read", "write", "all"], default="all",
+                    help="which projections to restore per band: read-side, write-side, or all")
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    PROJ_SET = {"read": READ_PROJS, "write": WRITE_PROJS, "all": ALL_PROJS}[args.proj_group]
 
     if args.output is None:
-        args.output = f"outputs/readwrite_per_layer_range_{args.model}_{qtz}.json"
+        suffix = "" if args.proj_group == "all" else f"_{args.proj_group}"
+        args.output = f"outputs/readwrite_per_layer_range{suffix}_{args.model}_{qtz}.json"
 
     print("=" * 70)
     print(f"  F3a Decomposition -- Per-layer-range restoration")
@@ -114,7 +118,7 @@ def main():
         print(f"    {name}:  [{lo}, {hi})  ({hi-lo} layers)")
 
     print("  Extracting FP32 weights for all read + write projections ...")
-    fp32_w = extract_fp32_weights(fp32_model, ALL_PROJS)
+    fp32_w = extract_fp32_weights(fp32_model, PROJ_SET)
     all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
     print(f"  ARC: {all_arc['fp32']:.0f}%")
@@ -133,7 +137,7 @@ def main():
         cond = f"layers_{name}"
         print(f"\n[{i}/5] {qtz} + layers {lo_hi[0]}-{lo_hi[1]-1} restored (all projections) ...")
         q_model, _ = load_quantized(args.model, quantizer=qtz)
-        restore_projections_in_range(q_model, fp32_w, ALL_PROJS, lo_hi)
+        restore_projections_in_range(q_model, fp32_w, PROJ_SET, lo_hi)
         all_responses[cond] = generate_only(q_model, tokenizer, items, desc=cond)
         all_arc[cond] = measure_arc(q_model, tokenizer, arc_items)
         print(f"  ARC: {all_arc[cond]:.0f}%")

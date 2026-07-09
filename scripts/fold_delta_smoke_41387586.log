@@ -1,0 +1,7 @@
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+`torch_dtype` is deprecated! Use `dtype` instead!
+  OK Loaded AQLM 2-bit model
+  module=model.layers.0.self_attn.q_proj delta_rel=0.0165 codes_changed=0.00% recon_moved=0.0001 codes_dtype=torch.int16
+  DELTA-FOLD SMOKE: PASS

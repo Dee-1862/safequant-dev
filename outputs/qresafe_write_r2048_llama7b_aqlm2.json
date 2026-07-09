@@ -1,0 +1,27 @@
+{
+  "mask": "write",
+  "r": 2048,
+  "alpha": 4096.0,
+  "beta": 0.01,
+  "lr": 5e-06,
+  "epochs": 3,
+  "n_eval": 400,
+  "n_pairs": 231,
+  "wrapped_modules": 64,
+  "mean_codes_changed": 9.802197018871084e-05,
+  "fp_lora": {
+    "asr": 24.75,
+    "arc": 38.0,
+    "xstest_fr": 0.0
+  },
+  "folded": {
+    "asr": 27.0,
+    "arc": 44.0,
+    "xstest_fr": 22.4
+  },
+  "baselines": {
+    "fp32_asr": 45.5,
+    "aqlm2_asr": 63.2,
+    "fp32_xstest": 6.0
+  }
+}

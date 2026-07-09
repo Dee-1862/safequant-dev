@@ -1,0 +1,37 @@
+=== ASR re-run | mistral7b-v02/awq | Wed Jun 17 22:53:23 EDT 2026 ===
+======================================================================
+  Read-Side vs Write-Side Restoration
+  Model: mistral7b-v02 | Quantizer: awq
+  ASR prompts: 200 | ARC questions: 50
+======================================================================
+
+Loading datasets...
+  WildJailbreak: 200 adversarial prompts
+  ARC-Challenge: 50 reasoning questions
+
+======================================================================
+  Phase A: Generating responses for all conditions
+======================================================================
+
+[1/5] FP32 baseline...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  OK Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  Extracting FP32 weights...
+  Done extracting weights
+
+  Generating responses (200 prompts)...
+  ARC: 62%
+
+[2/5] awq baseline...
+Loading AWQ model: mistral7b-v02 -> TheBloke/Mistral-7B-Instruct-v0.2-AWQ
+  OK Loaded AWQ 4-bit model
+
+  Generating responses (200 prompts)...
+  ARC: 58%
+
+[3/5] awq + write restored (o_proj, down_proj)...
+Loading AWQ model: mistral7b-v02 -> TheBloke/Mistral-7B-Instruct-v0.2-AWQ
+  OK Loaded AWQ 4-bit model

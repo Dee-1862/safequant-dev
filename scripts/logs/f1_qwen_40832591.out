@@ -1,0 +1,155 @@
+=== Job 40832591 | F1 Qwen — Phase Transition | Wed May 13 22:52:28 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# F1 — direction_drift on qwen7b/gptq4
+# started: Wed May 13 22:52:29 EDT 2026
+########################################################################
+======================================================================
+  Direction drift: qwen7b FP32 vs ['gptq4']
+  n_calib=200
+======================================================================
+Loading calibration prompts...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  num_hidden_layers: 28
+
+[FP32] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+
+######################################################################
+# Loading gptq4 model...
+######################################################################
+Loading GPTQ-4bit model: qwen7b → Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+
+[gptq4] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+
+======================================================================
+  Per-layer direction drift (FP32 vs gptq4)
+======================================================================
+  layer   cos_sim   sep_FP32   sep_gptq4   Δsep
+      0    0.9940      7.202      7.199    -0.003
+      1    0.9937      7.406      7.436    +0.029
+      2    0.9914      7.612      7.588    -0.024
+      3    0.9901      7.591      7.520    -0.071
+      4    0.9880      7.483      7.486    +0.003
+      5    0.9851      6.871      7.072    +0.201
+      6    0.9862      8.382      8.478    +0.096
+      7    0.9839      9.053      8.991    -0.062
+      8    0.9815      9.088      9.102    +0.014
+      9    0.9592      9.359      9.399    +0.040
+     10    0.9440      9.567      9.669    +0.102
+     11    0.9380      9.402      9.318    -0.084
+     12    0.9354      8.834      8.761    -0.073
+     13    0.9371      7.312      7.767    +0.456
+     14    0.9516      6.296      6.417    +0.122
+     15    0.9555      5.844      5.904    +0.061
+     16    0.9623      5.389      5.388    -0.001
+     17    0.9656      5.175      5.165    -0.010
+     18    0.9744      5.414      5.444    +0.030
+     19    0.9822      5.011      5.065    +0.054
+     20    0.9848      4.727      4.816    +0.089
+     21    0.9858      4.481      4.558    +0.077
+     22    0.9866      4.486      4.546    +0.060
+     23    0.9857      4.248      4.376    +0.128
+     24    0.9847      4.249      4.388    +0.139
+     25    0.9849      4.077      4.240    +0.163
+     26    0.9843      4.235      4.364    +0.129
+     27    0.9811      4.115      4.239    +0.124
+
+  cos_sim   min=0.9354  median=0.9841  max=0.9940
+  layers with cos_sim < 0.95: [10, 11, 12, 13]
+  layers with cos_sim < 0.80: []
+
+  Pearson(FP32 separation σ, cos_sim) = -0.378
+    negative → cos_sim drops at high-separation layers (hypothesis)
+
+Saved to outputs/direction_drift_qwen7b_gptq4.json
+DONE: F1 — direction_drift on qwen7b/gptq4 | Wed May 13 23:06:14 EDT 2026
+
+########################################################################
+# F1 — direction_drift on qwen7b/awq
+# started: Wed May 13 23:06:14 EDT 2026
+########################################################################
+======================================================================
+  Direction drift: qwen7b FP32 vs ['awq']
+  n_calib=200
+======================================================================
+Loading calibration prompts...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  num_hidden_layers: 28
+
+[FP32] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+
+######################################################################
+# Loading awq model...
+######################################################################
+Loading AWQ model: qwen7b → Qwen/Qwen2.5-7B-Instruct-AWQ
+FAILED (1): F1 — direction_drift on qwen7b/awq | Wed May 13 23:07:28 EDT 2026
+
+########################################################################
+# F1 — direction_drift on qwen7b/gptq3
+# started: Wed May 13 23:07:28 EDT 2026
+########################################################################
+======================================================================
+  Direction drift: qwen7b FP32 vs ['gptq3']
+  n_calib=200
+======================================================================
+Loading calibration prompts...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  num_hidden_layers: 28
+
+[FP32] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+
+######################################################################
+# Loading gptq3 model...
+######################################################################
+Loading GPTQ-3bit model: qwen7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen7b-gptq-3bit)
+FAILED (1): F1 — direction_drift on qwen7b/gptq3 | Wed May 13 23:08:11 EDT 2026
+
+########################################################################
+# F1 — direction_drift on qwen7b/gptq2
+# started: Wed May 13 23:08:11 EDT 2026
+########################################################################
+======================================================================
+  Direction drift: qwen7b FP32 vs ['gptq2']
+  n_calib=200
+======================================================================
+Loading calibration prompts...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  num_hidden_layers: 28
+
+[FP32] extracting last-token residuals across 28 layers
+    forwarding harmful (200 prompts)...
+    forwarding harmless (200 prompts)...
+
+######################################################################
+# Loading gptq2 model...
+######################################################################
+Loading GPTQ-2bit model: qwen7b (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen7b-gptq-2bit)
+FAILED (1): F1 — direction_drift on qwen7b/gptq2 | Wed May 13 23:08:53 EDT 2026
+
+=== F1 Qwen complete | Wed May 13 23:08:54 EDT 2026 ===

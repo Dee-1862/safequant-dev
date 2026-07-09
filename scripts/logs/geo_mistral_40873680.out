@@ -1,0 +1,243 @@
+=== Job 40873680 | Probe-geometry Mistral (aqlm2, gptq4, gptq3, gptq2) | Fri May 15 11:59:59 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+###################################################################
+# Probe-geometry mistral7b-v02/aqlm2
+# started: Fri May 15 12:00:00 EDT 2026
+###################################################################
+=== Probe-geometry comparison | mistral7b-v02 / aqlm2 | n_calib=200, seed=42
+[FP32] loading + extracting residuals ...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[aqlm2] loading + extracting residuals ...
+Loading AQLM-2bit model: mistral7b-v02 → ISTA-DASLab/Mistral-7B-Instruct-v0.2-AQLM-2Bit-2x8
+  ✓ Loaded AQLM 2-bit model
+
+    L | FP_train_acc Q_train_acc   cos(W_FP, W_q)  signal_status
+  ----------------------------------------------------------------------
+    0 |       99.5%      99.5%           0.8951  PARTIAL-ROTATION
+    1 |       99.0%      99.5%           0.4937  MOVED
+    2 |       99.0%      99.5%           0.5510  PARTIAL-ROTATION
+    3 |       99.0%      99.2%           0.5420  PARTIAL-ROTATION
+    4 |       99.0%      99.2%           0.5750  PARTIAL-ROTATION
+    5 |       99.2%      99.2%           0.5567  PARTIAL-ROTATION
+    6 |       99.2%      99.2%           0.5804  PARTIAL-ROTATION
+    7 |       99.8%      99.5%           0.6098  PARTIAL-ROTATION
+    8 |       99.8%      99.8%           0.6413  PARTIAL-ROTATION
+    9 |       99.8%      99.8%           0.6750  PARTIAL-ROTATION
+   10 |       99.8%      99.8%           0.7015  PARTIAL-ROTATION
+   11 |      100.0%      99.8%           0.7424  PARTIAL-ROTATION
+   12 |      100.0%      99.8%           0.7643  PARTIAL-ROTATION
+   13 |      100.0%     100.0%           0.7770  PARTIAL-ROTATION
+   14 |      100.0%     100.0%           0.7729  PARTIAL-ROTATION
+   15 |      100.0%     100.0%           0.7928  PARTIAL-ROTATION
+   16 |      100.0%     100.0%           0.8012  PARTIAL-ROTATION
+   17 |      100.0%     100.0%           0.7953  PARTIAL-ROTATION
+   18 |      100.0%     100.0%           0.7875  PARTIAL-ROTATION
+   19 |      100.0%     100.0%           0.7889  PARTIAL-ROTATION
+   20 |      100.0%     100.0%           0.7921  PARTIAL-ROTATION
+   21 |      100.0%     100.0%           0.7872  PARTIAL-ROTATION
+   22 |      100.0%     100.0%           0.7752  PARTIAL-ROTATION
+   23 |      100.0%     100.0%           0.7657  PARTIAL-ROTATION
+   24 |      100.0%     100.0%           0.7607  PARTIAL-ROTATION
+   25 |      100.0%     100.0%           0.7588  PARTIAL-ROTATION
+   26 |      100.0%     100.0%           0.7488  PARTIAL-ROTATION
+   27 |      100.0%     100.0%           0.7407  PARTIAL-ROTATION
+   28 |      100.0%     100.0%           0.7148  PARTIAL-ROTATION
+   29 |      100.0%     100.0%           0.7290  PARTIAL-ROTATION
+   30 |      100.0%     100.0%           0.7072  PARTIAL-ROTATION
+   31 |      100.0%     100.0%           0.6496  PARTIAL-ROTATION
+
+  cos_sim across layers: min=0.494  median=0.746  max=0.895
+  layers IN-PLACE (cos>0.9): 0/32
+  layers PARTIAL-ROTATION (0.5<cos<=0.9): 31/32
+  layers MOVED (cos<=0.5): 1/32
+
+  INTERPRETATION: PARTIALLY-ROTATED
+
+Saved to outputs/probe_geometry_mistral7b-v02_aqlm2.json
+DONE: Probe-geometry mistral7b-v02/aqlm2 | Fri May 15 12:05:35 EDT 2026
+
+###################################################################
+# Probe-geometry mistral7b-v02/gptq4
+# started: Fri May 15 12:05:35 EDT 2026
+###################################################################
+=== Probe-geometry comparison | mistral7b-v02 / gptq4 | n_calib=200, seed=42
+[FP32] loading + extracting residuals ...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[gptq4] loading + extracting residuals ...
+Loading GPTQ-4bit model: mistral7b-v02 → TheBloke/Mistral-7B-Instruct-v0.2-GPTQ
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+
+    L | FP_train_acc Q_train_acc   cos(W_FP, W_q)  signal_status
+  ----------------------------------------------------------------------
+    0 |       99.5%      99.5%           0.9881  IN-PLACE
+    1 |       99.0%      99.2%           0.9773  IN-PLACE
+    2 |       99.0%      99.0%           0.9869  IN-PLACE
+    3 |       99.0%      99.0%           0.9866  IN-PLACE
+    4 |       99.0%      99.2%           0.9871  IN-PLACE
+    5 |       99.2%      99.2%           0.9878  IN-PLACE
+    6 |       99.2%      99.5%           0.9882  IN-PLACE
+    7 |       99.8%      99.8%           0.9888  IN-PLACE
+    8 |       99.8%      99.8%           0.9892  IN-PLACE
+    9 |       99.8%      99.8%           0.9897  IN-PLACE
+   10 |       99.8%      99.8%           0.9890  IN-PLACE
+   11 |      100.0%     100.0%           0.9886  IN-PLACE
+   12 |      100.0%     100.0%           0.9895  IN-PLACE
+   13 |      100.0%     100.0%           0.9901  IN-PLACE
+   14 |      100.0%     100.0%           0.9897  IN-PLACE
+   15 |      100.0%     100.0%           0.9900  IN-PLACE
+   16 |      100.0%     100.0%           0.9893  IN-PLACE
+   17 |      100.0%     100.0%           0.9884  IN-PLACE
+   18 |      100.0%     100.0%           0.9894  IN-PLACE
+   19 |      100.0%     100.0%           0.9884  IN-PLACE
+   20 |      100.0%     100.0%           0.9876  IN-PLACE
+   21 |      100.0%     100.0%           0.9851  IN-PLACE
+   22 |      100.0%     100.0%           0.9866  IN-PLACE
+   23 |      100.0%     100.0%           0.9836  IN-PLACE
+   24 |      100.0%     100.0%           0.9865  IN-PLACE
+   25 |      100.0%     100.0%           0.9849  IN-PLACE
+   26 |      100.0%     100.0%           0.9843  IN-PLACE
+   27 |      100.0%     100.0%           0.9816  IN-PLACE
+   28 |      100.0%     100.0%           0.9508  IN-PLACE
+   29 |      100.0%     100.0%           0.9816  IN-PLACE
+   30 |      100.0%     100.0%           0.9801  IN-PLACE
+   31 |      100.0%     100.0%           0.9754  IN-PLACE
+
+  cos_sim across layers: min=0.951  median=0.988  max=0.990
+  layers IN-PLACE (cos>0.9): 32/32
+  layers PARTIAL-ROTATION (0.5<cos<=0.9): 0/32
+  layers MOVED (cos<=0.5): 0/32
+
+  INTERPRETATION: PRESERVED-IN-PLACE
+
+Saved to outputs/probe_geometry_mistral7b-v02_gptq4.json
+DONE: Probe-geometry mistral7b-v02/gptq4 | Fri May 15 12:08:36 EDT 2026
+
+###################################################################
+# Probe-geometry mistral7b-v02/gptq3
+# started: Fri May 15 12:08:36 EDT 2026
+###################################################################
+=== Probe-geometry comparison | mistral7b-v02 / gptq3 | n_calib=200, seed=42
+[FP32] loading + extracting residuals ...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[gptq3] loading + extracting residuals ...
+Loading GPTQ-3bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+
+    L | FP_train_acc Q_train_acc   cos(W_FP, W_q)  signal_status
+  ----------------------------------------------------------------------
+    0 |       99.5%      99.5%           0.8422  PARTIAL-ROTATION
+    1 |       99.0%      99.5%           0.8046  PARTIAL-ROTATION
+    2 |       99.0%      99.2%           0.7902  PARTIAL-ROTATION
+    3 |       99.0%      99.2%           0.7772  PARTIAL-ROTATION
+    4 |       99.0%      99.2%           0.7886  PARTIAL-ROTATION
+    5 |       99.2%      99.2%           0.8006  PARTIAL-ROTATION
+    6 |       99.2%      99.2%           0.8165  PARTIAL-ROTATION
+    7 |       99.8%      99.2%           0.8409  PARTIAL-ROTATION
+    8 |       99.8%      99.8%           0.8608  PARTIAL-ROTATION
+    9 |       99.8%      99.8%           0.8580  PARTIAL-ROTATION
+   10 |       99.8%      99.8%           0.8611  PARTIAL-ROTATION
+   11 |      100.0%      99.8%           0.8723  PARTIAL-ROTATION
+   12 |      100.0%      99.8%           0.8814  PARTIAL-ROTATION
+   13 |      100.0%     100.0%           0.8910  PARTIAL-ROTATION
+   14 |      100.0%     100.0%           0.8911  PARTIAL-ROTATION
+   15 |      100.0%     100.0%           0.8926  PARTIAL-ROTATION
+   16 |      100.0%     100.0%           0.8923  PARTIAL-ROTATION
+   17 |      100.0%     100.0%           0.8898  PARTIAL-ROTATION
+   18 |      100.0%     100.0%           0.8889  PARTIAL-ROTATION
+   19 |      100.0%     100.0%           0.8868  PARTIAL-ROTATION
+   20 |      100.0%     100.0%           0.8836  PARTIAL-ROTATION
+   21 |      100.0%     100.0%           0.8809  PARTIAL-ROTATION
+   22 |      100.0%     100.0%           0.8768  PARTIAL-ROTATION
+   23 |      100.0%     100.0%           0.8746  PARTIAL-ROTATION
+   24 |      100.0%     100.0%           0.8651  PARTIAL-ROTATION
+   25 |      100.0%     100.0%           0.8577  PARTIAL-ROTATION
+   26 |      100.0%     100.0%           0.8382  PARTIAL-ROTATION
+   27 |      100.0%     100.0%           0.8462  PARTIAL-ROTATION
+   28 |      100.0%     100.0%           0.8195  PARTIAL-ROTATION
+   29 |      100.0%     100.0%           0.8344  PARTIAL-ROTATION
+   30 |      100.0%     100.0%           0.8267  PARTIAL-ROTATION
+   31 |      100.0%     100.0%           0.8100  PARTIAL-ROTATION
+
+  cos_sim across layers: min=0.777  median=0.859  max=0.893
+  layers IN-PLACE (cos>0.9): 0/32
+  layers PARTIAL-ROTATION (0.5<cos<=0.9): 32/32
+  layers MOVED (cos<=0.5): 0/32
+
+  INTERPRETATION: PARTIALLY-ROTATED
+
+Saved to outputs/probe_geometry_mistral7b-v02_gptq3.json
+DONE: Probe-geometry mistral7b-v02/gptq3 | Fri May 15 12:12:44 EDT 2026
+
+###################################################################
+# Probe-geometry mistral7b-v02/gptq2
+# started: Fri May 15 12:12:44 EDT 2026
+###################################################################
+=== Probe-geometry comparison | mistral7b-v02 / gptq2 | n_calib=200, seed=42
+[FP32] loading + extracting residuals ...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[gptq2] loading + extracting residuals ...
+Loading GPTQ-2bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-2bit)
+  ✓ Loaded GPTQ 2-bit from cache
+
+    L | FP_train_acc Q_train_acc   cos(W_FP, W_q)  signal_status
+  ----------------------------------------------------------------------
+    0 |       99.5%      99.2%           0.6796  PARTIAL-ROTATION
+    1 |       99.0%      99.5%           0.5676  PARTIAL-ROTATION
+    2 |       99.0%      99.0%           0.4807  MOVED
+    3 |       99.0%      99.0%           0.4324  MOVED
+    4 |       99.0%      99.0%           0.4872  MOVED
+    5 |       99.2%      99.2%           0.4529  MOVED
+    6 |       99.2%      99.2%           0.4308  MOVED
+    7 |       99.8%      99.2%           0.4257  MOVED
+    8 |       99.8%      99.2%           0.4166  MOVED
+    9 |       99.8%      99.2%           0.4096  MOVED
+   10 |       99.8%      99.5%           0.3948  MOVED
+   11 |      100.0%      99.5%           0.3781  MOVED
+   12 |      100.0%      99.8%           0.3682  MOVED
+   13 |      100.0%      99.8%           0.3733  MOVED
+   14 |      100.0%      99.8%           0.3572  MOVED
+   15 |      100.0%     100.0%           0.3267  MOVED
+   16 |      100.0%     100.0%           0.3349  MOVED
+   17 |      100.0%     100.0%           0.3232  MOVED
+   18 |      100.0%     100.0%           0.3105  MOVED
+   19 |      100.0%     100.0%           0.2892  MOVED
+   20 |      100.0%     100.0%           0.2979  MOVED
+   21 |      100.0%     100.0%           0.2785  MOVED
+   22 |      100.0%     100.0%           0.2745  MOVED
+   23 |      100.0%     100.0%           0.2721  MOVED
+   24 |      100.0%     100.0%           0.2633  MOVED
+   25 |      100.0%     100.0%           0.2640  MOVED
+   26 |      100.0%     100.0%           0.2620  MOVED
+   27 |      100.0%     100.0%           0.2384  MOVED
+   28 |      100.0%     100.0%           0.2664  MOVED
+   29 |      100.0%     100.0%           0.2609  MOVED
+   30 |      100.0%     100.0%           0.2422  MOVED
+   31 |      100.0%     100.0%           0.1816  MOVED
+
+  cos_sim across layers: min=0.182  median=0.331  max=0.680
+  layers IN-PLACE (cos>0.9): 0/32
+  layers PARTIAL-ROTATION (0.5<cos<=0.9): 2/32
+  layers MOVED (cos<=0.5): 30/32
+
+  INTERPRETATION: PRESERVED-BUT-MOVED
+
+Saved to outputs/probe_geometry_mistral7b-v02_gptq2.json
+DONE: Probe-geometry mistral7b-v02/gptq2 | Fri May 15 12:16:04 EDT 2026
+=== Probe-geometry Mistral complete | Fri May 15 12:16:04 EDT 2026 ===

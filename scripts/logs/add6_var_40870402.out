@@ -1,0 +1,45 @@
+=== Job 40870402 | Addition 6 variance explained (analysis) | Fri May 15 03:38:29 EDT 2026 ===
+Using 10 non-destroyed conditions (excluded 4 destroyed-regime rows)
+
+model          quant  reg         cos_med  cos_sc  σ_ratio  opgap    asym   damage
+llama7b        gptq4  PRESERVED    0.972   0.967   1.027     1   +3.0    -3.0
+llama7b        awq    PRESERVED    0.974   0.338   1.022    25  +17.5    +0.0
+llama7b        aqlm2  DRIFTED      0.815   0.300   1.032    25   +4.5   +21.5
+mistral7b-v02  gptq4  PRESERVED    0.991   0.990   1.013     0   +1.0    -4.0
+mistral7b-v02  awq    PRESERVED    0.991   0.853   0.999     0   +3.0    +0.0
+mistral7b-v02  aqlm2  DRIFTED      0.811   0.255   0.949    11  +29.0    -7.5
+mistral7b-v02  gptq3  DRIFTED      0.901   0.584   1.020    12   +0.0    -1.0
+qwen7b         gptq4  PRESERVED    0.984   0.944   1.011     0   +0.5    +0.0
+qwen7b         awq    PRESERVED    0.976   0.958   0.999     0   +4.5    +0.0
+qwen7b         gptq3  DRIFTED      0.843   0.592   0.961    15   +8.5    +0.0
+
+========================================================================================
+  LOOCV linear regression — target: asym_magnitude (always avail)  (n=10)
+========================================================================================
+  features                                     MAE     R^2
+----------------------------------------------------------------------------------------
+  cos_med                                    7.60 -0.453
+  cos_sc                                     5.76 +0.060
+  sigma_ratio                                8.00 -0.373
+  op_gap                                     6.53 -0.191
+  cos_med+sc                                 6.51 -0.134
+  cos_med+sigma_ratio                        7.92 -0.422
+  cos_med+op_gap                            12.63 -4.879
+  all four                                  12.97 -4.327
+
+========================================================================================
+  LOOCV linear regression — target: damage_pp (where avail)  (n=5)
+========================================================================================
+  features                                     MAE     R^2
+----------------------------------------------------------------------------------------
+  cos_med                                   11.45 -1.672
+  cos_sc                                    11.43 -1.591
+  sigma_ratio                               23.40 -9.388
+  op_gap                                    11.43 -0.768
+  cos_med+sc                                17.07 -2.504
+  cos_med+sigma_ratio                        8.24 +0.026
+  cos_med+op_gap                             8.54 -0.012
+  all four                                  12.69 -1.700
+
+Saved data to outputs/variance_explained_summary.json
+=== Addition 6 complete | Fri May 15 03:38:36 EDT 2026 ===

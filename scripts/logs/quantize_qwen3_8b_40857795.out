@@ -1,0 +1,28 @@
+=== Job 40857795 | Qwen3-8B GPTQ-3 + GPTQ-2 quantization | Thu May 14 20:26:22 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+============================================================
+  GPTQ Quantization: Qwen3-8B (3-bit, 2-bit)
+============================================================
+
+============================================================
+  qwen3-8b / gptq3
+============================================================
+
+  Loading tokenizer for Qwen/Qwen3-8B...
+  Quantizing Qwen/Qwen3-8B to 3-bit GPTQ (wikitext2 calib)...
+  ✗ Failed: The size of tensor a (32) must match the size of tensor b (128) at non-singleton dimension 3
+
+============================================================
+  qwen3-8b / gptq2
+============================================================
+
+  Loading tokenizer for Qwen/Qwen3-8B...
+  Quantizing Qwen/Qwen3-8B to 2-bit GPTQ (wikitext2 calib)...
+  ✗ Failed: The size of tensor a (32) must match the size of tensor b (128) at non-singleton dimension 3
+
+============================================================
+  Qwen3-8B GPTQ quantization complete
+============================================================
+
+=== Qwen3-8B quantization complete | Thu May 14 20:50:07 EDT 2026 ===
+ls: cannot access '/ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/qwen3-8b-*': No such file or directory

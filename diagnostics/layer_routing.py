@@ -86,17 +86,26 @@ def per_layer_separation(harmful_lasts, harmless_lasts, r_hat):
     return float((h_scores.mean() - s_scores.mean()) / pooled)
 
 
-def per_prompt_projections(residuals_by_layer, r_hat):
+def per_prompt_projections(residuals_by_layer, r_hat, normalize=False):
     """
     Returns {prompt_idx: [layer_projections]}.
     residuals_by_layer is dict {L: [tensor_per_prompt]}.
+
+    With normalize=True the projection is the cosine t.r_hat / |t| instead of the
+    raw dot product. The raw dot product scales with the residual norm |t|, which
+    grows with depth, so argmax over layers is biased toward late layers (a pure
+    magnitude artifact). Cosine isolates *alignment* with r_hat from the norm, so
+    the operative layer reflects where the direction is genuinely active.
     """
     layers = sorted(residuals_by_layer.keys())
     n_prompts = len(residuals_by_layer[layers[0]])
     out = np.zeros((n_prompts, len(layers)), dtype=np.float64)
     for li, L in enumerate(layers):
         for pi, t in enumerate(residuals_by_layer[L]):
-            out[pi, li] = float(t @ r_hat)
+            v = float(t @ r_hat)
+            if normalize:
+                v = v / (float(t.norm()) + 1e-8)
+            out[pi, li] = v
     return out, layers
 
 
@@ -112,6 +121,12 @@ def main():
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="awq")
     ap.add_argument("--n_calib", type=int, default=200)
+    ap.add_argument("--token_pos", type=int, default=None,
+                    help="override residual token position (last CONTENT token: "
+                         "llama=-5, phi3=-3); default uses per-model heuristic")
+    ap.add_argument("--normalize", action="store_true", default=False,
+                    help="use cosine (norm-normalized) projection so the operative "
+                         "layer reflects alignment, not late-layer magnitude")
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
 
@@ -136,9 +151,14 @@ def main():
     layers = list(range(n_layers))
     print(f"  n_layers = {n_layers}")
 
-    token_pos = -1
-    if "llama" in args.model.lower():
+    if args.token_pos is not None:
+        token_pos = args.token_pos
+    elif "llama" in args.model.lower():
         token_pos = -5
+    elif "phi" in args.model.lower():
+        token_pos = -3   # phi3 template tail: <content> <|end|> <|assistant|>
+    else:
+        token_pos = -1
     print(f"  Mapped {args.model} to token_pos: {token_pos}")
 
     print("[FP32] extracting per-layer residuals ...")
@@ -178,10 +198,10 @@ def main():
     # In the QUANT model's residual stream, where does the activation
     # have peak projection onto r_hat_FP and r_hat_q respectively?
     print(f"\n=== Computing per-prompt operative layers ===")
-    q_proj_FP_harmful,  _ = per_prompt_projections(q_h_resid, r_hat_FP)
-    q_proj_FP_harmless, _ = per_prompt_projections(q_s_resid, r_hat_FP)
-    q_proj_q_harmful,   _ = per_prompt_projections(q_h_resid, r_hat_q)
-    q_proj_q_harmless,  _ = per_prompt_projections(q_s_resid, r_hat_q)
+    q_proj_FP_harmful,  _ = per_prompt_projections(q_h_resid, r_hat_FP, normalize=args.normalize)
+    q_proj_FP_harmless, _ = per_prompt_projections(q_s_resid, r_hat_FP, normalize=args.normalize)
+    q_proj_q_harmful,   _ = per_prompt_projections(q_h_resid, r_hat_q, normalize=args.normalize)
+    q_proj_q_harmless,  _ = per_prompt_projections(q_s_resid, r_hat_q, normalize=args.normalize)
 
     op_FP_harmful  = operative_layer_per_prompt(q_proj_FP_harmful,  layers)
     op_FP_harmless = operative_layer_per_prompt(q_proj_FP_harmless, layers)

@@ -1,0 +1,13 @@
+=== Job 41149906 | Arditi Selection | Wed Jun  3 22:55:28 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+Running FP32...
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+[llama7b/fp32] selecting behavioral direction ...
+
+  Generating responses (32 prompts)...
+  Classifying 32 responses with HarmBench judge...
+  Loading HarmBench classifier: cais/HarmBench-Mistral-7b-val-cls

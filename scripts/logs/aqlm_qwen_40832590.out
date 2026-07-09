@@ -1,0 +1,82 @@
+=== Job 40832590 | AQLM-2 quantize Qwen2.5-7B | Wed May 13 22:48:28 EDT 2026 ===
+  Save target: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/aqlm_cache/qwen7b-aqlm-2bit
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+=== Step 1: try pip install aqlm[gpu] + v1 script ===
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (2.27.5)
+Requirement already satisfied: nvidia-nvshmem-cu12==3.3.20 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (3.3.20)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from torch>=2.2.0->aqlm[gpu]) (1.13.1.3)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from sympy>=1.13.3->torch>=2.2.0->aqlm[gpu]) (1.3.0)
+Requirement already satisfied: regex!=2019.12.17 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from transformers>=4.38.0->aqlm[gpu]) (2026.4.4)
+Requirement already satisfied: tokenizers<=0.23.0,>=0.22.0 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from transformers>=4.38.0->aqlm[gpu]) (0.22.2)
+Requirement already satisfied: MarkupSafe>=2.0 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from jinja2->torch>=2.2.0->aqlm[gpu]) (3.0.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from requests->huggingface-hub>=0.21.0->accelerate>=0.27.0->aqlm[gpu]) (3.4.7)
+Requirement already satisfied: idna<4,>=2.5 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from requests->huggingface-hub>=0.21.0->accelerate>=0.27.0->aqlm[gpu]) (3.11)
+Requirement already satisfied: urllib3<3,>=1.26 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from requests->huggingface-hub>=0.21.0->accelerate>=0.27.0->aqlm[gpu]) (2.6.3)
+Requirement already satisfied: certifi>=2023.5.7 in /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages (from requests->huggingface-hub>=0.21.0->accelerate>=0.27.0->aqlm[gpu]) (2026.2.25)
+
+  Sanity check: is  importable?
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ImportError: cannot import name 'quantize' from 'aqlm' (/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/__init__.py)
+  ✗ aqlm.quantize not in this aqlm version. Falling back to Step 2.
+
+=== Step 2: clone github.com/Vahe1994/AQLM and quantize via main.py ===
+    Uninstalling accelerate-1.2.1:
+      Successfully uninstalled accelerate-1.2.1
+
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+optimum 1.23.3 requires coloredlogs, which is not installed.
+vllm 0.11.2 requires tokenizers>=0.21.1, but you have tokenizers 0.19.1 which is incompatible.
+vllm 0.11.2 requires transformers<5,>=4.56.0, but you have transformers 4.40.1 which is incompatible.
+autoawq 0.2.9 requires datasets>=2.20, but you have datasets 2.19.0 which is incompatible.
+autoawq 0.2.9 requires transformers>=4.45.0, but you have transformers 4.40.1 which is incompatible.
+Successfully installed accelerate-0.29.3 datasets-2.19.0 fsspec-2024.3.1 pyarrow-hotfix-0.7 safetensors-0.4.3 sentencepiece-0.2.0 tokenizers-0.19.1 transformers-4.40.1
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:124: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/backends/__init__.py:46: UserWarning: Please use the new API settings to control TF32 behavior, such as torch.backends.cudnn.conv.fp32_precision = 'tf32' or torch.backends.cuda.matmul.fp32_precision = 'ieee'. Old settings, e.g, torch.backends.cuda.matmul.allow_tf32 = True, torch.backends.cudnn.allow_tf32 = True, allowTF32CuDNN() and allowTF32CuBLAS() will be deprecated after Pytorch 2.9. Please see https://pytorch.org/docs/main/notes/cuda.html#tensorfloat-32-tf32-on-ampere-and-later-devices (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:80.)
+  self.setter(val)
+usage: main.py [-h] [--new_eval] [--nsamples NSAMPLES]
+               [--model_seqlen MODEL_SEQLEN] [--use_checkpointing]
+               [--mix_compression] [--load LOAD] [--save SAVE] [--resume]
+               [--on_save ON_SAVE] [--devices N [N ...]]
+               [--dtype {auto,float16,float32,bfloat16}] [--seed SEED]
+               [--skip_out_loss] [--offload_activations] [--true-sequential]
+               [--num_codebooks NUM_CODEBOOKS]
+               [--nbits_per_codebook NBITS_PER_CODEBOOK]
+               [--out_group_size OUT_GROUP_SIZE]
+               [--in_group_size IN_GROUP_SIZE] [--scale_nbits SCALE_NBITS]
+               [--codebook_value_nbits CODEBOOK_VALUE_NBITS]
+               [--codebook_value_num_groups CODEBOOK_VALUE_NUM_GROUPS]
+               [--init_max_iter INIT_MAX_ITER] [--use_faiss]
+               [--init_max_points_per_centroid INIT_MAX_POINTS_PER_CENTROID]
+               [--lr LR] [--beam_size BEAM_SIZE] [--max_epochs MAX_EPOCHS]
+               [--relative_mse_tolerance RELATIVE_MSE_TOLERANCE]
+               [--steps_per_epoch STEPS_PER_EPOCH]
+               [--finetune_max_epochs FINETUNE_MAX_EPOCHS]
+               [--finetune_early_stop FINETUNE_EARLY_STOP]
+               [--finetune_lr FINETUNE_LR]
+               [--finetune_batch_size FINETUNE_BATCH_SIZE]
+               [--finetune_adam_beta1 FINETUNE_ADAM_BETA1]
+               [--finetune_adam_beta2 FINETUNE_ADAM_BETA2]
+               [--finetune_keep_best] [--local_batch_size LOCAL_BATCH_SIZE]
+               [--val_size VAL_SIZE] [--print_frequency PRINT_FREQUENCY]
+               [--wandb] [--no_quant]
+               [--attn_implementation {None,eager,flash_attention_2,sdpa}]
+               [--use_fast_tokenizer] [--trust_remote_code]
+               model_path dataset
+main.py: error: unrecognized arguments: --finetune_max_steps=100
+
+=== AQLM-2 Qwen2.5-7B quantization complete | Wed May 13 23:04:17 EDT 2026 ===
+total 8
+drwxr-xr-x 2 bhoomire cis250287p 4096 May 13 23:04 .
+drwxr-xr-x 3 bhoomire cis250287p 4096 May 13 23:04 ..

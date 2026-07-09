@@ -1,0 +1,25 @@
+Loading FP32 model: phi3
+  Path: microsoft/Phi-3-mini-4k-instruct
+  Device: cuda
+  Revision pin: ff07dc01615f (FP weights matched to the quantizer's source)
+  OK Loaded (3.82B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+FP config _name_or_path: microsoft/Phi-3-mini-4k-instruct
+AQLM config _name_or_path: ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+FP n_layers=32  AQLM n_layers=32
+
+--- layer 0 ---
+  self_attn.qkv_proj     FP(9216, 3072) rel_err=1.118 cos=0.625  DIFFERENT VERSION
+  mlp.gate_up_proj       FP(16384, 3072) rel_err=0.405 cos=0.923  same-version(quant err)
+  self_attn.o_proj       FP(3072, 3072) rel_err=0.731 cos=0.715  DIFFERENT VERSION
+  mlp.down_proj          FP(3072, 8192) rel_err=0.487 cos=0.894  DIFFERENT VERSION
+--- layer 16 ---
+  self_attn.qkv_proj     FP(9216, 3072) rel_err=0.354 cos=0.938  same-version(quant err)
+  mlp.gate_up_proj       FP(16384, 3072) rel_err=0.353 cos=0.938  same-version(quant err)
+  self_attn.o_proj       FP(3072, 3072) rel_err=0.336 cos=0.943  same-version(quant err)
+  mlp.down_proj          FP(3072, 8192) rel_err=0.352 cos=0.939  same-version(quant err)
+
+=> If rel_err is large / cos low across projections, the AQLM checkpoint is a different Phi-3 version than the FP base; pin the FP revision to match.

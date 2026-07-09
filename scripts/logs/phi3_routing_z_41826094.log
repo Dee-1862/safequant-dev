@@ -1,0 +1,56 @@
+=== phi3 routing_z | Mon Jun 29 06:41:44 EDT 2026 ===
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+=== Layer routing analysis | phi3 / aqlm2 | n_calib=200 | seed=42
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[FP32] loading phi3 FP32 ...
+Loading FP32 model: phi3
+  Path: microsoft/Phi-3-mini-4k-instruct
+  Device: cuda
+  Revision pin: ff07dc01615f (FP weights matched to the quantizer's source)
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:29<00:29, 29.81s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:52<00:00, 25.77s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:52<00:00, 26.37s/it]
+  OK Loaded (3.82B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  n_layers = 32
+  Mapped phi3 to token_pos: -1
+[FP32] extracting per-layer residuals ...
+  FP32 best-sigma layer = 9 (sigma=8.232)
+
+[aqlm2] loading quantized model ...
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+[aqlm2] extracting per-layer residuals ...
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:20: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:33: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:48: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:62: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:75: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:88: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:102: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:115: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:128: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant_transposed")
+  quant best-sigma layer = 10 (sigma=8.722)
+
+=== Computing per-prompt operative layers ===
+
+  Operative layer (peak |projection|) summary in quant model:
+    r_hat_FP on harmful prompts:  mode=28 (32.0%), mean=26.4, std=2.78
+    r_hat_FP on harmless prompts: mode=31 (68.0%)
+    r_hat_q  on harmful prompts:  mode=29 (33.5%), mean=27.6, std=1.62
+    r_hat_q  on harmless prompts: mode=29 (20.5%)
+
+  Script-chosen layers: fp32_best_layer=9, quant_best_layer=10
+
+Saved to outputs/layer_routing_phi3_aqlm2.json

@@ -19,7 +19,7 @@ from core.datasets import load_wildjailbreak_prompts, load_harmless_prompts
 from core.evaluation import generate_only, classify_batch, _extract_behavior
 from sklearn.linear_model import LogisticRegression
 
-from diagnostics.directional_ablation import install_ablation, remove_handles
+from core.hooks import install_ablation, remove_handles
 from diagnostics.probe_utils import per_layer_probe_accuracy
 
 

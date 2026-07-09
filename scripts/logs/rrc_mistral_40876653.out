@@ -1,0 +1,149 @@
+=== Job 40876653 | Random-direction routing control Mistral | Fri May 15 15:56:00 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# Random-direction routing control on mistral7b-v02/gptq4
+# started: Fri May 15 15:56:00 EDT 2026
+########################################################################
+=== Random-direction routing control | mistral7b-v02 / gptq4 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq4] loading quantized model ...
+Loading GPTQ-4bit model: mistral7b-v02 → TheBloke/Mistral-7B-Instruct-v0.2-GPTQ
+  ✓ Loaded GPTQ 4-bit (pre-quantized)
+  n_layers = 32, hidden_dim = 4096
+[gptq4] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=4096) ===
+  trial  1/20: harmful mode=31 (mean=28.1) | harmless mode=29 (mean=28.5)
+  trial  2/20: harmful mode=31 (mean=30.4) | harmless mode=31 (mean=30.2)
+  trial  3/20: harmful mode=29 (mean=28.4) | harmless mode=31 (mean=29.0)
+  trial  4/20: harmful mode=31 (mean=27.3) | harmless mode=31 (mean=28.7)
+  trial  5/20: harmful mode=31 (mean=28.7) | harmless mode=31 (mean=28.8)
+  trial 20/20: harmful mode=31 (mean=28.3) | harmless mode=31 (mean=28.7)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=31 (65.0% of trials)  mean-layer=29.2 ± 1.06 (min=27.1, max=31.0)
+  harmless: mode-of-modes=31 (70.0% of trials)  mean-layer=29.3 ± 0.57
+
+Saved to outputs/routing_random_control_mistral7b-v02_gptq4.json
+DONE: Random-direction routing control on mistral7b-v02/gptq4 | Fri May 15 16:03:48 EDT 2026
+
+########################################################################
+# Random-direction routing control on mistral7b-v02/awq
+# started: Fri May 15 16:03:48 EDT 2026
+########################################################################
+=== Random-direction routing control | mistral7b-v02 / awq | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[awq] loading quantized model ...
+Loading AWQ model: mistral7b-v02 → TheBloke/Mistral-7B-Instruct-v0.2-AWQ
+  ✓ Loaded AWQ 4-bit model
+  n_layers = 32, hidden_dim = 4096
+[awq] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=4096) ===
+  trial  1/20: harmful mode=31 (mean=27.4) | harmless mode=31 (mean=28.2)
+  trial  2/20: harmful mode=31 (mean=30.3) | harmless mode=31 (mean=30.1)
+  trial  3/20: harmful mode=29 (mean=28.0) | harmless mode=31 (mean=28.9)
+  trial  4/20: harmful mode=31 (mean=26.9) | harmless mode=31 (mean=29.0)
+  trial  5/20: harmful mode=31 (mean=29.1) | harmless mode=31 (mean=28.5)
+  trial 20/20: harmful mode=31 (mean=27.6) | harmless mode=31 (mean=28.9)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=31 (60.0% of trials)  mean-layer=29.0 ± 1.16 (min=26.9, max=31.0)
+  harmless: mode-of-modes=31 (70.0% of trials)  mean-layer=29.2 ± 0.56
+
+Saved to outputs/routing_random_control_mistral7b-v02_awq.json
+DONE: Random-direction routing control on mistral7b-v02/awq | Fri May 15 16:05:23 EDT 2026
+
+########################################################################
+# Random-direction routing control on mistral7b-v02/gptq3
+# started: Fri May 15 16:05:23 EDT 2026
+########################################################################
+=== Random-direction routing control | mistral7b-v02 / gptq3 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq3] loading quantized model ...
+Loading GPTQ-3bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+  n_layers = 32, hidden_dim = 4096
+[gptq3] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=4096) ===
+  trial  1/20: harmful mode=21 (mean=25.9) | harmless mode=31 (mean=27.2)
+  trial  2/20: harmful mode=31 (mean=30.8) | harmless mode=31 (mean=30.4)
+  trial  3/20: harmful mode=31 (mean=28.4) | harmless mode=31 (mean=29.1)
+  trial  4/20: harmful mode=30 (mean=26.3) | harmless mode=31 (mean=28.4)
+  trial  5/20: harmful mode=31 (mean=29.4) | harmless mode=31 (mean=28.8)
+  trial 20/20: harmful mode=31 (mean=28.6) | harmless mode=31 (mean=28.5)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=31 (60.0% of trials)  mean-layer=29.0 ± 1.27 (min=25.9, max=30.8)
+  harmless: mode-of-modes=31 (80.0% of trials)  mean-layer=29.1 ± 0.74
+
+Saved to outputs/routing_random_control_mistral7b-v02_gptq3.json
+DONE: Random-direction routing control on mistral7b-v02/gptq3 | Fri May 15 16:07:34 EDT 2026
+
+########################################################################
+# Random-direction routing control on mistral7b-v02/gptq2
+# started: Fri May 15 16:07:34 EDT 2026
+########################################################################
+=== Random-direction routing control | mistral7b-v02 / gptq2 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[gptq2] loading quantized model ...
+Loading GPTQ-2bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-2bit)
+  ✓ Loaded GPTQ 2-bit from cache
+  n_layers = 32, hidden_dim = 4096
+[gptq2] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=4096) ===
+  trial  1/20: harmful mode=31 (mean=28.7) | harmless mode=31 (mean=28.9)
+  trial  2/20: harmful mode=31 (mean=30.1) | harmless mode=31 (mean=29.4)
+  trial  3/20: harmful mode=31 (mean=28.5) | harmless mode=31 (mean=28.7)
+  trial  4/20: harmful mode=31 (mean=28.5) | harmless mode=31 (mean=28.7)
+  trial  5/20: harmful mode=31 (mean=28.2) | harmless mode=31 (mean=28.7)
+  trial 20/20: harmful mode=31 (mean=28.2) | harmless mode=31 (mean=29.0)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=31 (90.0% of trials)  mean-layer=28.9 ± 0.58 (min=27.9, max=30.1)
+  harmless: mode-of-modes=31 (95.0% of trials)  mean-layer=28.8 ± 0.30
+
+Saved to outputs/routing_random_control_mistral7b-v02_gptq2.json
+DONE: Random-direction routing control on mistral7b-v02/gptq2 | Fri May 15 16:09:03 EDT 2026
+
+########################################################################
+# Random-direction routing control on mistral7b-v02/aqlm2
+# started: Fri May 15 16:09:03 EDT 2026
+########################################################################
+=== Random-direction routing control | mistral7b-v02 / aqlm2 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[aqlm2] loading quantized model ...
+Loading AQLM-2bit model: mistral7b-v02 → ISTA-DASLab/Mistral-7B-Instruct-v0.2-AQLM-2Bit-2x8
+  ✓ Loaded AQLM 2-bit model
+  n_layers = 32, hidden_dim = 4096
+[aqlm2] extracting per-layer residuals ...
+
+=== Sampling 20 random unit vectors (dim=4096) ===
+  trial  1/20: harmful mode=30 (mean=27.4) | harmless mode=31 (mean=27.9)
+  trial  2/20: harmful mode=31 (mean=30.2) | harmless mode=30 (mean=30.2)
+  trial  3/20: harmful mode=29 (mean=28.6) | harmless mode=31 (mean=28.6)
+  trial  4/20: harmful mode=31 (mean=27.6) | harmless mode=31 (mean=28.4)
+  trial  5/20: harmful mode=31 (mean=29.0) | harmless mode=31 (mean=28.2)
+  trial 20/20: harmful mode=31 (mean=28.9) | harmless mode=31 (mean=29.2)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=31 (65.0% of trials)  mean-layer=29.1 ± 1.13 (min=26.7, max=30.7)
+  harmless: mode-of-modes=31 (70.0% of trials)  mean-layer=29.3 ± 0.64
+
+Saved to outputs/routing_random_control_mistral7b-v02_aqlm2.json
+DONE: Random-direction routing control on mistral7b-v02/aqlm2 | Fri May 15 16:10:19 EDT 2026
+
+=== Random-direction routing control Mistral complete | Fri May 15 16:10:19 EDT 2026 ===

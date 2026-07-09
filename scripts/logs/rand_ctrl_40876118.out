@@ -1,0 +1,55 @@
+=== Job 40876118 | Random-direction control (3 arch, K=1000 random vecs) | Fri May 15 14:47:49 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== Random-direction control | seed=42, K_random=1000
+  models: ['llama7b', 'mistral7b-v02', 'qwen7b'], n_calib=200
+
+
+[llama7b] loading FP32 + extracting residuals ...
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  ✓ Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  hidden_dim=4096, n_layers=32
+  computing σ-probe alignment + random null at each layer ...
+  signal cos(σ, probe): min=0.7039, median=0.8759
+  null   cos(rand, probe): mean median=0.0125, p95 median=0.0306, max median=0.0545
+  separation: signal_median 0.8759 vs null_max_median 0.0545  → SIGNAL ≫ NULL (real)
+
+[mistral7b-v02] loading FP32 + extracting residuals ...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  hidden_dim=4096, n_layers=32
+  computing σ-probe alignment + random null at each layer ...
+  signal cos(σ, probe): min=0.7202, median=0.9126
+  null   cos(rand, probe): mean median=0.0125, p95 median=0.0308, max median=0.0609
+  separation: signal_median 0.9126 vs null_max_median 0.0609  → SIGNAL ≫ NULL (real)
+
+[qwen7b] loading FP32 + extracting residuals ...
+Loading FP32 model: qwen7b
+  Path: Qwen/Qwen2.5-7B-Instruct
+  Device: cuda
+  ✓ Loaded (7.62B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  hidden_dim=3584, n_layers=28
+  computing σ-probe alignment + random null at each layer ...
+  signal cos(σ, probe): min=0.6802, median=0.8115
+  null   cos(rand, probe): mean median=0.0134, p95 median=0.0327, max median=0.0564
+  separation: signal_median 0.8115 vs null_max_median 0.0564  → SIGNAL ≫ NULL (real)
+
+==============================================================================================
+  CROSS-ARCH RANDOM-DIRECTION CONTROL
+==============================================================================================
+  Model            hid  σ-probe median  null mean   null p95   null max  ratio
+  ----------------------------------------------------------------------------------------------
+  llama7b         4096         0.8759     0.0125     0.0306     0.0545   28.6×
+  mistral7b-v02   4096         0.9126     0.0125     0.0308     0.0609   29.6×
+  qwen7b          3584         0.8115     0.0134     0.0327     0.0564   24.8×
+
+  VERDICT: CONTROL PASSES — σ-probe cos (min=0.811) is 13.3× larger than the random-direction null max (0.061). σ and probe are aligned far above chance: they share real signal, and the ~0.12 disagreement is two extraction methods of the SAME signal, not accidentally-aligned random vectors.
+
+Saved to outputs/random_direction_control.json
+=== Random-direction control complete | Fri May 15 15:06:36 EDT 2026 ===

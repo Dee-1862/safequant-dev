@@ -1,0 +1,18 @@
+=== Job 40857725 | Gemma 7B downloads | Thu May 14 09:35:20 EDT 2026 ===
+
+=== Downloading google/gemma-7b-it ===
+  ✓ Downloaded to: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--google--gemma-7b-it/snapshots/9c5798d27f588501ce1e108079d2a19e4c3a2353
+
+=== Downloading TechxGenus/gemma-7b-it-GPTQ ===
+  ✓ Downloaded to: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--TechxGenus--gemma-7b-it-GPTQ/snapshots/8f760fc349e7e835a810a3b8b860bc3e27b9fbaa
+
+=== Downloading casperhansen/gemma-7b-it-awq ===
+  ✓ Downloaded to: /ocean/projects/cis240116p/bhoomire/.cache/huggingface/models--casperhansen--gemma-7b-it-awq/snapshots/871499c811e7bd88027628c278e61f682853738b
+
+=== All downloads complete ===
+
+drwxr-xr-x  5 bhoomire cis250287p 4096 May 14 09:49 models--TechxGenus--gemma-7b-it-GPTQ
+drwxr-xr-x  5 bhoomire cis250287p 4096 May 14 09:51 models--casperhansen--gemma-7b-it-awq
+drwxr-xr-x  5 bhoomire cis250287p 4096 May 14 09:47 models--google--gemma-7b-it
+
+=== Gemma 7B downloads complete | Thu May 14 09:51:37 EDT 2026 ===

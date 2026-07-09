@@ -1,0 +1,59 @@
+=== Job 40818812 | F3a Mistral SLOW — Static Restoration | Wed May 13 17:49:57 EDT 2026 ===
+NVIDIA H100 80GB HBM3, 81559 MiB
+
+########################################################################
+# F3a — readwrite_restoration on mistral7b-v02/gptq3 (slow Triton kernel)
+# started: Wed May 13 17:49:57 EDT 2026
+########################################################################
+======================================================================
+  Read-Side vs Write-Side Restoration
+  Model: mistral7b-v02 | Quantizer: gptq3
+  ASR prompts: 200 | ARC questions: 50
+======================================================================
+
+Loading datasets...
+  WildJailbreak: 200 adversarial prompts
+  ARC-Challenge: 50 reasoning questions
+
+======================================================================
+  Phase A: Generating responses for all conditions
+======================================================================
+
+[1/5] FP32 baseline...
+Loading FP32 model: mistral7b-v02
+  Path: mistralai/Mistral-7B-Instruct-v0.2
+  Device: cuda
+  ✓ Loaded (7.24B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  Extracting FP32 weights...
+  Done extracting weights
+
+  Generating responses (200 prompts)...
+  ARC: 62%
+
+[2/5] gptq3 baseline...
+Loading GPTQ-3bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+
+  Generating responses (200 prompts)...
+  ARC: 40%
+
+[3/5] gptq3 + write restored (o_proj, down_proj)...
+Loading GPTQ-3bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+
+  Generating responses (200 prompts)...
+  ARC: 46%
+
+[4/5] gptq3 + read restored (q/k/v/gate/up)...
+Loading GPTQ-3bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+
+  Generating responses (200 prompts)...
+  ARC: 56%
+
+[5/5] gptq3 + both restored...
+Loading GPTQ-3bit model: mistral7b-v02 (cached at /ocean/projects/cis240116p/bhoomire/.cache/huggingface/gptq_cache/mistral7b-v02-gptq-3bit)
+  ✓ Loaded GPTQ 3-bit from cache
+
+  Generating responses (200 prompts)...

@@ -1,0 +1,46 @@
+=== llama_ctrl_norm | Mon Jun 29 07:21:44 EDT 2026 ===
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+=== Random-direction routing control | llama7b / aqlm2 | n_calib=200 n_random=20 | seed=42 rand_seed=12345
+Loading calibration prompts...
+  n harmful: 200  n harmless: 200
+
+[aqlm2] loading quantized model ...
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+`torch_dtype` is deprecated! Use `dtype` instead!
+  OK Loaded AQLM 2-bit model
+  n_layers = 32, hidden_dim = 4096
+  token_pos = -5 (must match layer_routing)
+[aqlm2] extracting per-layer residuals ...
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:20: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:33: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:48: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:62: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:75: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:88: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:102: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:115: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:128: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant_transposed")
+
+=== Sampling 20 random unit vectors (dim=4096) ===
+  trial  1/20: harmful mode=28 (mean=18.5) | harmless mode=19 (mean=14.8)
+  trial  2/20: harmful mode=16 (mean=13.8) | harmless mode=16 (mean=14.4)
+  trial  3/20: harmful mode= 3 (mean=5.9) | harmless mode=11 (mean=8.3)
+  trial  4/20: harmful mode=27 (mean=26.4) | harmless mode=27 (mean=25.8)
+  trial  5/20: harmful mode=17 (mean=11.1) | harmless mode= 1 (mean=6.2)
+  trial 20/20: harmful mode= 9 (mean=8.9) | harmless mode= 9 (mean=11.7)
+
+=== Random-direction summary (20 trials) ===
+  harmful : mode-of-modes=3 (15.0% of trials)  mean-layer=9.7 +/- 6.22 (min=0.3, max=26.4)
+  harmless: mode-of-modes=1 (15.0% of trials)  mean-layer=10.2 +/- 5.84
+
+Saved to outputs/routing_random_control_llama7b_aqlm2_norm.json

@@ -1,0 +1,10 @@
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/jet/home/bhoomire/projects/safequant_v2/refusal_direction/pipeline/run_pipeline.py", line 10, in <module>
+    from pipeline.model_utils.model_factory import construct_model_base
+  File "/jet/home/bhoomire/projects/safequant_v2/refusal_direction/pipeline/model_utils/model_factory.py", line 1, in <module>
+    from pipeline.model_utils.model_base import ModelBase
+  File "/jet/home/bhoomire/projects/safequant_v2/refusal_direction/pipeline/model_utils/model_base.py", line 5, in <module>
+    from jaxtyping import Int, Float
+ModuleNotFoundError: No module named 'jaxtyping'
