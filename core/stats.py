@@ -1,15 +1,26 @@
-"""Statistical helpers for headline evaluation (dependency-free)."""
 from __future__ import annotations
-
 import math
-
 import numpy as np
 
 
 def mcnemar_exact(flags_a, flags_b):
-    """Exact two-sided McNemar on paired binary flags (1=complied)."""
-    b = sum(1 for x, y in zip(flags_a, flags_b) if x and not y)
-    c = sum(1 for x, y in zip(flags_a, flags_b) if (not x) and y)
+    """
+    Exact two-sided McNemar on paired binary flags (1=complied).
+
+    Input:
+    - flags_a (list): list of binary flags for condition A
+    - flags_b (list): list of binary flags for condition B
+
+    Returns:
+    - dictionary containing the number of discordant pairs, the p-value, and the number of successes and failures in each condition
+    """
+    b = 0
+    c = 0
+    for x, y in zip(flags_a, flags_b):
+        if x and not y:
+            b += 1
+        elif not x and y:
+            c += 1
     nbc = b + c
     if nbc == 0:
         p = 1.0
@@ -21,7 +32,17 @@ def mcnemar_exact(flags_a, flags_b):
 
 
 def wilson_ci(k, n, z=1.96):
-    """Wilson score 95% CI for a proportion k/n."""
+    """
+    Wilson score 95% CI for a proportion k/n.
+
+    Input:
+    - k (int): the number of successes
+    - n (int): the number of trials
+    - z (float): the z-score for the confidence interval
+
+    Returns:
+    - list of two floats: the lower and upper bounds of the confidence interval
+    """
     if n == 0:
         return [0.0, 0.0]
     p = k / n
@@ -32,7 +53,18 @@ def wilson_ci(k, n, z=1.96):
 
 
 def bootstrap_recovery(flags_by_cond, qtz, n_boot=2000, seed=0):
-    """Paired bootstrap CIs on read/write/both recovery percentages."""
+    """
+    Paired bootstrap CIs on read/write/both recovery percentages.
+
+    Input:
+    - flags_by_cond (dict): dictionary of lists of binary flags, keyed by condition name
+    - qtz (str): the condition name to compare against
+    - n_boot (int): the number of bootstrap samples
+    - seed (int): the random seed
+
+    Returns:
+    - dictionary of lists of CIs for the recovery percentages
+    """
     rng = np.random.default_rng(seed)
     arrs = {c: np.asarray(v, dtype=float) for c, v in flags_by_cond.items()}
     n = len(next(iter(arrs.values())))
@@ -55,4 +87,6 @@ def bootstrap_recovery(flags_by_cond, qtz, n_boot=2000, seed=0):
         a = np.asarray(a)
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 
-    return {k: ci(v) for k, v in rec.items()}
+    for k, v in rec.items():
+        rec[k] = ci(v)
+    return rec

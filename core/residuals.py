@@ -1,4 +1,5 @@
 """Residual-stream extraction and model unwrapping (single canonical impl)."""
+
 from __future__ import annotations
 
 import torch

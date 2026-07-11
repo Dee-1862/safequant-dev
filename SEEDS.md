@@ -51,18 +51,15 @@ set_global_seed(DEFAULT_SEED, deterministic=True)
 
 This enables `torch.use_deterministic_algorithms(True, warn_only=True)` and `cudnn.deterministic = True`. Default is `deterministic=False` -- we accept the +/-1 prompt of CUDA atomic-add noise on n=1000 evaluations in exchange for ~2x speed on attention kernels.
 
-### 3. Random unit-vector controls (`fixed_rng`, `torch_gen`)
+### 3. Random unit-vector controls
 
-Some experiments use a "random direction" as a control (random unit vector to compare against r_hat). These use isolated generators, not the global state:
+Archived directional-ablation scripts use an isolated ``torch.Generator`` so the random direction is identical across runs regardless of prior global RNG calls:
 
 ```python
-from core.seeds import torch_gen
-rng = torch_gen(SEED)                      # isolated torch.Generator
+rng = torch.Generator().manual_seed(SEED)
 rand_r = torch.randn(hidden, generator=rng)
 rand_r = rand_r / rand_r.norm()
 ```
-
-This way, the random direction is identical across runs regardless of how many other random calls happened first.
 
 ### 4. Calibration sampling in tuning loops
 
@@ -93,9 +90,10 @@ To check that your environment matches ours, run:
 
 ```bash
 python -c "
-from core.seeds import set_global_seed, fixed_rng
+import numpy as np
+from core.seeds import set_global_seed
 set_global_seed()
-rng = fixed_rng()
+rng = np.random.default_rng(42)
 print(rng.integers(0, 100, size=5).tolist())
 "
 # Expected output: [8, 77, 65, 43, 43]

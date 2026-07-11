@@ -1,4 +1,5 @@
 """FP32 weight extraction and projection restoration (read/write split)."""
+
 from __future__ import annotations
 
 import torch
@@ -63,7 +64,9 @@ def extract_fp32_weights(fp32_model, proj_paths):
             weights[layer_idx] = {}
             for proj in proj_paths:
                 m = _get_submodule(layer, proj)
-                weights[layer_idx][proj] = get_weight(m, as_dtype=torch.float32).cpu().clone()
+                weights[layer_idx][proj] = (
+                    get_weight(m, as_dtype=torch.float32).cpu().clone()
+                )
     return weights
 
 
@@ -77,7 +80,9 @@ def restore_projections(model, fp32_weights, proj_paths):
         for proj in proj_paths:
             orig_module = _get_submodule(layer, proj)
             in_f = getattr(orig_module, "in_features", None) or orig_module.infeatures
-            out_f = getattr(orig_module, "out_features", None) or orig_module.outfeatures
+            out_f = (
+                getattr(orig_module, "out_features", None) or orig_module.outfeatures
+            )
             has_bias = orig_module.bias is not None
             w = fp32_weights[layer_idx][proj]
             if _is_awq_module(orig_module):
@@ -104,7 +109,9 @@ def restore_projections_in_range(model, fp32_weights, proj_paths, layer_range):
         for proj in proj_paths:
             orig_module = _get_submodule(layer, proj)
             in_f = getattr(orig_module, "in_features", None) or orig_module.infeatures
-            out_f = getattr(orig_module, "out_features", None) or orig_module.outfeatures
+            out_f = (
+                getattr(orig_module, "out_features", None) or orig_module.outfeatures
+            )
             has_bias = orig_module.bias is not None
             w = fp32_weights[layer_idx][proj]
             if _is_awq_module(orig_module):

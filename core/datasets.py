@@ -1,62 +1,7 @@
 import random
 
-import jailbreakbench as jbb
 import pandas as pd
 from datasets import load_dataset
-
-# -- Safety: harmful prompts ---------------------------------------------------
-def load_harmful_prompts(n_samples = None, cache_dir = None):
-    """
-    Load harmful prompts from JailbreakBench JBB-Behaviors.
-
-    Uses ``jailbreakbench.read_dataset()``.
-
-    Returns list of dicts containing:
-      - goal (str):     harmful instruction sent to the model
-      - behavior (str): short label used by the HarmBench judge
-      - target (str):   expected harmful response
-      - category (str): misuse category from JBB-Behaviors
-    """ 
-    try:
-        dataset = jbb.read_dataset()
-    except Exception as e:
-        raise RuntimeError(f"Cannot load JBB-Behaviors via jailbreakbench: {e}") from e
-
-    items = []
-    for goal, behavior, target, category in zip(
-        dataset.goals,
-        dataset.behaviors,
-        dataset.targets,
-        dataset.categories,
-    ):
-        goal = goal.strip()
-        if not goal:
-            continue
-        
-        behavior = behavior.strip()
-        if not behavior:
-            continue
-        
-        target = target.strip()
-        if not target:
-            continue
-        
-        category = category.strip()
-        if not category:
-            continue
-
-        items.append({
-            "goal": goal,
-            "behavior": behavior,
-            "target": target,
-            "category": category,
-        })
-    if not items:
-        raise RuntimeError("[ERROR] JBB-Behaviors loaded but returned 0 items.")
-
-    if n_samples:
-        items = items[:n_samples]
-    return items
 
 
 def load_harmbench_prompts(n_samples=None, cache_dir=None):
@@ -83,7 +28,9 @@ def load_harmbench_prompts(n_samples=None, cache_dir=None):
             continue
         prompts.append(behavior)
     if not prompts:
-        raise RuntimeError("[ERROR] HarmBench loaded but 'Behavior' field is empty, please check the CSV schema.")
+        raise RuntimeError(
+            "[ERROR] HarmBench loaded but 'Behavior' field is empty, please check the CSV schema."
+        )
 
     if n_samples:
         prompts = prompts[:n_samples]
@@ -91,7 +38,7 @@ def load_harmbench_prompts(n_samples=None, cache_dir=None):
 
 
 # -- Safety: adversarial jailbreak prompts ------------------------------------
-def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = None):
+def load_wildjailbreak_prompts(n_samples=None, config="train", cache_dir=None):
     """
     Load adversarial jailbreak prompts from WildJailbreak (NeurIPS 2024).
 
@@ -112,15 +59,17 @@ def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = N
         dataset = load_dataset(
             "allenai/wildjailbreak",
             config,
-            revision = "5ddc12a7894f842b0619b8e1c7ee496b198af009",  # pinned for reproducibility
-            delimiter = "\t",
-            keep_default_na = False,
-            cache_dir = cache_dir,
+            revision="5ddc12a7894f842b0619b8e1c7ee496b198af009",  # pinned for reproducibility
+            delimiter="\t",
+            keep_default_na=False,
+            cache_dir=cache_dir,
         )
         # Config defines one split; access via "train" key
         dataset = dataset["train"]
     except Exception as e:
-        raise RuntimeError(f"[ERROR] Cannot load WildJailbreak (allenai/wildjailbreak, config='{config}'): {e}") from e
+        raise RuntimeError(
+            f"[ERROR] Cannot load WildJailbreak (allenai/wildjailbreak, config='{config}'): {e}"
+        ) from e
 
     # Filter for adversarial harmful prompts only
     items = []
@@ -132,14 +81,18 @@ def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = N
         if not adv:
             continue
         vanilla = row.get("vanilla", "").strip()
-        items.append({
-            "prompt":    adv,
-            "vanilla":   vanilla,
-            "data_type": dtype,
-        })
+        items.append(
+            {
+                "prompt": adv,
+                "vanilla": vanilla,
+                "data_type": dtype,
+            }
+        )
 
     if not items:
-        raise RuntimeError("[ERROR] WildJailbreak loaded but no adversarial_harmful items found.")
+        raise RuntimeError(
+            "[ERROR] WildJailbreak loaded but no adversarial_harmful items found."
+        )
 
     # Fixed seed ensures same prompts across phases in a single pipeline run
     random.Random(42).shuffle(items)
@@ -150,7 +103,8 @@ def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = N
 
 # -- Safety: harmless prompts (for refusal direction) -------------------------
 
-def load_harmless_prompts(n_samples = None, cache_dir = None):
+
+def load_harmless_prompts(n_samples=None, cache_dir=None):
     """
     Load harmless prompts from Alpaca-cleaned.
 
@@ -166,12 +120,14 @@ def load_harmless_prompts(n_samples = None, cache_dir = None):
         url = f"https://raw.githubusercontent.com/gururise/AlpacaDataCleaned/{sha}/alpaca_data_cleaned.json"
         df = pd.read_json(url)
     except Exception as e:
-        raise RuntimeError(f"[ERROR] Cannot load Alpaca-cleaned JSON from GitHub (gururise/AlpacaDataCleaned): {e}") from e
+        raise RuntimeError(
+            f"[ERROR] Cannot load Alpaca-cleaned JSON from GitHub (gururise/AlpacaDataCleaned): {e}"
+        ) from e
 
     prompts = []
     for _, item in df.iterrows():
         instr = str(item.get("instruction", "")).strip()
-        inp   = str(item.get("input", "")).strip()
+        inp = str(item.get("input", "")).strip()
         if not instr:
             continue
         if inp:
@@ -180,7 +136,9 @@ def load_harmless_prompts(n_samples = None, cache_dir = None):
             prompts.append(instr)
 
     if not prompts:
-        raise RuntimeError("[ERROR] Alpaca-cleaned loaded but no instruction fields found, please check the schema.")
+        raise RuntimeError(
+            "[ERROR] Alpaca-cleaned loaded but no instruction fields found, please check the schema."
+        )
 
     random.Random(42).shuffle(prompts)
     if n_samples:
@@ -188,109 +146,7 @@ def load_harmless_prompts(n_samples = None, cache_dir = None):
     return prompts
 
 
-# -- Utility benchmarks (CLI-only: not used by experiments/) ------------------
-# Pipeline uses load_arc_challenge via core/restoration.measure_arc instead.
-# Remove the surrounding ''' quotes to restore prefetch / measure_utility support.
-
-'''
-def load_hellaswag(n_samples = None, split = "validation", cache_dir = None):
-    try:
-        dataset = load_dataset("hellaswag", split=split, cache_dir=cache_dir)
-    except Exception as e:
-        raise RuntimeError(
-            f"Cannot load HellaSwag (hellaswag, split='{split}'): {e}"
-        ) from e
-
-    items = [
-        {
-            "ctx":     item["ctx"],
-            "endings": item["endings"],
-            "label":   int(item["label"]),
-        }
-        for item in dataset
-    ]
-    if not items:
-        raise RuntimeError("HellaSwag loaded but returned 0 items.")
-
-    if n_samples:
-        items = items[:n_samples]
-    return items
-
-
-def load_boolq(n_samples=None, split="validation", cache_dir=None):
-    try:
-        dataset = load_dataset("google/boolq", split=split, cache_dir=cache_dir)
-    except Exception as e:
-        raise RuntimeError(
-            f"Cannot load BoolQ (google/boolq, split='{split}'): {e}"
-        ) from e
-
-    items = [
-        {
-            "question": item["question"],
-            "passage":  item["passage"],
-            "answer":   bool(item["answer"]),
-        }
-        for item in dataset
-    ]
-    if not items:
-        raise RuntimeError("BoolQ loaded but returned 0 items.")
-
-    if n_samples:
-        items = items[:n_samples]
-    return items
-
-
-def load_rte(n_samples=None, split="validation", cache_dir=None):
-    try:
-        dataset = load_dataset("super_glue", "rte", split=split, cache_dir=cache_dir)
-    except Exception as e:
-        raise RuntimeError(
-            f"Cannot load RTE (super_glue/rte, split='{split}'): {e}"
-        ) from e
-
-    items = [
-        {
-            "premise":    item["premise"],
-            "hypothesis": item["hypothesis"],
-            "label":      int(item["label"]),
-        }
-        for item in dataset
-    ]
-    if not items:
-        raise RuntimeError("RTE loaded but returned 0 items.")
-
-    if n_samples:
-        items = items[:n_samples]
-    return items
-
-
-def load_winogrande(n_samples=None, split="validation", cache_dir=None):
-    try:
-        dataset = load_dataset("winogrande", "winogrande_xl", split=split, cache_dir=cache_dir)
-    except Exception as e:
-        raise RuntimeError(
-            f"Cannot load WinoGrande (winogrande/winogrande_xl, split='{split}'): {e}"
-        ) from e
-
-    items = []
-    for item in dataset:
-        items.append({
-            "sentence":   item["sentence"],
-            "options":    [item["option1"], item["option2"]],
-            "answer_idx": int(item["answer"]) - 1,
-        })
-
-    if not items:
-        raise RuntimeError("WinoGrande loaded but returned 0 items.")
-
-    if n_samples:
-        items = items[:n_samples]
-    return items
-'''
-
-
-def load_arc_challenge(n_samples = None, split = "test", cache_dir = None):
+def load_arc_challenge(n_samples=None, split="test", cache_dir=None):
     """
     ARC-Challenge: 4-way science multiple-choice task.
 
@@ -303,11 +159,17 @@ def load_arc_challenge(n_samples = None, split = "test", cache_dir = None):
     - answer_idx (int): the index of the correct choice
     """
     try:
-        dataset = load_dataset("allenai/ai2_arc", "ARC-Challenge", split = split,
-                               revision = "210d026faf9955653af8916fad021475a3f00453",  # pinned for reproducibility
-                               cache_dir = cache_dir)
+        dataset = load_dataset(
+            "allenai/ai2_arc",
+            "ARC-Challenge",
+            split=split,
+            revision="210d026faf9955653af8916fad021475a3f00453",  # pinned for reproducibility
+            cache_dir=cache_dir,
+        )
     except Exception as e:
-        raise RuntimeError(f"[ERROR] Cannot load ARC-Challenge (allenai/ai2_arc/ARC-Challenge, split='{split}'): {e}") from e
+        raise RuntimeError(
+            f"[ERROR] Cannot load ARC-Challenge (allenai/ai2_arc/ARC-Challenge, split='{split}'): {e}"
+        ) from e
 
     items = []
     for item in dataset:
@@ -318,7 +180,9 @@ def load_arc_challenge(n_samples = None, split = "test", cache_dir = None):
             answer_idx = labels.index(answer_key)
         except ValueError:
             continue  # Skips rare malformed entries where the answer key is not found in the label list
-        items.append({"question": item["question"], "choices": texts, "answer_idx": answer_idx})
+        items.append(
+            {"question": item["question"], "choices": texts, "answer_idx": answer_idx}
+        )
 
     if not items:
         raise RuntimeError("[ERROR] ARC-Challenge loaded but returned 0 valid items.")
@@ -329,6 +193,7 @@ def load_arc_challenge(n_samples = None, split = "test", cache_dir = None):
 
 
 # -- XSTest: over-refusal benchmark (Rottger et al. 2024) ---------------------
+
 
 def load_xstest(n_samples=None, cache_dir=None):
     """
@@ -349,7 +214,9 @@ def load_xstest(n_samples=None, cache_dir=None):
         url = f"https://raw.githubusercontent.com/paul-rottger/xstest/{sha}/xstest_prompts.csv"
         df = pd.read_csv(url)
     except Exception as e:
-        raise RuntimeError(f"[ERROR] Cannot load XSTest CSV from GitHub (paul-rottger/xstest): {e}") from e
+        raise RuntimeError(
+            f"[ERROR] Cannot load XSTest CSV from GitHub (paul-rottger/xstest): {e}"
+        ) from e
 
     # CSV schema: id, prompt, type, label, focus, note
     # 'label' is an explicit 'safe'/'unsafe' column, so no contrast-prefix heuristic needed:
@@ -361,11 +228,13 @@ def load_xstest(n_samples=None, cache_dir=None):
         if not prompt:
             continue
         label = str(row.get("label", "")).strip().lower()
-        items.append({
-            "prompt": prompt,
-            "type": "safe" if label == "safe" else "unsafe",
-            "category": str(row.get("type") or row.get("focus") or "").strip(),
-        })
+        items.append(
+            {
+                "prompt": prompt,
+                "type": "safe" if label == "safe" else "unsafe",
+                "category": str(row.get("type") or row.get("focus") or "").strip(),
+            }
+        )
     if not items:
         raise RuntimeError("XSTest loaded but returned 0 items -- check CSV schema.")
     if n_samples:
@@ -375,11 +244,12 @@ def load_xstest(n_samples=None, cache_dir=None):
 
 # -- C4: generic web text for the perplexity-only calibration baseline --------
 
+
 def load_c4_calibration(n_samples=64, max_chars=1000, cache_dir=None):
     """
     Random C4 (Colossal Clean Crawled Corpus) passages for use as perplexity-style (no harmful/harmless contrast) calibration data.
     Reference: Raffel et al., C4/T5 (JMLR 2020).
-    
+
     Dataset: allenai/c4 (https://huggingface.co/datasets/allenai/c4/viewer/en/train?p=11)
     Pinned revision: 1588ec454efa1a09f29cd18ddd04fe05fc8653a2 (recorded 2026-07-10)
 
@@ -387,9 +257,14 @@ def load_c4_calibration(n_samples=64, max_chars=1000, cache_dir=None):
 
     """
     try:
-        ds = load_dataset("allenai/c4", "en", split = "train",
-                          revision = "1588ec454efa1a09f29cd18ddd04fe05fc8653a2",  # pinned for reproducibility
-                          streaming = True, cache_dir = cache_dir)
+        ds = load_dataset(
+            "allenai/c4",
+            "en",
+            split="train",
+            revision="1588ec454efa1a09f29cd18ddd04fe05fc8653a2",  # pinned for reproducibility
+            streaming=True,
+            cache_dir=cache_dir,
+        )
     except Exception as e:
         raise RuntimeError(f"[ERROR] Cannot load C4 (allenai/c4, 'en'): {e}") from e
 

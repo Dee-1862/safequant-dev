@@ -1,4 +1,5 @@
 """Linear/MLP refusal probes on residual streams."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -15,9 +16,7 @@ except ModuleNotFoundError:
 
 def make_probe(probe_type: str):
     if probe_type == "linear":
-        return LogisticRegression(
-            C=1.0, max_iter=2000, n_jobs=1, random_state=SEED
-        )
+        return LogisticRegression(C=1.0, max_iter=2000, n_jobs=1, random_state=SEED)
     if probe_type == "mlp":
         return MLPClassifier(
             hidden_layer_sizes=(256,),
@@ -107,9 +106,7 @@ def per_layer_probe_accuracy(residuals_by_layer, labels):
             continue
         fold_accs = []
         for train_idx, test_idx in skf.split(X, y):
-            clf = LogisticRegression(
-                C=1.0, max_iter=2000, n_jobs=1, random_state=SEED
-            )
+            clf = LogisticRegression(C=1.0, max_iter=2000, n_jobs=1, random_state=SEED)
             clf.fit(X[train_idx], y[train_idx])
             fold_accs.append(clf.score(X[test_idx], y[test_idx]))
         accs[layer_idx] = float(np.mean(fold_accs))

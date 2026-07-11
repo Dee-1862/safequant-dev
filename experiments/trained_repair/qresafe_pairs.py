@@ -22,6 +22,7 @@ Usage:
 
 import argparse
 import gc
+import json
 import sys
 from pathlib import Path
 
@@ -31,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from core.model_loader import load_fp32, load_quantized  # noqa: E402
 from core.evaluation import generate_only, classify_batch, _extract_behavior  # noqa: E402
 from core.datasets import load_wildjailbreak_prompts  # noqa: E402
-from core.manifest import RunConfig, find_result, result_path, save_result  # noqa: E402
+from core.manifest import RunConfig, save_result  # noqa: E402
 
 _SCRIPT = Path(__file__)
 

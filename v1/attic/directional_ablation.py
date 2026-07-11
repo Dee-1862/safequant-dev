@@ -22,7 +22,7 @@ from direction_drift import (
     _get_inner,
 )
 
-from core.seeds import set_global_seed, DEFAULT_SEED, fixed_rng, torch_gen
+from core.seeds import set_global_seed, DEFAULT_SEED
 SEED = set_global_seed(DEFAULT_SEED)
 
 
@@ -179,7 +179,7 @@ def main():
           f"r_hat[{q_best}]) = {cos_at_self:.4f}")
 
     # Random unit-vector control (deterministic with fixed seed)
-    rng = torch_gen(SEED)
+    rng = torch.Generator().manual_seed(SEED)
     rand_r = torch.randn(q_r.shape, generator=rng).float()
     rand_r = rand_r / rand_r.norm()
 

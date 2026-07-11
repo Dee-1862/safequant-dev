@@ -14,7 +14,6 @@ from core.manifest import RunConfig, save_result
 from core.model_loader import load_fp32, load_quantized
 from core.restoration import (
     extract_fp32_weights,
-    get_proj_sets,
     measure_arc,
     restore_projections,
     restore_projections_in_range,

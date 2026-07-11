@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from core.manifest import RunConfig, save_result
+from core.manifest import RunConfig
 
 _SCRIPT = Path(__file__)
 

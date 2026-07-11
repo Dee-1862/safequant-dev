@@ -1,4 +1,5 @@
 import os
+
 # Force gptqmodel to use pure-pytorch backend (no triton/exllama kernel issues)
 os.environ["GPTQMODEL_FORCE_BACKEND"] = "torch"
 # Disable torch.compile which causes PY_SSIZE_T_CLEAN errors on older torch
@@ -12,6 +13,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import MODELS, DEVICE, HF_HOME, QUANTIZED_CHECKPOINTS
+
 try:
     from config import MODEL_REVISIONS
 except ImportError:
@@ -61,8 +63,12 @@ def load_fp32(model_name: str, device: str = None):
 
     rev = MODEL_REVISIONS.get(model_name)
     if rev:
-        print(f"  Revision pin: {rev[:12]} (FP weights matched to the quantizer's source)")
-    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME, revision=rev)
+        print(
+            f"  Revision pin: {rev[:12]} (FP weights matched to the quantizer's source)"
+        )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, cache_dir=HF_HOME, revision=rev
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype=torch.float32,
@@ -72,7 +78,9 @@ def load_fp32(model_name: str, device: str = None):
         revision=rev,
     )
 
-    print(f"  OK Loaded ({sum(p.numel() for p in model.parameters())/1e9:.2f}B params)")
+    print(
+        f"  OK Loaded ({sum(p.numel() for p in model.parameters()) / 1e9:.2f}B params)"
+    )
     print(f"  Cache: {HF_HOME}")
 
     return model, tokenizer
@@ -235,8 +243,9 @@ def _load_awq(model_name: str, device: str = None):
         model_path = _resolve_model_path(model_name)
         print(f"Loading AWQ model: {model_path}")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME,
-                                               trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, cache_dir=HF_HOME, trust_remote_code=True
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
@@ -249,100 +258,6 @@ def _load_awq(model_name: str, device: str = None):
     model.eval()
     print(f"  OK Loaded AWQ 4-bit model")
     return model, tokenizer
-
-
-def _dequantize_awq_inplace(model):
-    """
-    Replace all AWQ WQLinear modules with standard nn.Linear by unpacking
-    the INT4 weights using AWQ's own dequantization utilities.
-
-    This avoids the PY_SSIZE_T_CLEAN kernel bug (which affects both
-    forward() and generate()) and makes weight extraction / module-swap
-    restoration work seamlessly.
-    """
-    import torch.nn as nn
-
-    # Collect AWQ layers -- detect by class name OR attributes
-    replacements = []
-    for name, module in model.named_modules():
-        cls_name = type(module).__name__
-        is_awq = (
-            "WQLinear" in cls_name
-            or (hasattr(module, 'qweight') and hasattr(module, 'scales')
-                and hasattr(module, 'qzeros'))
-        )
-        if is_awq:
-            replacements.append((name, module))
-
-    if not replacements:
-        print(f"  Warning: no AWQ layers found to dequantize")
-        return
-
-    print(f"  Found {len(replacements)} AWQ layers, dequantizing...")
-
-    count = 0
-    for name, module in replacements:
-        try:
-            in_f = module.in_features
-            out_f = module.out_features
-            has_bias = module.bias is not None
-            # AWQ exllama-v2 stores data as buffers, not parameters
-            device = module.qweight.device
-            w_bit = getattr(module, 'w_bit', 4)
-            group_size = getattr(module, 'group_size', 128)
-
-            # Pure-torch AWQ INT4 unpacking (no kernel dependencies)
-            qweight = module.qweight  # (in_features // pack_factor, out_features), int32
-            qzeros = module.qzeros    # (in_features // group_size // pack_factor, out_features), int32
-            scales = module.scales    # (in_features // group_size, out_features), float16
-
-            # Unpack INT4 from INT32: each int32 packs 8 x 4-bit values
-            shifts = torch.arange(0, 32, w_bit, device=device)
-            iweight = torch.bitwise_right_shift(
-                qweight[:, :, None], shifts[None, None, :]
-            ).to(torch.int8)
-            iweight = iweight.view(iweight.shape[0], -1)  # unpack columns
-            iweight = torch.bitwise_and(iweight, (2 ** w_bit) - 1)
-
-            izeros = torch.bitwise_right_shift(
-                qzeros[:, :, None], shifts[None, None, :]
-            ).to(torch.int8)
-            izeros = izeros.view(izeros.shape[0], -1)
-            izeros = torch.bitwise_and(izeros, (2 ** w_bit) - 1)
-
-            # Reverse AWQ interleave order
-            reverse_order = [0, 4, 1, 5, 2, 6, 3, 7]
-            num_groups = iweight.shape[-1] // (32 // w_bit)
-            reverse_idx = torch.arange(iweight.shape[-1], device=device, dtype=torch.int32)
-            reverse_idx = reverse_idx.view(-1, 32 // w_bit)[:, reverse_order].reshape(-1)
-            iweight = iweight[:, reverse_idx]
-            izeros = izeros[:, reverse_idx]
-
-            # Dequantize: weight = (iweight - izeros) * scales
-            scales_expanded = scales.repeat_interleave(group_size, dim=0)
-            izeros_expanded = izeros.repeat_interleave(group_size, dim=0)
-            weight = ((iweight.float() - izeros_expanded.float()) * scales_expanded.float()).T
-
-            new_linear = nn.Linear(in_f, out_f, bias=has_bias, device=device,
-                                   dtype=torch.float16)
-            new_linear.weight = nn.Parameter(weight.to(device).to(torch.float16),
-                                             requires_grad=False)
-            if has_bias:
-                new_linear.bias = nn.Parameter(module.bias.data.clone(),
-                                               requires_grad=False)
-
-            # Replace in model
-            parts = name.split(".")
-            parent = model
-            for p in parts[:-1]:
-                parent = getattr(parent, p)
-            setattr(parent, parts[-1], new_linear)
-            count += 1
-        except Exception as e:
-            print(f"  Warning: failed to dequantize {name}: {type(e).__name__}: {e}")
-            continue
-
-    print(f"  Dequantized {count}/{len(replacements)} AWQ layers to FP16 nn.Linear")
 
 
 def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
@@ -369,9 +284,13 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
         # Check local aqlm_cache
         safe_name = model_name.replace("/", "_")
         local_path = os.path.join(HF_HOME, "aqlm_cache", f"{safe_name}-aqlm-{bits}bit")
-        if os.path.isdir(local_path) and os.path.exists(os.path.join(local_path, "config.json")):
+        if os.path.isdir(local_path) and os.path.exists(
+            os.path.join(local_path, "config.json")
+        ):
             model_path = local_path
-            print(f"Loading AQLM-{bits}bit model: {model_name} (cached at {local_path})")
+            print(
+                f"Loading AQLM-{bits}bit model: {model_name} (cached at {local_path})"
+            )
         else:
             raise ValueError(
                 f"No pre-quantized AQLM checkpoint for ({model_name}, {bit_suffix}). "
@@ -382,8 +301,9 @@ def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
     # AQLM checkpoints often lack a chat template, so load tokenizer from
     # the base model to get the full chat template and special tokens.
     base_path = _resolve_model_path(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(base_path, cache_dir=HF_HOME,
-                                               trust_remote_code=_use_remote_code(base_path))
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_path, cache_dir=HF_HOME, trust_remote_code=_use_remote_code(base_path)
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map=device,
@@ -411,12 +331,15 @@ def _load_quip(model_name: str, device: str = None, bits: int = 4):
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
         print(f"Loading QuIP#-{bits}bit model: {model_name} -> {model_path}")
     else:
-        raise ValueError(f"No pre-quantized QuIP# checkpoint for ({model_name}, {bit_suffix})")
+        raise ValueError(
+            f"No pre-quantized QuIP# checkpoint for ({model_name}, {bit_suffix})"
+        )
 
     # Tokenizer from base model (QuIP# repos don't include tokenizer)
     base_path = _resolve_model_path(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(base_path, cache_dir=HF_HOME,
-                                               trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_path, cache_dir=HF_HOME, trust_remote_code=True
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
@@ -460,7 +383,9 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         revision = None
         if "compressed-llm" in pre_quantized:
             revision = f"{bits}bit_128g"
-            print(f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized} (rev: {revision})")
+            print(
+                f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized} (rev: {revision})"
+            )
         else:
             print(f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized}")
 
@@ -468,11 +393,14 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         # extra CUDA/triton kernels needed -- avoids auto_gptq version conflicts)
         if "compressed-llm" in pre_quantized:
             base_path = _resolve_model_path(model_name)
-            tokenizer = AutoTokenizer.from_pretrained(base_path, cache_dir=HF_HOME,
-                                                       trust_remote_code=True)
+            tokenizer = AutoTokenizer.from_pretrained(
+                base_path, cache_dir=HF_HOME, trust_remote_code=True
+            )
         else:
             tokenizer = AutoTokenizer.from_pretrained(
-                pre_quantized, cache_dir=HF_HOME, trust_remote_code=True,
+                pre_quantized,
+                cache_dir=HF_HOME,
+                trust_remote_code=True,
                 revision=revision,
             )
         gptq_cfg = GPTQConfig(bits=bits, use_exllama=False)
@@ -495,13 +423,21 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
     safe_name = model_name.replace("/", "_")
     cache_path = os.path.join(HF_HOME, "gptq_cache", f"{safe_name}-gptq-{bits}bit")
 
-    if os.path.isdir(cache_path) and os.path.exists(os.path.join(cache_path, "config.json")):
+    if os.path.isdir(cache_path) and os.path.exists(
+        os.path.join(cache_path, "config.json")
+    ):
         print(f"Loading GPTQ-{bits}bit model: {model_name} (cached at {cache_path})")
         try:
-            tokenizer = AutoTokenizer.from_pretrained(cache_path, trust_remote_code=True)
+            tokenizer = AutoTokenizer.from_pretrained(
+                cache_path, trust_remote_code=True
+            )
         except Exception as e:
-            print(f"  cache-path tokenizer load failed ({type(e).__name__}); loading from base HF repo {model_path}")
-            tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+            print(
+                f"  cache-path tokenizer load failed ({type(e).__name__}); loading from base HF repo {model_path}"
+            )
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_path, trust_remote_code=True
+            )
         gptq_cfg = GPTQConfig(bits=bits, use_exllama=False)
         model = AutoModelForCausalLM.from_pretrained(
             cache_path,
@@ -517,16 +453,19 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
     # Quantize from scratch
     print(f"Loading GPTQ-{bits}bit model: {model_name} (on-the-fly quantization)")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME,
-                                               trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, cache_dir=HF_HOME, trust_remote_code=True
+    )
 
     # Load calibration data as a list of strings to avoid optimum trying to
     # download allenai/c4 at runtime (fails on compute nodes without internet,
     # and the dataset= string param doesn't reliably propagate to optimum).
     from datasets import load_dataset as _load_ds
+
     try:
-        _wiki = _load_ds("wikitext", "wikitext-2-raw-v1", split="train",
-                         cache_dir=HF_HOME)
+        _wiki = _load_ds(
+            "wikitext", "wikitext-2-raw-v1", split="train", cache_dir=HF_HOME
+        )
         calib_texts = [t for t in _wiki["text"] if len(t.strip()) > 100][:128]
     except Exception:
         _wiki = _load_ds("wikitext", "wikitext-2-raw-v1", split="train")
@@ -577,11 +516,13 @@ def get_weight(module, as_dtype=torch.float32):
     import torch.nn as nn
 
     # Get dimensions -- different quantizers use different attribute names
-    in_f = getattr(module, 'in_features', None) or getattr(module, 'infeatures', None)
-    out_f = getattr(module, 'out_features', None) or getattr(module, 'outfeatures', None)
+    in_f = getattr(module, "in_features", None) or getattr(module, "infeatures", None)
+    out_f = getattr(module, "out_features", None) or getattr(
+        module, "outfeatures", None
+    )
 
     # Check if it's an auto_gptq QuantLinear
-    if hasattr(module, 'qweight'):
+    if hasattr(module, "qweight"):
         # auto_gptq QuantLinear -- use identity matrix forward pass to dequantize
         device = module.qweight.device
         identity = torch.eye(in_f, device=device, dtype=torch.float16)
@@ -599,13 +540,18 @@ def get_weight(module, as_dtype=torch.float32):
         return weight.to(as_dtype)
 
     # Check if quantized (BitsAndBytes Params4bit -- NF4)
-    if hasattr(module.weight, 'quant_type'):
+    if hasattr(module.weight, "quant_type"):
         try:
             import bitsandbytes.functional as bnb_F
-            weight = bnb_F.dequantize_4bit(
-                module.weight.data,
-                module.weight.quant_state,
-            ).to(torch.float32).view(out_f, in_f)
+
+            weight = (
+                bnb_F.dequantize_4bit(
+                    module.weight.data,
+                    module.weight.quant_state,
+                )
+                .to(torch.float32)
+                .view(out_f, in_f)
+            )
         except Exception:
             identity = torch.eye(in_f, device=module.weight.device, dtype=torch.float32)
             with torch.no_grad():
@@ -613,7 +559,7 @@ def get_weight(module, as_dtype=torch.float32):
         return weight.to(as_dtype)
 
     # Check if quantized (BitsAndBytes Int8Params -- LLM.int8)
-    if hasattr(module.weight, 'CB') or module.weight.dtype == torch.int8:
+    if hasattr(module.weight, "CB") or module.weight.dtype == torch.int8:
         # Int8 stores weights as int8 + row-wise absmax scales
         # Use identity matrix forward pass to get dequantized weight
         device = module.weight.device
@@ -629,9 +575,13 @@ def get_weight(module, as_dtype=torch.float32):
 if __name__ == "__main__":
     # Test loading
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="qwen0.5b",
-                        help="Short alias (qwen0.5b/qwen1.5b/qwen3b) or any HF model ID")
+    parser.add_argument(
+        "--model",
+        default="qwen0.5b",
+        help="Short alias (qwen0.5b/qwen1.5b/qwen3b) or any HF model ID",
+    )
     parser.add_argument("--precision", choices=["fp32", "nf4"], default="fp32")
     args = parser.parse_args()
 

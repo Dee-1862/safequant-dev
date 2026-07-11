@@ -32,7 +32,7 @@ safequant_v2/
   SEEDS.md                   seed strategy and reproducibility guarantees
   config.py                  paths, model aliases, defaults
   core/
-    seeds.py                 set_global_seed(), fixed_rng(), torch_gen()
+    seeds.py                 set_global_seed(), DEFAULT_SEED
     datasets.py              WildJailbreak, JBB, Alpaca, ARC, C4 loaders
     model_loader.py          FP32/AQLM/GPTQ/AWQ loaders
     evaluation.py            ASR via HarmBench judge + ARC via logprob
@@ -116,7 +116,7 @@ Every diagnostic accepts `--n_eval`, `--n_arc`, `--n_calib` overrides. Defaults 
 See `SEEDS.md` for full detail. Briefly:
 - Calibration prompts are identical run-to-run via `random.Random(42)` shuffle.
 - Refusal-direction extraction is deterministic.
-- Random unit-vector controls use `torch_gen(seed=42)` with a separate `rand_seed=12345`.
+- Random unit-vector controls (archived F2a scripts) use an isolated `torch.Generator` seeded explicitly.
 - The only unavoidable non-determinism is tiny CUDA atomic-add noise; below +/- 1 prompt on n=200.
 
 ## Archived material

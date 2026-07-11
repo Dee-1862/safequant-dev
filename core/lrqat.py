@@ -79,8 +79,8 @@ def symmetric_int_ptq(weight, n_bits, group_size=128, eps=1e-8):
         qmin, qmax: integer grid bounds.
         group_size: the effective group size actually used.
     """
-    qmax = 2 ** (n_bits - 1) - 1     # b=2 -> 1
-    qmin = -(2 ** (n_bits - 1))      # b=2 -> -2
+    qmax = 2 ** (n_bits - 1) - 1  # b=2 -> 1
+    qmin = -(2 ** (n_bits - 1))  # b=2 -> -2
     w = weight.detach().float()
     out_f, in_f = w.shape
     if group_size is None or group_size <= 0 or group_size >= in_f:
@@ -90,10 +90,10 @@ def symmetric_int_ptq(weight, n_bits, group_size=128, eps=1e-8):
     n_groups = in_f // group_size
 
     wg = w.view(out_f, n_groups, group_size)
-    amax = wg.abs().amax(dim=2, keepdim=True).clamp_min(eps)        # [out, n_groups, 1]
-    scale_g = amax / max(qmax, 1)                                   # symmetric
+    amax = wg.abs().amax(dim=2, keepdim=True).clamp_min(eps)  # [out, n_groups, 1]
+    scale_g = amax / max(qmax, 1)  # symmetric
     W_int = torch.clamp(torch.round(wg / scale_g), qmin, qmax).view(out_f, in_f)
-    scale = scale_g.squeeze(2).to(torch.float32)                   # [out, n_groups]
+    scale = scale_g.squeeze(2).to(torch.float32)  # [out, n_groups]
     return W_int, scale, qmin, qmax, group_size
 
 
@@ -112,8 +112,17 @@ class LRQATLinear(nn.Module):
     forward is just  y = x @ (scale * W_int0)^T + bias  -- a true INT-b weight.
     """
 
-    def __init__(self, weight_fp, bias, n_bits, rank, alpha,
-                 device, compute_dtype=torch.float16, group_size=128):
+    def __init__(
+        self,
+        weight_fp,
+        bias,
+        n_bits,
+        rank,
+        alpha,
+        device,
+        compute_dtype=torch.float16,
+        group_size=128,
+    ):
         super().__init__()
         out_f, in_f = weight_fp.shape
         self.in_features = in_f
@@ -123,22 +132,25 @@ class LRQATLinear(nn.Module):
         self.lora_scaling = float(alpha) / float(rank)
 
         W_int, scale, qmin, qmax, gs = symmetric_int_ptq(
-            weight_fp, n_bits, group_size=group_size)
+            weight_fp, n_bits, group_size=group_size
+        )
         self.group_size = int(gs)
         self.n_groups = in_f // self.group_size
         # Frozen integer codes + group-wise scale (buffers: saved, not trained).
         self.register_buffer("W_int", W_int.to(device))
-        self.register_buffer("scale", scale.to(device))   # [out, n_groups]
+        self.register_buffer("scale", scale.to(device))  # [out, n_groups]
         self.qmin = int(qmin)
         self.qmax = int(qmax)
 
         # Trainable low-rank adapter, kept in fp32 for stable optimisation.
         # A init zeros + Bt init kaiming  =>  C = A @ Bt = 0 at step 0, so an
         # untrained module == the plain INT-b PTQ control (see module docstring).
-        self.lora_A = nn.Parameter(torch.zeros(out_f, self.rank,
-                                               device=device, dtype=torch.float32))
-        self.lora_Bt = nn.Parameter(torch.empty(self.rank, in_f,
-                                                device=device, dtype=torch.float32))
+        self.lora_A = nn.Parameter(
+            torch.zeros(out_f, self.rank, device=device, dtype=torch.float32)
+        )
+        self.lora_Bt = nn.Parameter(
+            torch.empty(self.rank, in_f, device=device, dtype=torch.float32)
+        )
         nn.init.kaiming_uniform_(self.lora_Bt, a=math.sqrt(5))
 
         if bias is not None:
@@ -160,8 +172,9 @@ class LRQATLinear(nn.Module):
 
     def _w_hat(self):
         """Differentiable repaired weight (un-merged path)."""
-        W_int_hat = torch.clamp(self.W_int + round_ste(self._delta()),
-                                self.qmin, self.qmax)
+        W_int_hat = torch.clamp(
+            self.W_int + round_ste(self._delta()), self.qmin, self.qmax
+        )
         return self._scale_full() * W_int_hat
 
     def forward(self, x):
@@ -205,10 +218,12 @@ class LRQATLinear(nn.Module):
         return [self.lora_A, self.lora_Bt]
 
     def extra_repr(self):
-        return (f"in={self.in_features}, out={self.out_features}, "
-                f"n_bits={self.n_bits}, group_size={self.group_size}, "
-                f"rank={self.rank}, scaling={self.lora_scaling:.3g}, "
-                f"merged={self.merged}")
+        return (
+            f"in={self.in_features}, out={self.out_features}, "
+            f"n_bits={self.n_bits}, group_size={self.group_size}, "
+            f"rank={self.rank}, scaling={self.lora_scaling:.3g}, "
+            f"merged={self.merged}"
+        )
 
 
 # -- module tree helpers (kept local so core/ has no diagnostics dependency) ---
@@ -235,9 +250,17 @@ def _get_inner_model(model):
     return inner
 
 
-def inject_lrqat_adapters(model, proj_paths, n_bits, rank, alpha,
-                          get_weight_fn, compute_dtype=torch.float16,
-                          group_size=128, verbose=True):
+def inject_lrqat_adapters(
+    model,
+    proj_paths,
+    n_bits,
+    rank,
+    alpha,
+    get_weight_fn,
+    compute_dtype=torch.float16,
+    group_size=128,
+    verbose=True,
+):
     """
     Replace each selected QuantLinear with an LRQATLinear (Route A1).
 
@@ -265,9 +288,16 @@ def inject_lrqat_adapters(model, proj_paths, n_bits, rank, alpha,
             w = get_weight_fn(mod, as_dtype=torch.float32).to(device)
             bias = getattr(mod, "bias", None)
             bias = bias if (bias is not None) else None
-            new = LRQATLinear(w, bias, n_bits=n_bits, rank=rank, alpha=alpha,
-                              device=device, compute_dtype=compute_dtype,
-                              group_size=group_size)
+            new = LRQATLinear(
+                w,
+                bias,
+                n_bits=n_bits,
+                rank=rank,
+                alpha=alpha,
+                device=device,
+                compute_dtype=compute_dtype,
+                group_size=group_size,
+            )
             _set_submodule(layer, proj, new)
             injected.append(new)
 
@@ -279,10 +309,14 @@ def inject_lrqat_adapters(model, proj_paths, n_bits, rank, alpha,
 
     if verbose:
         n_train = sum(p.numel() for p in trainable)
-        print(f"  Injected {len(injected)} LRQATLinear adapters "
-              f"(n_bits={n_bits}, group_size={group_size}, rank={rank}, alpha={alpha})")
-        print(f"  Trainable adapter params: {n_train:,} "
-              f"({n_train / 1e6:.2f}M) across {len(proj_paths)} proj types")
+        print(
+            f"  Injected {len(injected)} LRQATLinear adapters "
+            f"(n_bits={n_bits}, group_size={group_size}, rank={rank}, alpha={alpha})"
+        )
+        print(
+            f"  Trainable adapter params: {n_train:,} "
+            f"({n_train / 1e6:.2f}M) across {len(proj_paths)} proj types"
+        )
     return injected, trainable
 
 
@@ -291,7 +325,9 @@ def merge_all(injected, verbose=True):
     for m in injected:
         m.merge_and_requantize()
     if verbose:
-        print(f"  Fused {len(injected)} adapters back into INT-{injected[0].n_bits} grid")
+        print(
+            f"  Fused {len(injected)} adapters back into INT-{injected[0].n_bits} grid"
+        )
 
 
 def injected_effective_bits(injected):

@@ -13,7 +13,7 @@ from core.datasets import load_harmbench_prompts, load_harmless_prompts, load_wi
 from core.directions import compute_r_hat, cos_sim, per_layer_separation
 from core.manifest import RunConfig, save_result
 from core.model_loader import load_fp32, load_quantized
-from core.residuals import default_token_pos, extract_last_token_residuals, get_inner
+from core.residuals import default_token_pos, extract_last_token_residuals
 from core.seeds import DEFAULT_SEED, set_global_seed
 
 SEED = set_global_seed(DEFAULT_SEED)

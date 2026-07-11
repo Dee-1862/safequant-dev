@@ -10,7 +10,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import sys
-import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
