@@ -60,22 +60,22 @@ BUDGET_ARGS="--steps 3000 --lr 1e-4 --rank 32 --alpha 64 \
 
 # 1) READ-side INT-2 — the key new row (+ untrained INT-2 PTQ control)
 robust_run "LR-QAT read INT-2" \
-    python -u diagnostics/lrqat_repair.py \
+    python -u experiments/trained_repair/lrqat.py \
         --model llama7b --quantizer aqlm2 --role read --n_bits 2 ${BUDGET_ARGS}
 
 # 2) WRITE-side INT-2 — asymmetry control at the SAME budget
 robust_run "LR-QAT write INT-2" \
-    python -u diagnostics/lrqat_repair.py \
+    python -u experiments/trained_repair/lrqat.py \
         --model llama7b --quantizer aqlm2 --role write --n_bits 2 ${BUDGET_ARGS}
 
 # 3) READ-side INT-4 — recovery-vs-precision sweep point (coherent grid)
 robust_run "LR-QAT read INT-4 (sweep)" \
-    python -u diagnostics/lrqat_repair.py \
+    python -u experiments/trained_repair/lrqat.py \
         --model llama7b --quantizer aqlm2 --role read --n_bits 4 ${BUDGET_ARGS}
 
 # 4) WRITE-side INT-4 — asymmetry control at a COHERENT bit-width, matched budget
 robust_run "LR-QAT write INT-4 (asymmetry @ coherent bits)" \
-    python -u diagnostics/lrqat_repair.py \
+    python -u experiments/trained_repair/lrqat.py \
         --model llama7b --quantizer aqlm2 --role write --n_bits 4 ${BUDGET_ARGS}
 
 echo ""

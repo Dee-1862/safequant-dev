@@ -16,7 +16,7 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== LR-QAT INT-4 REFILL (read, n_eval=400, n_xstest=250) | $(date) ==="
-python -u diagnostics/lrqat_repair.py \
+python -u experiments/trained_repair/lrqat.py \
     --model llama7b --quantizer aqlm2 --role read --n_bits 4 \
     --steps 3000 --lr 1e-4 --rank 32 --alpha 64 \
     --seq_len 512 --grad_accum 8 --n_train_docs 4000 \

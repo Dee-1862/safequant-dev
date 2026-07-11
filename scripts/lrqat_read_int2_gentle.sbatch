@@ -16,6 +16,6 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== LR-QAT GENTLE (read INT-2, rank=64, 6000 steps) | $(date) ==="
-python -u diagnostics/lrqat_repair.py --model llama7b --quantizer aqlm2 --role read --n_bits 2 \
+python -u experiments/trained_repair/lrqat.py --model llama7b --quantizer aqlm2 --role read --n_bits 2 \
   --rank 64 --alpha 128 --steps 6000 --lr 1e-4 --n_eval 200 --n_reasoning 50 \
   --output outputs/lrqat_llama7b_aqlm2_read_int2_r64_s6000.json

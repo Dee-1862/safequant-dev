@@ -20,7 +20,7 @@ cd /jet/home/bhoomire/projects/safequant_v2
 
 echo "=== Running F1 calibration sensitivity check (HarmBench) ==="
 # Write output to a specific file to avoid overwriting the 14-cell default wildjailbreak JSON
-python -u diagnostics/direction_drift.py --model llama7b --quantizer aqlm2 \
+python -u experiments/signal_geometry/direction_drift.py --model llama7b --quantizer aqlm2 \
   --dataset harmbench \
   --output outputs/direction_drift_llama7b_aqlm2_harmbench.json \
   > outputs/run_harmbench_check.log 2>&1

@@ -46,7 +46,7 @@ robust_run() {
 MODEL=mistral7b-v02
 for QUANTIZER in gptq3 gptq2; do
     robust_run "F3a — readwrite_restoration on ${MODEL}/${QUANTIZER} (slow Triton kernel)" \
-        python -u diagnostics/readwrite_restoration.py \
+        python -u experiments/regime_sweep/restoration_sweep.py \
             --model ${MODEL} \
             --quantizer ${QUANTIZER} \
             --n_eval 200 \

@@ -48,7 +48,7 @@ robust_run() {
 MODEL=qwen7b
 for QUANTIZER in gptq4 awq gptq3 gptq2; do
     robust_run "F1 — direction_drift on ${MODEL}/${QUANTIZER}" \
-        python -u diagnostics/direction_drift.py \
+        python -u experiments/signal_geometry/direction_drift.py \
             --model ${MODEL} \
             --quantizer ${QUANTIZER} \
             --n_calib 200 \

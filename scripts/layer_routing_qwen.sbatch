@@ -40,7 +40,7 @@ robust_run() {
 MODEL=qwen7b
 for QUANTIZER in gptq4 awq; do
     robust_run "Layer routing on ${MODEL}/${QUANTIZER}" \
-        python -u diagnostics/layer_routing.py \
+        python -u experiments/boundary/routing_null.py \
             --model ${MODEL} --quantizer ${QUANTIZER} --n_calib 200
 done
 

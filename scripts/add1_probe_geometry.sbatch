@@ -22,6 +22,6 @@ echo "=== Job ${SLURM_JOB_ID} | Addition 1 probe geometry (Llama-AQLM-2) | $(dat
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 cd /jet/home/bhoomire/projects/safequant_v2
 
-python -u diagnostics/probe_geometry.py --model llama7b --quantizer aqlm2 --n_calib 200
+python -u experiments/signal_geometry/probe_rotation.py --model llama7b --quantizer aqlm2 --n_calib 200
 
 echo "=== Addition 1 complete | $(date) ==="

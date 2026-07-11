@@ -1,6 +1,7 @@
-"""Core utilities for SafeQuant."""
+"""Core utilities for SafeQuant.
 
-from .model_loader import load_fp32, load_nf4
-from .evaluation import measure_asr
+Import submodules directly (e.g. ``from core.manifest import save_result``)
+to avoid pulling optional GPU/dataset dependencies at package import time.
+"""
 
-__all__ = ['load_fp32', 'load_nf4', 'measure_asr']
+__all__: list[str] = []

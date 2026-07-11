@@ -45,7 +45,7 @@ robust_run() {
 MODEL=mistral7b-v02
 for QUANTIZER in gptq4 aqlm2; do
     robust_run "F3a — readwrite_restoration on ${MODEL}/${QUANTIZER}" \
-        python -u diagnostics/readwrite_restoration.py \
+        python -u experiments/regime_sweep/restoration_sweep.py \
             --model ${MODEL} \
             --quantizer ${QUANTIZER} \
             --n_eval 200 \

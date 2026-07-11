@@ -33,7 +33,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 cd /jet/home/bhoomire/projects/safequant_v2
 
-python -u diagnostics/refusal_probe.py \
+python -u experiments/signal_geometry/probe_accuracy.py \
     --model mistral7b-v02 --quantizer aqlm2 \
     --n_calib 200 --n_folds 5 --probe_type linear
 

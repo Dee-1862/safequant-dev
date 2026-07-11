@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== phi3 headline_stats | $(date) ==="
-python -u -m diagnostics.headline_eval_full --model phi3 --quantizer aqlm2 --n_eval 400 --n_reasoning 100 --n_boot 2000 --output outputs/headline_full_phi3_aqlm2.json
+python -u -m experiments.headline.headline_eval --model phi3 --quantizer aqlm2 --n_eval 400 --n_reasoning 100 --n_boot 2000 --output outputs/headline_full_phi3_aqlm2.json

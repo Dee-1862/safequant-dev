@@ -10,7 +10,7 @@
 #
 # AWQ is intentionally excluded from F3a to match the Llama/Mistral matrix
 # (AWQ restoration requires scale-space transformation that is implemented in
-# diagnostics/readwrite_restoration.py but kept out of the F3a table).
+# experiments/regime_sweep/restoration_sweep.py but kept out of the F3a table).
 #
 # Output: outputs/readwrite_qwen7b_gptq4.json
 #
@@ -52,7 +52,7 @@ robust_run() {
 MODEL=qwen7b
 for QUANTIZER in gptq4; do
     robust_run "F3a — readwrite_restoration on ${MODEL}/${QUANTIZER}" \
-        python -u diagnostics/readwrite_restoration.py \
+        python -u experiments/regime_sweep/restoration_sweep.py \
             --model ${MODEL} \
             --quantizer ${QUANTIZER} \
             --n_eval 200 \

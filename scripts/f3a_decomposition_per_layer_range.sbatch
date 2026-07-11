@@ -41,7 +41,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 cd /jet/home/bhoomire/projects/safequant_v2
 
 # Llama-3.1-8B has 32 layers. Splits: early=[0,11), middle=[11,22), late=[22,32).
-python -u diagnostics/readwrite_per_layer_range.py \
+python -u experiments/localization/depth_bands.py \
     --model llama7b \
     --quantizer aqlm2 \
     --n_eval 200 \

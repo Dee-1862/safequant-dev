@@ -2,7 +2,7 @@
 # ────────────────────────────────────────────────────────────────────────────
 # Finding 1 — Phase transition in refusal-direction cos-sim, Llama-3.1-8B.
 #
-# Runs diagnostics/direction_drift.py on Llama-3.1-8B-Instruct at 5 quantizers
+# Runs experiments/signal_geometry/direction_drift.py on Llama-3.1-8B-Instruct at 5 quantizers
 # (GPTQ-4, AWQ-4, AQLM-2, GPTQ-3, GPTQ-2). Each produces per-layer cos-sim
 # against the FP32 reference and reports the headline regime number.
 #
@@ -47,7 +47,7 @@ robust_run() {
 MODEL=llama7b
 for QUANTIZER in gptq4 awq aqlm2 gptq3 gptq2; do
     robust_run "F1 — direction_drift on ${MODEL}/${QUANTIZER}" \
-        python -u diagnostics/direction_drift.py \
+        python -u experiments/signal_geometry/direction_drift.py \
             --model ${MODEL} \
             --quantizer ${QUANTIZER} \
             --n_calib 200 \

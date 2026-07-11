@@ -48,7 +48,7 @@ robust_run() {
 MODEL=llama7b
 for QUANTIZER in awq gptq4 gptq3 gptq2; do
     robust_run "Add4 — per_projection_middle on ${MODEL}/${QUANTIZER}" \
-        python -u diagnostics/per_projection_middle.py \
+        python -u experiments/localization/per_projection.py \
             --model ${MODEL} --quantizer ${QUANTIZER} \
             --layer_lo 11 --layer_hi 22 \
             --n_eval 200 --n_reasoning 50

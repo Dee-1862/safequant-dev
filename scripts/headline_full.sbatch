@@ -18,7 +18,7 @@ cd /jet/home/bhoomire/projects/safequant_v2
 
 # Tier 1: headline-cell ASR(>=400)+ARC+XSTest over the 5 restoration conditions,
 # with McNemar(paired flips) + bootstrap CIs on recovery.
-python -u -m diagnostics.headline_eval_full \
+python -u -m experiments.headline.headline_eval \
   --model llama7b --quantizer aqlm2 \
   --n_eval 400 --n_reasoning 100 --n_boot 2000 \
   --output outputs/headline_full_llama7b_aqlm2.json

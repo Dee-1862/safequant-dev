@@ -34,9 +34,9 @@ robust_run() {
 }
 
 robust_run "Probe-geometry llama7b/awq" \
-    python -u diagnostics/probe_geometry.py --model llama7b --quantizer awq --n_calib 200
+    python -u experiments/signal_geometry/probe_rotation.py --model llama7b --quantizer awq --n_calib 200
 
 robust_run "Probe-geometry mistral7b-v02/awq" \
-    python -u diagnostics/probe_geometry.py --model mistral7b-v02 --quantizer awq --n_calib 200
+    python -u experiments/signal_geometry/probe_rotation.py --model mistral7b-v02 --quantizer awq --n_calib 200
 
 echo "=== Probe-geometry AWQ extension complete | $(date) ==="

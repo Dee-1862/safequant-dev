@@ -34,7 +34,7 @@ robust_run() {
 
 for Q in gptq4 gptq3 gptq2; do
     robust_run "Probe-geometry llama7b/${Q}" \
-        python -u diagnostics/probe_geometry.py --model llama7b --quantizer ${Q} --n_calib 200
+        python -u experiments/signal_geometry/probe_rotation.py --model llama7b --quantizer ${Q} --n_calib 200
 done
 
 echo "=== Probe-geometry Llama complete | $(date) ==="

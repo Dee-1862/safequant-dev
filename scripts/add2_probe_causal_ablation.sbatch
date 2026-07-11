@@ -23,7 +23,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 cd /jet/home/bhoomire/projects/safequant_v2
 
 # Ablate every 4th layer (0,4,8,12,16,20,24,28) — 8 conditions × 100 prompts
-python -u diagnostics/probe_causal_ablation.py \
+python -u experiments/boundary/probe_causal_ablation.py \
     --model llama7b --quantizer aqlm2 \
     --n_calib 200 --n_eval 100 \
     --layers_to_ablate 0,4,8,12,16,20,24,28

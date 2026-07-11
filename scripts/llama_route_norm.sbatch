@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== llama_route_norm | $(date) ==="
-python -u -m diagnostics.layer_routing --model llama7b --quantizer aqlm2 --n_calib 200 --normalize --output outputs/layer_routing_llama7b_aqlm2_norm.json
+python -u -m experiments.boundary.routing_null --model llama7b --quantizer aqlm2 --n_calib 200 --normalize --output outputs/layer_routing_llama7b_aqlm2_norm.json

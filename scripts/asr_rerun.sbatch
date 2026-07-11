@@ -16,4 +16,4 @@ export CUDA_HOME=/opt/packages/cuda/v12.4.0
 export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== ASR re-run | ${MODEL}/${QUANTIZER} | $(date) ==="
-python -u diagnostics/readwrite_restoration.py --model ${MODEL} --quantizer ${QUANTIZER} --n_eval 200 --n_reasoning 50
+python -u experiments/regime_sweep/restoration_sweep.py --model ${MODEL} --quantizer ${QUANTIZER} --n_eval 200 --n_reasoning 50

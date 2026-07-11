@@ -10,11 +10,9 @@ Projects a (pre-normalized) direction out of the residual stream at each listed 
 import sys
 from pathlib import Path
 
-# TEMPORARY backward import: _get_inner still lives in diagnostics/layer_routing.py.
-# Phase 1 moves the single canonical _get_inner into core/residuals.py; then this import
-# becomes `from core.residuals import _get_inner` and the sys.path hack goes away.
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from diagnostics.layer_routing import _get_inner  # noqa: E402
+from core.residuals import get_inner  # noqa: E402
+
+_get_inner = get_inner
 
 
 def make_ablation_hook(r_hat_cpu):

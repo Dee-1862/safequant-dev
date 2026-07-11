@@ -35,10 +35,10 @@ for model in "${models[@]}"; do
 
   for q in "${quantizers[@]}"; do
     echo "Running F1 (direction_drift) on $model / $q" >> outputs/run_f1_f2.log
-    python -u diagnostics/direction_drift.py --model "$model" --quantizer "$q" >> outputs/run_f1_f2.log 2>&1
+    python -u experiments/signal_geometry/direction_drift.py --model "$model" --quantizer "$q" >> outputs/run_f1_f2.log 2>&1
     
     echo "Running F2 (layer_routing) on $model / $q" >> outputs/run_f1_f2.log
-    python -u diagnostics/layer_routing.py --model "$model" --quantizer "$q" >> outputs/run_f1_f2.log 2>&1
+    python -u experiments/boundary/routing_null.py --model "$model" --quantizer "$q" >> outputs/run_f1_f2.log 2>&1
   done
 done
 

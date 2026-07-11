@@ -39,7 +39,7 @@ echo "=== Job ${SLURM_JOB_ID} | F3a per-matrix Mistral/AQLM-2 | $(date) ==="
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 cd /jet/home/bhoomire/projects/safequant_v2
 
-python -u diagnostics/readwrite_per_projection.py \
+python -u experiments/localization/per_projection.py \
     --model mistral7b-v02 --quantizer aqlm2 \
     --n_eval 200 --n_reasoning 50
 

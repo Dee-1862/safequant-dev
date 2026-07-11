@@ -38,7 +38,7 @@ echo "=== Job ${SLURM_JOB_ID} | F3a per-matrix Llama/GPTQ-2 | $(date) ==="
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 cd /jet/home/bhoomire/projects/safequant_v2
 
-python -u diagnostics/readwrite_per_projection.py \
+python -u experiments/localization/per_projection.py \
     --model llama7b --quantizer gptq2 \
     --n_eval 100 --n_reasoning 50
 

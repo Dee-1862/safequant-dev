@@ -44,7 +44,7 @@ robust_run() {
 
 for QUANTIZER in gptq4 gptq3 gptq2; do
     robust_run "Linear probe llama7b/${QUANTIZER}" \
-        python -u diagnostics/refusal_probe.py \
+        python -u experiments/signal_geometry/probe_accuracy.py \
             --model llama7b --quantizer ${QUANTIZER} \
             --n_calib 200 --n_folds 5 --probe_type linear
 done

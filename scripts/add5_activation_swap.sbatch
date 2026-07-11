@@ -25,7 +25,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 cd /jet/home/bhoomire/projects/safequant_v2
 
 # Swap at 5 representative layers: F2's qL=4, middle 11/16/22, F2's fpL=29
-python -u diagnostics/activation_swap.py \
+python -u experiments/boundary/activation_swap.py \
     --model llama7b --quantizer aqlm2 \
     --swap_layers 4,11,16,22,29 \
     --n_eval 100

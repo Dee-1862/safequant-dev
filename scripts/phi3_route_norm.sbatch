@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== phi3_route_norm | $(date) ==="
-python -u -m diagnostics.layer_routing --model phi3 --quantizer aqlm2 --n_calib 200 --token_pos -3 --normalize --output outputs/layer_routing_phi3_aqlm2_norm.json
+python -u -m experiments.boundary.routing_null --model phi3 --quantizer aqlm2 --n_calib 200 --token_pos -3 --normalize --output outputs/layer_routing_phi3_aqlm2_norm.json

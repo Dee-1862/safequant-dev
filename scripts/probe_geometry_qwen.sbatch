@@ -32,7 +32,7 @@ robust_run() {
 
 for Q in gptq4 awq gptq3 gptq2; do
     robust_run "Probe-geometry qwen7b/${Q}" \
-        python -u diagnostics/probe_geometry.py --model qwen7b --quantizer ${Q} --n_calib 200
+        python -u experiments/signal_geometry/probe_rotation.py --model qwen7b --quantizer ${Q} --n_calib 200
 done
 
 echo "=== Probe-geometry Qwen complete | $(date) ==="

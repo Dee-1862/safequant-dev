@@ -1,0 +1,18 @@
+{
+  "direction_drift": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "n_calib": 50,
+    "source": "outputs/signal_geometry/direction_drift_llama_aqlm2.json",
+    "cos_sim_median": 0.7861571311950684,
+    "token_pos": -5
+  },
+  "probe_accuracy": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "n_calib": 200,
+    "source": "outputs/signal_geometry/probe_accuracy_llama_aqlm2.json",
+    "quant_min_acc": 0.99,
+    "fp32_min_acc": 0.9875
+  }
+}

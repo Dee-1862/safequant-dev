@@ -32,7 +32,7 @@ robust_run() {
 
 for Q in aqlm2 gptq4 gptq3 gptq2; do
     robust_run "Probe-geometry mistral7b-v02/${Q}" \
-        python -u diagnostics/probe_geometry.py --model mistral7b-v02 --quantizer ${Q} --n_calib 200
+        python -u experiments/signal_geometry/probe_rotation.py --model mistral7b-v02 --quantizer ${Q} --n_calib 200
 done
 
 echo "=== Probe-geometry Mistral complete | $(date) ==="
