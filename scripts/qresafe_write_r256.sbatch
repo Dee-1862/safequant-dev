@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== Q-Resafe write r=256 (8bit-Adam) | $(date) ==="
-python -u -m diagnostics.qresafe_dpo --mask write --r 256 --alpha 512 --beta 0.01 --epochs 3 --lr 5e-6   --n_eval 400 --opt8bit --output outputs/qresafe_write_r256_llama7b_aqlm2.json
+python -u -m experiments.trained_repair.qresafe_dpo --mask write --r 256 --alpha 512 --beta 0.01 --epochs 3 --lr 5e-6   --n_eval 400 --opt8bit --output outputs/qresafe_write_r256_llama7b_aqlm2.json

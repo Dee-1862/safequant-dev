@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== depth read-only | $(date) ==="
-python -u -m diagnostics.readwrite_per_layer_range --model llama7b --quantizer aqlm2   --n_eval 200 --n_reasoning 50 --proj_group read   --output outputs/readwrite_per_layer_range_read_llama7b_aqlm2.json
+python -u experiments/localization/depth_bands.py --model llama7b --quantizer aqlm2   --n_eval 200 --n_reasoning 50 --projections read   --output outputs/localization/depth_bands_read_llama_aqlm2.json

@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== Q-Resafe DPO | mask=$MASK | $(date) ==="
-python -u -m diagnostics.qresafe_dpo --mask $MASK --n_eval 400
+python -u -m experiments.trained_repair.qresafe_dpo --mask $MASK --n_eval 400

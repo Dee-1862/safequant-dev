@@ -16,4 +16,4 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== probe refit noise-floor phi3 | $(date) ==="
-python -u -m diagnostics.probe_refit_control --model phi3 --n_calib 200   --output outputs/probe_refit_control_phi3.json
+python -u -m experiments.boundary.probe_refit_control --model phi3 --n_calib 200   --output outputs/probe_refit_control_phi3.json

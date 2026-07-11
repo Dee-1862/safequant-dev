@@ -20,8 +20,8 @@ cd /jet/home/bhoomire/projects/safequant_v2
 # distribution the 41->62.5 headline ASR is measured on, where FP refuses but the
 # AQLM-2 cell complies. max_new_tokens=128 keeps 1000x2 batch-1 generations tractable;
 # 128 tokens is ample to judge compliance and to supply the yl loser text.
-python -u -m diagnostics.build_displacement_pairs \
+python -u -m experiments.trained_repair.qresafe_pairs \
   --model llama7b --quantizer aqlm2 \
   --prompt_source wildjailbreak --wj_config eval \
   --n_prompts 1000 --max_new_tokens 128 \
-  --output outputs/displacement_pairs_llama7b_wj.json
+  --output outputs/trained_repair/qresafe_pairs_llama_aqlm2_wj.json

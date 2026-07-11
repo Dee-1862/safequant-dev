@@ -16,5 +16,5 @@ export TRANSFORMERS_CACHE=${HF_HOME}
 export TOKENIZERS_PARALLELISM=false
 cd /jet/home/bhoomire/projects/safequant_v2
 echo "=== Q-Resafe RANK TEST (read, r=512, alpha=1024, beta=0.01, 3ep) | $(date) ==="
-python -u -m diagnostics.qresafe_dpo --mask read --r 512 --alpha 1024 --beta 0.01 --epochs 3 --lr 5e-6 --n_eval 400 \
+python -u -m experiments.trained_repair.qresafe_dpo --mask read --r 512 --alpha 1024 --beta 0.01 --epochs 3 --lr 5e-6 --n_eval 400 \
   --output outputs/qresafe_read_r512_llama7b_aqlm2.json

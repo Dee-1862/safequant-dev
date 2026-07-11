@@ -9,9 +9,45 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import REFUSAL_PREFIXES, HF_HOME
+from config import HF_HOME
 
-# Light-touch refusal patterns extracted from config.REFUSAL_PREFIXES.
+# Inlined from the old top-level config.REFUSAL_PREFIXES (removed 2026-07).
+# v1-only: cheap substring filter for calibration-set construction, never
+# used to score results. Main-pipeline ASR is judged by the HarmBench
+# classifier in core/evaluation.py.
+REFUSAL_PREFIXES = [
+    "I'm sorry",
+    "Sorry",
+    "I am sorry",
+    "I apologize",
+    "As an",
+    "As an AI",
+    "I'm an",
+    "I'm just",
+    "As a language model",
+    "As an Assistant",
+    "I cannot",
+    "I can't",
+    "I do not",
+    "I don't",
+    "is illegal and unethical",
+    "I'm really sorry",
+    "unethical",
+    "not ethical",
+    "not legal",
+    "My apologies",
+    "I'm not able to",
+    "I am really sorry",
+    "I cannot create",
+    "I cannot support",
+    "I can't provide",
+    "I can't assist",
+    "I am not able to",
+    "I must respectfully",
+    "I'm unable to",
+]
+
+# Light-touch refusal patterns extracted from the local REFUSAL_PREFIXES above.
 # Match case-insensitive substring; sequences containing any of these are
 # stripped from the refusal-stripped corpus. Same patterns are wrapped into
 # templated refusals for refusal-enriched.

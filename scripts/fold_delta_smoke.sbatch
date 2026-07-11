@@ -13,4 +13,4 @@ export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 export HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
 export TRANSFORMERS_CACHE=${HF_HOME}
 cd /jet/home/bhoomire/projects/safequant_v2
-python -u -m diagnostics.qresafe_fold_writeback delta
+python -u -m experiments.trained_repair.qresafe_fold delta

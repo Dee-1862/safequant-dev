@@ -18,4 +18,4 @@ cd /jet/home/bhoomire/projects/safequant_v2
 # Tier 2 bridge gate: prove the HF<->repo fold-writeback round-trips the headline
 # AQLM-2 checkpoint with ZERO delta bit-identically, removing the bridge as a
 # suspect before any DPO is run.
-python -u -m diagnostics.qresafe_fold_writeback
+python -u -m experiments.trained_repair.qresafe_fold
