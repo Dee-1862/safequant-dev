@@ -21,6 +21,7 @@ _SCRIPT = Path(__file__)
 
 
 def main():
+    # Command line arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="aqlm2")
@@ -29,9 +30,11 @@ def main():
     ap.add_argument("--probe_type", default="linear", choices=["linear", "mlp"])
     args = ap.parse_args()
 
+    # Load the prompts and extract the harmful and harmless prompts
     harmful = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
     harmless = load_harmless_prompts(n_samples=args.n_calib)
 
+    # Load the fp32 model and extract the residuals
     fp32_model, fp32_tok = load_fp32(args.model)
     device = next(fp32_model.parameters()).device
     layers = list(range(len(get_inner(fp32_model).layers)))
@@ -42,6 +45,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Load the quantized model and extract the residuals
     q_model, q_tok = load_quantized(args.model, quantizer=args.quantizer)
     q_device = next(q_model.parameters()).device
     q_h = extract_last_token_residuals(q_model, q_tok, harmful, layers, q_device)
@@ -51,10 +55,12 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Compute the probe accuracies
     fp_accs = [fp_probes[L]["mean_acc"] for L in layers]
     q_accs = [q_probes[L]["mean_acc"] for L in layers]
     layers_drop = [L for L in layers if (q_probes[L]["mean_acc"] - fp_probes[L]["mean_acc"]) < -0.05]
 
+    # Create the run config
     variant = None if args.probe_type == "linear" else args.probe_type
     cfg = RunConfig(
         model=args.model,
@@ -67,6 +73,8 @@ def main():
             "seed": SEED,
         },
     )
+
+    # Save the results
     data = {
         "n_layers": len(layers),
         "fp32_probe_per_layer": {str(L): fp_probes[L] for L in layers},

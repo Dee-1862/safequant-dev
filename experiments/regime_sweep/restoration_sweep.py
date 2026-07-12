@@ -27,21 +27,25 @@ _SCRIPT = Path(__file__)
 
 
 def main():
+    # Command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
     parser.add_argument("--quantizer", default="aqlm2")
     parser.add_argument("--n_eval", type=int, default=1000)
     parser.add_argument("--n_reasoning", type=int, default=50)
     args = parser.parse_args()
+
+    # Get the quantizer and the device
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # Load the prompts and extract the behaviors
     items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
     behaviors = [_extract_behavior(item) for item in items]
     arc_items = load_arc_challenge(n_samples=args.n_reasoning)
 
+    # Load the fp32 model and extract the weights
     all_responses, all_arc = {}, {}
-
     fp32_model, tokenizer = load_fp32(args.model)
     restorer = Restorer(fp32_model)
     all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
@@ -50,6 +54,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Load the quantized model and generate responses
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
     all_arc[qtz] = measure_arc(q_model, tokenizer, arc_items)
@@ -57,6 +62,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Restore the projections and generate responses
     for cond, restore_fn in [
         ("write_restored", "restore_write"),
         ("read_restored", "restore_read"),
@@ -70,6 +76,7 @@ def main():
         gc.collect()
         torch.cuda.empty_cache()
 
+    # Classify the responses and calculate the ASR for each condition
     conditions = list(all_responses.keys())
     flat_behaviors, flat_responses = [], []
     for cond in conditions:
@@ -82,6 +89,7 @@ def main():
         flags = flat_flags[i * n : (i + 1) * n]
         asr_results[cond] = 100.0 * sum(flags) / n
 
+    # Calculate the ASR for the fp32 model and the quantized model
     fp32_asr = asr_results["fp32"]
     q_asr = asr_results[qtz]
     damage = q_asr - fp32_asr
@@ -94,11 +102,14 @@ def main():
     )
     swap_valid = abs(swap_delta) <= swap_tol and arc_floor_ok
 
+    # Create the run config
     cfg = RunConfig(
         model=args.model,
         quantizer=qtz,
         extra={"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
     )
+
+    # Save the results
     data = {
         "fp32_asr": fp32_asr,
         "quantized_asr": q_asr,

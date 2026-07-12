@@ -16,7 +16,7 @@ from core.restoration import (
     extract_fp32_weights,
     get_proj_sets,
     measure_arc,
-    restore_projections_in_range,
+    restore_projections,
 )
 from core.seeds import DEFAULT_SEED, set_global_seed
 
@@ -25,6 +25,7 @@ _SCRIPT = Path(__file__)
 
 
 def main():
+    # Command line arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--quantizer", default="aqlm2")
@@ -35,18 +36,26 @@ def main():
     ap.add_argument("--early_end", type=int, default=None)
     ap.add_argument("--mid_end", type=int, default=None)
     args = ap.parse_args()
+
+    # Get the quantizer and the device
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Load the fp32 model and extract the weights
     fp32_model, tokenizer = load_fp32(args.model)
+
+    # Get the projection sets
     read_projs, write_projs = get_proj_sets(fp32_model)
     all_projs = read_projs + write_projs
     proj_set = {"read": read_projs, "write": write_projs, "all": all_projs}[args.projections]
     variant = None if args.projections == "all" else args.projections
 
+    # Load the prompts and extract the behaviors
     items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
     behaviors = [_extract_behavior(it) for it in items]
     arc_items = load_arc_challenge(n_samples=args.n_reasoning)
 
+    # Load the quantized model and extract the weights
     all_responses, all_arc = {}, {}
     fp32_model, tokenizer = load_fp32(args.model)
     n_layers = args.n_layers or fp32_model.config.num_hidden_layers
@@ -54,13 +63,19 @@ def main():
     mid_end = args.mid_end or (2 * n_layers // 3)
     ranges = {"early": (0, early_end), "middle": (early_end, mid_end), "late": (mid_end, n_layers)}
 
+    # Extract the weights for the fp32 model
     fp32_w = extract_fp32_weights(fp32_model, proj_set)
+
+    # Generate responses for the fp32 model
     all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
+
+    # Measure the arc scores for the fp32 model
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Load the quantized model and generate responses
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
     all_arc[qtz] = measure_arc(q_model, tokenizer, arc_items)
@@ -68,16 +83,18 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Restore the projections in the ranges and generate responses
     for name, lo_hi in ranges.items():
         cond = f"layers_{name}"
         q_model, _ = load_quantized(args.model, quantizer=qtz)
-        restore_projections_in_range(q_model, fp32_w, proj_set, lo_hi)
+        restore_projections(q_model, fp32_w, proj_set, layer_range = lo_hi)
         all_responses[cond] = generate_only(q_model, tokenizer, items, desc=cond)
         all_arc[cond] = measure_arc(q_model, tokenizer, arc_items)
         del q_model
         gc.collect()
         torch.cuda.empty_cache()
 
+    # Classify the responses and calculate the ASR for each condition
     conditions = list(all_responses.keys())
     flat_b, flat_r = [], []
     for cond in conditions:
@@ -89,6 +106,7 @@ def main():
     fp32_asr, q_asr = asr_results["fp32"], asr_results[qtz]
     damage = q_asr - fp32_asr
 
+    # Create the run config
     cfg = RunConfig(
         model=args.model,
         quantizer=qtz,

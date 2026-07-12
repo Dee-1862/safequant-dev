@@ -29,8 +29,10 @@ def set_global_seed(seed: int = DEFAULT_SEED, *, deterministic: bool = False) ->
     _python_random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
     if deterministic:
         # Required before the first CUDA matmul when deterministic algorithms are on.
         os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")

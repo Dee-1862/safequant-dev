@@ -21,6 +21,23 @@ _SCRIPT = Path(__file__)
 
 
 def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, token_pos=-1):
+    """
+    Run the model for the given label.
+    Inputs:
+        model: The model to run.
+        tokenizer: The tokenizer to use.
+        harmful: The harmful prompts.
+        harmless: The harmless prompts.
+        layers: The layers to run.
+        device: The device to run on.
+        label: The label to run.
+        token_pos: The token position to run.
+    Outputs:
+        r_hats: The r hats.
+        seps: The separations.
+    """
+
+    # Extract the residuals
     print(f"\n[{label}] extracting residuals (token_pos={token_pos})")
     h_caps = extract_last_token_residuals(
         model, tokenizer, harmful, layers, device, token_pos=token_pos
@@ -28,6 +45,8 @@ def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, to
     s_caps = extract_last_token_residuals(
         model, tokenizer, harmless, layers, device, token_pos=token_pos
     )
+
+    # Compute the r hats and separations
     r_hats, seps = {}, {}
     for layer_idx in layers:
         r = compute_r_hat(h_caps[layer_idx], s_caps[layer_idx])
@@ -38,6 +57,21 @@ def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, to
 
 
 def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib, model_name):
+    """
+    Analyze the results.
+    Inputs:
+        quantizer: The quantizer to use.
+        fp32_r_hats: The r hats for the fp32 model.
+        fp32_seps: The separations for the fp32 model.
+        q_r_hats: The r hats for the quantized model.
+        q_seps: The separations for the quantized model.
+        layers: The layers to analyze.
+        n_calib: The number of calibration samples.
+        model_name: The name of the model.
+    Outputs:
+        data: The data to save.
+    """
+    # Compute the cosine similarity per layer
     cos_per_layer = {L: cos_sim(fp32_r_hats[L], q_r_hats[L]) for L in layers}
     cos_vals = list(cos_per_layer.values())
     fp32_seps_arr = np.array([fp32_seps[L]["separation_sigma"] for L in layers])
@@ -47,6 +81,8 @@ def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib
         if fp32_seps_arr.std() > 1e-9 and cos_arr.std() > 1e-9
         else 0.0
     )
+
+    # Compute the weak and very weak layers
     weak = [L for L, c in cos_per_layer.items() if c < 0.95]
     very_weak = [L for L, c in cos_per_layer.items() if c < 0.80]
     return {
@@ -69,6 +105,7 @@ def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib
 
 
 def main():
+    # Command line arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="aqlm2")
@@ -77,10 +114,12 @@ def main():
     ap.add_argument("--token_pos", type=int, default=None)
     args = ap.parse_args()
 
+    # Get the quantizers and the device
     quantizers = [q.strip() for q in args.quantizer.split(",") if q.strip()]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     token_pos = args.token_pos if args.token_pos is not None else default_token_pos(args.model)
 
+    # Load the prompts and extract the harmful and harmless prompts
     if args.dataset == "wildjailbreak":
         harmful_items = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
         harmful = [
@@ -91,6 +130,7 @@ def main():
         harmful = load_harmbench_prompts(n_samples=args.n_calib)
     harmless = load_harmless_prompts(n_samples=args.n_calib)
 
+    # Load the fp32 model and extract the r hats and separations
     fp32_model, tokenizer = load_fp32(args.model)
     n_layers = fp32_model.config.num_hidden_layers
     layers = list(range(n_layers))
@@ -101,6 +141,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Load the quantized model and extract the r hats and separations
     for q in quantizers:
         q_model, _ = load_quantized(args.model, quantizer=q)
         q_r_hats, q_seps = run_for_model(

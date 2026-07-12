@@ -1,9 +1,4 @@
-import sys
-from pathlib import Path
-
-from core.residuals import get_inner  # noqa: E402
-
-_get_inner = get_inner
+from core.residuals import get_inner
 
 
 def make_ablation_hook(r_hat_cpu):
@@ -16,10 +11,15 @@ def make_ablation_hook(r_hat_cpu):
 
     Output: hook function
     """
-
+    # Define the hook function
     def hook(module, inputs, output):
+        # Check if the output is a tuple
         is_tuple = isinstance(output, tuple)
+
+        # Get the hidden state
         h = output[0] if is_tuple else output
+
+        # Check if the hidden state is a 3D tensor
         if h.dim() != 3:
             return output
         r = r_hat_cpu.to(h.device).to(h.dtype)
@@ -44,12 +44,13 @@ def install_ablation(model, r_hat_cpu, layers):
 
     Output: list of handles
     """
-    inner = _get_inner(model)
+    # Get the inner model
+    inner = get_inner(model)
     handles = []
+
+    # Install the hook for each layer
     for L in layers:
-        handles.append(
-            inner.layers[L].register_forward_hook(make_ablation_hook(r_hat_cpu))
-        )
+        handles.append(inner.layers[L].register_forward_hook(make_ablation_hook(r_hat_cpu)))
     return handles
 
 
@@ -62,5 +63,7 @@ def remove_handles(handles):
 
     Output: None
     """
+
+    # Remove the handles
     for h in handles:
         h.remove()

@@ -6,19 +6,35 @@ import torch
 
 
 def get_inner(model):
-    """Unwrap to the inner model that has .layers (handles GPTQ wrappers)."""
+    """
+    Unwrap to the inner model that has .layers (handles GPTQ wrappers).
+
+    Input:
+    - model (torch.nn.Module): the model to unwrap
+
+    Output:
+    - inner (torch.nn.Module): the inner model
+    """
+    # Get the inner model
     inner = model.model if hasattr(model, "model") else model
+
+    # Check if the inner model has a model and a layers attribute
     if hasattr(inner, "model") and hasattr(inner.model, "layers"):
         inner = inner.model
     return inner
 
-
-# Backward-compatible alias used across the codebase during migration.
-_get_inner = get_inner
-
-
 def prompt_text(p, tok) -> str:
-    """Format a prompt (str or dict) with the model chat template."""
+    """
+    Format a prompt (str or dict) with the model chat template.
+
+    Input:
+    - p (str or dict): the prompt to format
+    - tok (Tokenizer): the tokenizer to use
+
+    Output:
+    - text (str): the formatted prompt
+    """
+    # Get the text of the prompt
     if isinstance(p, dict):
         text = p.get("prompt") or p.get("vanilla") or p.get("behavior") or ""
     else:
@@ -33,13 +49,20 @@ def prompt_text(p, tok) -> str:
         return text
 
 
-# Alias for scripts that used format_prompt.
-format_prompt = prompt_text
-
-
 def default_token_pos(model_name: str) -> int:
-    """Per-model heuristic for post-instruction residual token position."""
+    """
+    Per-model heuristic for post-instruction residual token position.
+
+    Input:
+    - model_name (str): the name of the model
+
+    Output:
+    - token_pos (int): the position of the token to extract the residuals from
+    """
+    # Get the name of the model
     name = model_name.lower()
+
+    # Check if the model is a llama model
     if "llama" in name:
         return -5
     if "phi" in name:
@@ -50,10 +73,25 @@ def default_token_pos(model_name: str) -> int:
 def extract_last_token_residuals(
     model, tokenizer, prompts, layers, device, token_pos: int = -1
 ):
-    """Returns {layer: list of (hidden,) CPU tensors, one per prompt}."""
+    """
+    Returns {layer: list of (hidden,) CPU tensors, one per prompt}.
+
+    Input:
+    - model (torch.nn.Module): the model to extract the residuals from
+    - tokenizer (Tokenizer): the tokenizer to use
+    - prompts (list): the prompts to extract the residuals from
+    - layers (list): the layers to extract the residuals from
+    - device (torch.device): the device to extract the residuals from
+    - token_pos (int): the position of the token to extract the residuals from
+
+    Output:
+    - out (dict): a dictionary of the residuals for each layer and prompt
+    """
+    # Get the inner model
     inner = get_inner(model)
     buf = {}
 
+    # Define a function to make a hook for the layer
     def make_hook(layer_idx):
         def hook(module, inputs, output):
             r = output[0] if isinstance(output, (tuple, list)) else output
@@ -62,9 +100,13 @@ def extract_last_token_residuals(
 
         return hook
 
-    handles = [inner.layers[l].register_forward_hook(make_hook(l)) for l in layers]
+    # Register the hooks for the layers
+    handles = []
+    for l in layers:
+        handles.append(inner.layers[l].register_forward_hook(make_hook(l)))
     out = {l: [] for l in layers}
     try:
+        # Extract the residuals for each prompt 
         for p in prompts:
             text = prompt_text(p, tokenizer)
             inputs = tokenizer(

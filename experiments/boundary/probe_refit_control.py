@@ -20,30 +20,55 @@ _SCRIPT = Path(__file__)
 
 
 def _cos(a, b):
+    """
+    Calculate the cosine similarity between two vectors.
+    Inputs:
+        a: The first vector.
+        b: The second vector.
+    Outputs:
+        The cosine similarity between the two vectors.
+    """
+    # Convert the vectors to numpy arrays
     a = np.asarray(a, np.float64)
     b = np.asarray(b, np.float64)
+
+    # Calculate the cosine similarity
     na, nb = np.linalg.norm(a), np.linalg.norm(b)
     return 0.0 if na < 1e-12 or nb < 1e-12 else float(np.dot(a, b) / (na * nb))
 
 
 def _fit_w(h_list, s_list):
+    """
+    Fit a logistic regression model to the data.
+    Inputs:
+        h_list: The list of harmful activations.
+        s_list: The list of harmless activations.
+    Outputs:
+        The weights of the logistic regression model.
+    """
+    # Stack the harmful and harmless activations into a single array
     X = np.stack([t.numpy() for t in h_list] + [t.numpy() for t in s_list])
     y = np.array([1] * len(h_list) + [0] * len(s_list))
-    clf = LogisticRegression(C=1.0, max_iter=2000, random_state=SEED)
+
+    # Fit a logistic regression model to the data
+    clf = LogisticRegression(C = 1.0, max_iter = 2000, random_state = SEED)
     clf.fit(X, y)
     return clf.coef_[0]
 
 
 def main():
+    # Command line arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--n_calib", type=int, default=200)
     ap.add_argument("--token_pos", type=int, default=-1)
     args = ap.parse_args()
 
+    # Load prompts
     harmful = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
     harmless = load_harmless_prompts(n_samples=args.n_calib)
 
+    # Load fp32 model and extract last token residuals
     fp_model, fp_tok = load_fp32(args.model)
     device = next(fp_model.parameters()).device
     layers = list(range(len(get_inner(fp_model).layers)))
@@ -54,12 +79,14 @@ def main():
     import torch
     torch.cuda.empty_cache()
 
+    # Randomly split the harmful and harmless activations into two groups
     rng = np.random.default_rng(SEED)
     nh, ns = len(h[layers[0]]), len(s[layers[0]])
     hp, sp = rng.permutation(nh), rng.permutation(ns)
     hA, hB = hp[: nh // 2], hp[nh // 2 :]
     sA, sB = sp[: ns // 2], sp[ns // 2 :]
 
+    # Fit a logistic regression model to the data for each layer
     cos_floor = {}
     for layer_idx in layers:
         wA = _fit_w([h[layer_idx][i] for i in hA], [s[layer_idx][i] for i in sA])
@@ -67,6 +94,7 @@ def main():
         cos_floor[layer_idx] = _cos(wA, wB)
     vals = list(cos_floor.values())
 
+    # Save results
     cfg = RunConfig(
         model=args.model,
         omit_quantizer=True,

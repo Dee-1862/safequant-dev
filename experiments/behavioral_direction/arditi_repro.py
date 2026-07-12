@@ -18,6 +18,7 @@ from core.model_loader import load_fp32, load_quantized
 from core.datasets import load_wildjailbreak_prompts, load_harmless_prompts
 from core.evaluation import generate_only, classify_batch, _extract_behavior
 from core.manifest import RunConfig, save_result
+from core.residuals import get_inner
 
 _SCRIPT = Path(__file__)
 K_POSITIONS = 5      # last K post-instruction token positions (Arditi uses len(eoi_toks))
@@ -68,14 +69,8 @@ def refusal_rate(model, tok, prompts):
 
 _hook_handles = []
 
-def _get_layers(model):
-    inner = model.model if hasattr(model, "model") else model
-    if hasattr(inner, "model") and hasattr(inner.model, "layers"):
-        inner = inner.model
-    return inner.layers
-
 def install_direction_hook(model, direction, layer=None, mode="ablate"):
-    layers = _get_layers(model)
+    layers = get_inner(model).layers
     d = torch.as_tensor(direction, dtype=model.dtype, device=model.device)
 
     if mode == "ablate":

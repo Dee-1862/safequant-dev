@@ -23,8 +23,18 @@ _SCRIPT = Path(__file__)
 
 
 def _summary(op_list):
+    """
+    Calculate the summary of the operative layer.
+    Inputs:
+        op_list: The list of operative layers.
+    Outputs:
+        The summary of the operative layer.
+    """
+    # Calculate the mode of the operative layer
     c = Counter(op_list)
     mode_layer, mode_count = c.most_common(1)[0]
+
+    # Calculate the summary of the operative layer
     return {
         "mode_layer": int(mode_layer),
         "mode_count": int(mode_count),
@@ -36,6 +46,7 @@ def _summary(op_list):
 
 
 def main():
+    # Command line arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="aqlm2")
@@ -44,27 +55,29 @@ def main():
     ap.add_argument("--normalize", action="store_true", default=False)
     args = ap.parse_args()
 
+    # Get the token position and the variant
     token_pos = args.token_pos if args.token_pos is not None else default_token_pos(args.model)
     variant = "norm" if args.normalize else None
 
-    harmful = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
-    harmless = load_harmless_prompts(n_samples=args.n_calib)
+    # Load prompts
+    harmful = load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")
+    harmless = load_harmless_prompts(n_samples = args.n_calib)
 
+    # Load the fp32 model and extract last token residuals
     fp32_model, fp32_tok = load_fp32(args.model)
     device = next(fp32_model.parameters()).device
     layers = list(range(len(get_inner(fp32_model).layers)))
     fp_h = extract_last_token_residuals(fp32_model, fp32_tok, harmful, layers, device, token_pos)
     fp_s = extract_last_token_residuals(fp32_model, fp32_tok, harmless, layers, device, token_pos)
     fp_r_hats = {L: compute_r_hat(fp_h[L], fp_s[L]) for L in layers}
-    fp_seps = {
-        L: per_layer_separation(fp_h[L], fp_s[L], fp_r_hats[L])[0] for L in layers
-    }
+    fp_seps = {L: per_layer_separation(fp_h[L], fp_s[L], fp_r_hats[L])[0] for L in layers}
     fp32_best = max(layers, key=lambda L: fp_seps[L])
     r_hat_fp = fp_r_hats[fp32_best]
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Load the quantized model and extract last token residuals
     q_model, q_tok = load_quantized(args.model, quantizer=args.quantizer)
     q_device = next(q_model.parameters()).device
     q_h = extract_last_token_residuals(q_model, q_tok, harmful, layers, q_device, token_pos)
@@ -74,11 +87,13 @@ def main():
     quant_best = max(layers, key=lambda L: q_seps[L])
     r_hat_q = q_r_hats[quant_best]
 
+    # Calculate the projections for the fp32 model and the quantized model
     q_proj_fp_h, _ = per_prompt_projections(q_h, r_hat_fp, normalize=args.normalize)
     q_proj_fp_s, _ = per_prompt_projections(q_s, r_hat_fp, normalize=args.normalize)
     q_proj_q_h, _ = per_prompt_projections(q_h, r_hat_q, normalize=args.normalize)
     q_proj_q_s, _ = per_prompt_projections(q_s, r_hat_q, normalize=args.normalize)
 
+    # Calculate the operative layer for the fp32 model and the quantized model
     op_fp_h = operative_layer_per_prompt(q_proj_fp_h, layers)
     op_fp_s = operative_layer_per_prompt(q_proj_fp_s, layers)
     op_q_h = operative_layer_per_prompt(q_proj_q_h, layers)
@@ -87,6 +102,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
+    # Save results
     cfg = RunConfig(
         model=args.model,
         quantizer=args.quantizer,

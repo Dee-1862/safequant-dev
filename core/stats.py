@@ -16,12 +16,16 @@ def mcnemar_exact(flags_a, flags_b):
     """
     b = 0
     c = 0
+
+    # Count the number of discordant pairs
     for x, y in zip(flags_a, flags_b):
         if x and not y:
             b += 1
         elif not x and y:
             c += 1
     nbc = b + c
+
+    # Calculate the p-value
     if nbc == 0:
         p = 1.0
     else:
@@ -43,9 +47,12 @@ def wilson_ci(k, n, z=1.96):
     Returns:
     - list of two floats: the lower and upper bounds of the confidence interval
     """
+    # Check if the number of trials is zero
     if n == 0:
         return [0.0, 0.0]
     p = k / n
+
+    # Calculate the center and half of the confidence interval
     den = 1 + z * z / n
     center = (p + z * z / (2 * n)) / den
     half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
@@ -65,10 +72,17 @@ def bootstrap_recovery(flags_by_cond, qtz, n_boot=2000, seed=0):
     Returns:
     - dictionary of lists of CIs for the recovery percentages
     """
+    # Initialize the random number generator
     rng = np.random.default_rng(seed)
+
+    # Convert the flags to numpy arrays
     arrs = {c: np.asarray(v, dtype=float) for c, v in flags_by_cond.items()}
+
+    # Get the number of samples
     n = len(next(iter(arrs.values())))
     rec = {"read": [], "write": [], "both": [], "read_minus_write": []}
+
+    # Bootstrap the recovery percentages
     for _ in range(n_boot):
         idx = rng.integers(0, n, n)
         asr = {c: arrs[c][idx].mean() * 100 for c in arrs}
@@ -84,9 +98,18 @@ def bootstrap_recovery(flags_by_cond, qtz, n_boot=2000, seed=0):
         rec["read_minus_write"].append(rr - rw)
 
     def ci(a):
+        """
+        Calculate the confidence interval for a given array.
+        Input:
+        - a (numpy array): the array to calculate the confidence interval
+
+        Returns:
+        - rec (dict): dictionary of lists of two floats: the lower and upper bounds of the confidence interval for each recovery percentage
+        """
         a = np.asarray(a)
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 
+    # Calculate the confidence intervals for each recovery percentage
     for k, v in rec.items():
         rec[k] = ci(v)
     return rec

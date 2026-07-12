@@ -16,9 +16,12 @@ def per_prompt_projections(residuals_by_layer, r_hat, normalize: bool = False):
     - projections: numpy array of shape (n_prompts, n_layers)
     - layers: list of layer names
     """
+    # Get the layers and the number of prompts
     layers = sorted(residuals_by_layer.keys())
     n_prompts = len(residuals_by_layer[layers[0]])
     out = np.zeros((n_prompts, len(layers)), dtype=np.float64)
+
+    # Compute the projections for each prompt and layer
     for li, layer_idx in enumerate(layers):
         for pi, t in enumerate(residuals_by_layer[layer_idx]):
             v = float(t @ r_hat)
@@ -39,6 +42,9 @@ def operative_layer_per_prompt(projections, layers):
     Output:
     - layers: list of layer names
     """
+    # Compute the absolute values of the projections
     abs_proj = np.abs(projections)
+    
+    # Get the indices of the maximum values for each prompt
     argmax_indices = abs_proj.argmax(axis=1)
     return [layers[i] for i in argmax_indices]

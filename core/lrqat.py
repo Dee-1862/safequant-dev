@@ -40,6 +40,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from core.residuals import get_inner
+
 
 # -- straight-through round ---------------------------------------------------
 # Forward rounds to nearest integer; backward passes the gradient through
@@ -242,14 +244,6 @@ def _set_submodule(layer, dotted, new_module):
     setattr(parent, parts[-1], new_module)
 
 
-def _get_inner_model(model):
-    """Unwrap to the inner model that owns .layers (e.g. LlamaModel)."""
-    inner = model.model
-    if hasattr(inner, "model") and hasattr(inner.model, "layers"):
-        inner = inner.model
-    return inner
-
-
 def inject_lrqat_adapters(
     model,
     proj_paths,
@@ -272,7 +266,7 @@ def inject_lrqat_adapters(
     ALL base parameters are frozen first; only the injected adapters end up
     trainable. Returns (injected_modules, trainable_params).
     """
-    inner = _get_inner_model(model)
+    inner = get_inner(model)
     device = next(model.parameters()).device
     n_layers = model.config.num_hidden_layers
 
