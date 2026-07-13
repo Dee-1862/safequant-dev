@@ -1,6 +1,6 @@
 """
-diagnostics/lrqat_repair.py
-===========================
+experiments/trained_repair/lrqat.py
+===================================
 Reader-side (vs writer-side) low-bit REPAIR via quant-domain LR-QAT.
 
 Kills the "safety came back because you added bits" objection. We train ONLY the
@@ -26,7 +26,7 @@ Eval is the EXISTING harness, unchanged: WildJailbreak + HarmBench classifier
 for ASR, log-prob ARC-Challenge for coherence.
 
 Usage:
-    python -u diagnostics/lrqat_repair.py --model llama7b --quantizer aqlm2 \
+    python -u experiments/trained_repair/lrqat.py --model llama7b --quantizer aqlm2 \
         --role read --n_bits 2 --steps 3000 --n_eval 200 --n_reasoning 50
 """
 
@@ -105,9 +105,13 @@ def build_token_blocks(tokenizer, n_docs, seq_len, device, max_chars=4000):
 # -----------------------------------------------------------------------------
 def kl_distill_loss(student_logits, teacher_logits, temperature=1.0):
     """
-    KL( p_teacher || p_student ) averaged over tokens.
+    KL( p_teacher || p_student ) over tokens (see normalization note).
     F.kl_div expects log-probs for the input (student) and probs for the target
-    (teacher). reduction='batchmean' divides by the number of token positions.
+    (teacher). NOTE: with a single block per step (batch=1), reduction='batchmean'
+    divides by the batch dim (=1), so this returns the loss SUMMED over token
+    positions (~seq_len x a per-token mean). Switching to a per-token mean is a
+    STAGED change -- it alters grad-clip binding and early-stop, so run-and-compare
+    against the current Table 7 before applying; do NOT silently change the loss.
     """
     t = temperature
     s_logp = F.log_softmax(student_logits / t, dim=-1)

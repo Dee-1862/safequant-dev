@@ -1,22 +1,10 @@
+"""Fold trained LoRA delta back into AQLM quantized weights.
+
+CONNECTED — do not remove.
+  Imported by: qresafe_dpo.py (fold_and_writeback_, quant_cfg, dequantize_module)
+  Also run directly by: roundtrip_gate.sbatch, fold_delta_smoke.sbatch (dev gates)
+  Not a RESULTS.md paper row, but required by the Q-Resafe DPO pipeline.
 """
-qresafe_fold_writeback.py -- fold a LoRA delta into an AQLM HF-inference module
-and write it back, staying at the same bit width; plus the zero-training
-ROUND-TRIP GATE that proves the HF<->repo bridge is lossless before any DPO.
-
-Why the gate must pass first (variable isolation): when the folded repaired
-model comes back, a null has three candidate causes -- (a) the repair delta got
-snapped away by the 2-bit grid, (b) the bridge silently changed the model, or
-(c) DPO learned nothing. This gate removes (b) as a suspect by round-tripping the
-headline checkpoint with the delta set to ZERO and asserting the model is
-unchanged. Only then is a folded result attributable to repair-survival.
-
-Bridge facts (verified for the 1x16g8 headline cell):
-  - inference QuantizedLinear and repo QuantizedWeight share tensor layouts;
-    codes differ only by signed packing (aqlm.utils pack/unpack_int_data).
-  - aqlm's prepare_matmul_op permute fires only for codebook_size==256 on CPU;
-    our cell is 16-bit on CUDA, so codes are never permuted.
-"""
-
 import sys
 from pathlib import Path
 
@@ -30,9 +18,22 @@ from aqlm.utils import _dequantize_weight, pack_int_data, unpack_int_data  # noq
 
 
 def quant_cfg(model):
+    """
+    Get the quantization configuration.
+    Inputs:
+        model (nn.Module): The model to get the quantization configuration from.
+
+    Outputs:
+        cfg (dict): The quantization configuration.
+    """
+    # Get the quantization configuration
     qc = model.config.quantization_config
+
+    # Check if the quantization configuration is a dictionary
     if not isinstance(qc, dict):
         qc = qc.to_dict() if hasattr(qc, "to_dict") else dict(qc)
+
+    # Return the quantization configuration
     return {
         "nbits": int(qc["nbits_per_codebook"]),
         "num_codebooks": int(qc["num_codebooks"]),
@@ -42,33 +43,58 @@ def quant_cfg(model):
 
 
 def is_quantized_linear(module):
+    """
+    Check if the module is a quantized linear.
+    Inputs:
+        module (nn.Module): The module to check if it is a quantized linear.
+
+    Outputs:
+        is_quantized_linear (bool): True if the module is a quantized linear, False otherwise.
+    """
+    # Check if the module is a quantized linear
     return (hasattr(module, "codes") and hasattr(module, "codebooks")
             and hasattr(module, "scales"))
 
 
 def dequantize_module(module, nbits):
-    """Dense weight [out,in] from an inference QuantizedLinear, via aqlm's own
-    dequantize (so it matches what the forward kernel computes)."""
+    """
+    Dequantize the module.
+    Inputs:
+        module (nn.Module): The module to dequantize.
+        nbits (int): The number of bits to dequantize the module to.
+
+    Outputs:
+        dequantized_module (torch.Tensor): The dequantized module.
+    """
+    # Dequantize the module
     codes_u = unpack_int_data(module.codes.data, nbits)
     return _dequantize_weight(codes_u, module.codebooks.data, module.scales.data)
 
 
 def fold_and_writeback_(module, delta, cfg, beam_size=5):
-    """Fold `delta` (dense [out,in], may be None/zero) into the module's quantized
-    weight and write it back in place. Returns fraction of codes changed.
-
-    delta is None or all-zero  -> pure writeback round-trip (codes must be
-      reproduced bit-for-bit: this is the gate path).
-    delta non-zero  -> build a repo QuantizedWeight from the EXISTING codebooks
-      (no kmeans re-init), refit codes to W+delta, write back. Bit width preserved.
     """
+    Fold `delta` (dense [out,in], may be None/zero) into the module's quantized
+    weight and write it back in place. Returns fraction of codes changed.
+    Inputs:
+        module (nn.Module): The module to fold and write back.
+        delta (torch.Tensor): The delta to fold into the module.
+        cfg (dict): The configuration of the module.
+        beam_size (int): The number of beams to use for the beam search.
+
+    Outputs:
+        changed (float): The fraction of codes changed.
+    """
+    # Get the number of bits
     nbits = cfg["nbits"]
     codes_u = unpack_int_data(module.codes.data, nbits)          # [out_g,in_g,ncb] >=0
     codebooks = module.codebooks.data
     scales = module.scales.data
 
+    # Initialize the changed variable
     changed = 0.0
     if delta is not None and float(delta.abs().sum()) > 0.0:
+        
+        # Create the QuantizedWeight
         from src.aq import QuantizedWeight
         W = _dequantize_weight(codes_u, codebooks, scales)
         W_target = (W + delta.to(W.dtype)).float()
@@ -105,21 +131,39 @@ def fold_and_writeback_(module, delta, cfg, beam_size=5):
 
 
 def roundtrip_gate(model, target_names, cfg, atol=0.0):
-    """Zero-training round trip: for each target module, dequantize, write back
-    with delta=0, dequantize again, assert the dense weight is bit-identical.
-    Returns (n_ok, n_total, max_abs_diff)."""
+    """Zero-training round trip: for each target module, dequantize, write back with delta=0, dequantize again, assert the dense weight is bit-identical. Returns (n_ok, n_total, max_abs_diff).
+    Inputs:
+        model (nn.Module): The model to run the roundtrip gate on.
+        target_names (list[str]): The names of the target modules.
+        cfg (dict): The configuration of the model.
+        atol (float): The absolute tolerance for the roundtrip gate.
+
+    Outputs:
+        n_ok (int): The number of target modules that passed the roundtrip gate.
+    """
+    # Initialize the variables
     n_ok, n_total, max_diff = 0, 0, 0.0
     mods = dict(model.named_modules())
+
+    # Run the roundtrip gate for each target module
     for name in target_names:
+
+        # Get the module
         m = mods[name]
         if not is_quantized_linear(m):
             continue
         n_total += 1
+
+        # Dequantize the module
         W0 = dequantize_module(m, cfg["nbits"]).float()
         codes0 = m.codes.data.clone()
+
+        # Fold the module
         fold_and_writeback_(m, delta=None, cfg=cfg)          # pure writeback
         W1 = dequantize_module(m, cfg["nbits"]).float()
         d = float((W1 - W0).abs().max())
+
+        # Check if the codes are identical and update the maximum difference
         codes_identical = bool(torch.equal(m.codes.data, codes0))
         max_diff = max(max_diff, d)
         if d <= atol and codes_identical:
@@ -130,25 +174,40 @@ def roundtrip_gate(model, target_names, cfg, atol=0.0):
 
 
 def run_gate(model_alias="llama7b", quantizer="aqlm2", n_arc=100):
-    """Zero-training round-trip gate on the real headline checkpoint: bit-identity
-    of every target module's dense weight AND ARC unchanged through the bridge."""
+    """Zero-training round-trip gate on the real headline checkpoint: bit-identity of every target module's dense weight AND ARC unchanged through the bridge.
+    Inputs:
+        model_alias (str): The alias of the model to run the roundtrip gate on.
+        quantizer (str): The quantizer to use for the model.
+        n_arc (int): The number of ARC items to use for the roundtrip gate.
+
+    Outputs:
+        ok (bool): True if the roundtrip gate passed, False otherwise.
+    """
+    # Insert the path to the core modules
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from core.model_loader import load_quantized
     from core.datasets import load_arc_challenge
     from core.restoration import measure_arc
     from experiments.trained_repair.qresafe_repair import select_target_modules
 
+    # Load the model and tokenizer
     model, tok = load_quantized(model_alias, quantizer=quantizer)
     cfg = quant_cfg(model)
     print("quant cfg:", cfg)
+
+    # Select the target modules
     targets = select_target_modules(model, "full")
     print(f"target modules: {len(targets)}")
 
+    # Load the ARC items
     arc_items = load_arc_challenge(n_samples=n_arc)
     arc_before = measure_arc(model, tok, arc_items)
+
+    # Run the roundtrip gate
     n_ok, n_total, max_diff = roundtrip_gate(model, targets, cfg)
     arc_after = measure_arc(model, tok, arc_items)
 
+    # Print the results
     print(f"\n  round-trip: {n_ok}/{n_total} modules bit-identical | max|dW|={max_diff:.2e}")
     print(f"  ARC through bridge: {arc_before:.1f}% -> {arc_after:.1f}% "
           f"(headline aqlm2 ARC was 46%)")
@@ -160,19 +219,38 @@ def run_gate(model_alias="llama7b", quantizer="aqlm2", n_arc=100):
 
 def delta_fold_smoke(model_alias="llama7b", quantizer="aqlm2"):
     """Exercise the delta!=0 fold path (QuantizedWeight.__new__ + beam_search +
-    writeback) on ONE real module, before any DPO run depends on it."""
+    writeback) on ONE real module, before any DPO run depends on it.
+    Inputs:
+        model_alias (str): The alias of the model to run the delta fold smoke test on.
+        quantizer (str): The quantizer to use for the model.
+
+    Outputs:
+        ok (bool): True if the delta fold smoke test passed, False otherwise.
+    """
+    # Insert the path to the core modules
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     import torch
     from core.model_loader import load_quantized
     from experiments.trained_repair.qresafe_repair import select_target_modules
 
+    # Load the model and tokenizer
     model, tok = load_quantized(model_alias, quantizer=quantizer)
     cfg = quant_cfg(model)
+
+    # Select the target module
     name = select_target_modules(model, "read")[0]
+
+    # Get the module
     m = dict(model.named_modules())[name]
+
+    # Dequantize the module
     W0 = dequantize_module(m, cfg["nbits"]).float()
+
+    # Initialize the variables
     nb0 = None
     out_f, in_f = m.out_features, m.in_features
+
+    # Create the delta
     r = 16
     A = torch.randn(r, in_f, device=W0.device) * 0.01
     B = torch.randn(out_f, r, device=W0.device) * 0.01
@@ -180,7 +258,11 @@ def delta_fold_smoke(model_alias="llama7b", quantizer="aqlm2"):
     rel = float(delta.norm() / W0.norm())
     dtype0 = m.codes.dtype
     frac = fold_and_writeback_(m, delta, cfg, beam_size=5)
+
+    # Dequantize the module
     W1 = dequantize_module(m, cfg["nbits"]).float()
+
+    # Print the results
     moved = float((W1 - W0).norm() / W0.norm())
     print(f"  module={name} delta_rel={rel:.4f} codes_changed={100*frac:.2f}% "
           f"recon_moved={moved:.4f} codes_dtype={m.codes.dtype}")

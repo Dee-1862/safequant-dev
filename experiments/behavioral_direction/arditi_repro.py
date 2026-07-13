@@ -65,6 +65,30 @@ def refusal_rate(model, tok, prompts):
                for r in responses)
     return hits / len(prompts)
 
+def get_refusal_toks(tok):
+    """Token id(s) whose probability mass counts as 'refusal' for the logit metric.
+    Arditi uses model-specific refusal tokens (Llama3 = [40] = 'I';
+    paper_refs/refusal_direction/pipeline/model_utils/llama3_model.py:31). We
+    approximate with the tokenizer's id for 'I', the dominant refusal opener."""
+    ids = tok.encode("I", add_special_tokens=False)
+    return [ids[-1]] if ids else []
+
+def refusal_score_logit(model, tok, prompts, refusal_toks):
+    """Arditi's logit refusal-score, averaged over prompts:
+        log P(refusal_toks) - log(1 - P(refusal_toks))   at the last position.
+    Higher = more refusal. Faithful port of select_direction.refusal_score
+    (paper_refs/refusal_direction/pipeline/submodules/select_direction.py:17-31)."""
+    scores = []
+    for prompt in prompts:
+        ids = tok(chat_text(tok, prompt), return_tensors="pt",
+                  truncation=True, max_length=512).to(model.device)
+        with torch.no_grad():
+            logits = model(**ids).logits[0, -1].to(torch.float64)
+        probs = F.softmax(logits, dim=-1)
+        rp = probs[refusal_toks].sum()
+        scores.append(float(torch.log(rp + 1e-8) - torch.log(1.0 - rp + 1e-8)))
+    return float(np.mean(scores))
+
 # --- Hooks ------------------------------------------------------------------
 
 _hook_handles = []
@@ -158,19 +182,32 @@ def diff_in_means_candidates(acts_harmful, acts_harmless):
     rhat = r / np.clip(np.linalg.norm(r, axis=2, keepdims=True), 1e-8, None)
     return r, rhat
 
-def score_candidate(model, tok, r_layer, rhat_layer, layer, harmful_val, harmless_val):
+def score_candidate(model, tok, r_layer, rhat_layer, layer, harmful_val, harmless_val,
+                    metric="logit", refusal_toks=None):
+    # bypass: ablate the direction everywhere, measure residual refusal on harmful
+    #   prompts (lower = better bypass).
     install_direction_hook(model, rhat_layer, layer=None, mode="ablate")
-    bypass = refusal_rate(model, tok, harmful_val)     # lower = better
+    if metric == "logit":
+        bypass = refusal_score_logit(model, tok, harmful_val, refusal_toks)
+    else:
+        bypass = refusal_rate(model, tok, harmful_val)
     clear_hooks(model)
 
+    # induce: add the direction at this layer, measure refusal induced on harmless
+    #   prompts (must exceed 0). For the logit metric that is log-odds > 0, i.e.
+    #   P(refuse) > 0.5, matching Arditi's induce_refusal_threshold = 0.0.
     install_direction_hook(model, r_layer, layer=layer, mode="add")
-    induce = refusal_rate(model, tok, harmless_val)    # must be > 0
+    if metric == "logit":
+        induce = refusal_score_logit(model, tok, harmless_val, refusal_toks)
+    else:
+        induce = refusal_rate(model, tok, harmless_val)
     clear_hooks(model)
 
     kl = mean_kl_clean_vs_ablated(model, tok, rhat_layer, harmless_val)
     return float(bypass), float(induce), float(kl)
 
-def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers):
+def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
+                     metric="logit", refusal_toks=None):
     max_layer = int(LAYER_FRAC * n_layers)
     rows = []
     
@@ -179,12 +216,14 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers):
         for pos_idx in range(K_POSITIONS):
             print(f"\nEvaluating Layer {l}, Position {pos_idx - K_POSITIONS}:")
             b, i, k = score_candidate(
-                model, tok, 
-                r[l, pos_idx], 
-                rhat[l, pos_idx], 
+                model, tok,
+                r[l, pos_idx],
+                rhat[l, pos_idx],
                 l,
-                harmful_val, 
-                harmless_val
+                harmful_val,
+                harmless_val,
+                metric=metric,
+                refusal_toks=refusal_toks,
             )
             rows.append((l, pos_idx, b, i, k))
             print(f"  bypass={b:.3f}  induce={i:.3f}  kl={k:.3f}")
@@ -198,9 +237,10 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers):
     print(f"\nselected layer {winner[0]}, position {winner[1] - K_POSITIONS} (bypass={winner[2]:.3f})")
     return winner[0], winner[1], rows
 
-def run_cell(name, quantizer):
+def run_cell(name, quantizer, metric="logit"):
     torch.manual_seed(SEED); np.random.seed(SEED)
     model, tok, n_layers = load_model(name, quantizer)
+    refusal_toks = get_refusal_toks(tok) if metric == "logit" else None
 
     h_all  = load_harmful_train(N_TRAIN + N_SELECT)
     harmful_tr,  harmful_val  = h_all[:N_TRAIN],  h_all[N_TRAIN:N_TRAIN + N_SELECT]
@@ -214,7 +254,8 @@ def run_cell(name, quantizer):
 
     print(f"[{name}/{quantizer}] selecting behavioral direction (|I|xL search) ...")
     layer, pos_idx, rows = select_direction(model, tok, r, rhat,
-                                            harmful_val, harmless_val, n_layers)
+                                            harmful_val, harmless_val, n_layers,
+                                            metric=metric, refusal_toks=refusal_toks)
 
     baseline = harmbench_asr(model, tok, harmful_eval) * 100
     if layer is None:
@@ -250,12 +291,19 @@ if __name__ == "__main__":
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="fp32",
                     help="run BOTH fp32 and aqlm2 and read the contrast")
+    ap.add_argument("--selection_metric", choices=["logit", "substring"], default="logit",
+                    help="direction-selection objective. 'logit' = Arditi's logit "
+                         "refusal-score (faithful, primary; canonical output). "
+                         "'substring' = legacy generation+substring proxy, kept for the "
+                         "both-ways robustness comparison (writes a _substring variant).")
     args = ap.parse_args()
-    data = run_cell(args.model, args.quantizer)
+    data = run_cell(args.model, args.quantizer, metric=args.selection_metric)
     cfg = RunConfig(
         model=args.model,
         quantizer=args.quantizer,
-        extra={"n_train": N_TRAIN, "n_select": N_SELECT, "n_eval": N_EVAL, "kl_max": KL_MAX},
+        variant=(None if args.selection_metric == "logit" else args.selection_metric),
+        extra={"n_train": N_TRAIN, "n_select": N_SELECT, "n_eval": N_EVAL,
+               "kl_max": KL_MAX, "selection_metric": args.selection_metric},
     )
     path = save_result(_SCRIPT, cfg, data)
     print(f"[saved] {path}")

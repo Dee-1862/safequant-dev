@@ -1,25 +1,3 @@
-"""
-qresafe_dpo.py -- Q-Resafe masked LoRA-DPO repair, end to end, on one mask
-condition {read, write, full}. Built only after the round-trip bridge gate
-(job 41384451) went green, so a folded null is not bridge-ambiguous.
-
-Pipeline (per mask):
-  load AQLM-2 cell -> attach_masked_lora(mask, r=128, a=256) -> manual DPO
-  (beta=0.01, lr=5e-6) on the 231 WJ displacement pairs (yw=FP refusal,
-  yl=quantized harmful completion) -> EVAL the FP+LoRA model -> fold the LoRA
-  delta into the 2-bit codes (fold_and_writeback_, codes-only, bit width
-  preserved) -> UNWRAP the adapter -> EVAL the folded pure-2-bit model.
-
-Three pre-registered branches (report whichever lands; do NOT assume the win):
-  (1) FOLD-SURVIVAL  folded recovers ~ FP+LoRA  -> deployable repair at fixed bits
-      FP+LoRA recovers but folded does NOT      -> sub-granularity limit (publishable)
-  (2) LOCALIZATION   read >= full > write recovery -> read-side is the repair locus
-  (3) OVER-REFUSAL   XSTest(folded) ~ FP            -> genuine refusal, not over-refusal
-Live signal: mean codes-changed fraction from the fold (0 => delta snapped away).
-
-Usage:  python -m diagnostics.qresafe_dpo --mask read --n_eval 400
-"""
-
 import sys
 import json
 import argparse
@@ -148,16 +126,27 @@ def main():
     ap.add_argument("--mask", required=True, choices=["read", "write", "full"])
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="aqlm2")
+    # Official Q-Resafe llama7b recipe (paper_refs/Qresafe/quant-with-ft/configs/
+    # llama7b.yaml): r=128, alpha=128, beta=0.01, lr=5e-7, epochs=1. These are the
+    # DEFAULTS; override to sweep and show how recovery increases/decreases. Pair a
+    # sweep with --tag so each point writes its own output file.
     ap.add_argument("--r", type=int, default=128)
-    ap.add_argument("--alpha", type=float, default=256.0)
+    ap.add_argument("--alpha", type=float, default=128.0,
+                    help="LoRA alpha (official 128; our earlier runs used 256 = 2x scaling)")
     ap.add_argument("--beta", type=float, default=0.01)
-    ap.add_argument("--lr", type=float, default=5e-6)
-    ap.add_argument("--epochs", type=int, default=3)
+    ap.add_argument("--lr", type=float, default=5e-7,
+                    help="DPO learning rate (official 5e-7; our earlier runs used 5e-6 = 10x)")
+    ap.add_argument("--epochs", type=int, default=1,
+                    help="DPO epochs (official 1; our earlier runs used 3)")
     ap.add_argument("--n_eval", type=int, default=400)
     ap.add_argument("--n_arc", type=int, default=100)
     ap.add_argument("--pairs_file", default=None,
                     help="displacement pairs JSON (default: qresafe_pairs_<model>_<quant>_wj.json)")
     ap.add_argument("--output", default=None)
+    ap.add_argument("--tag", default=None,
+                    help="suffix appended to the output variant so hyperparameter-sweep "
+                         "points do not overwrite each other, e.g. --tag lr5e-6 writes "
+                         "outputs/trained_repair/qresafe_dpo_<model>_<quant>_<mask>_lr5e-6.json")
     ap.add_argument("--opt8bit", action="store_true", default=False,
                     help="use 8-bit AdamW (bitsandbytes) to fit large rank (e.g. r=2048)")
     ap.add_argument("--save_adapter", action="store_true", default=False,
@@ -241,7 +230,7 @@ def main():
     run_cfg = RunConfig(
         model=args.model,
         quantizer=args.quantizer,
-        variant=args.mask,
+        variant=(f"{args.mask}_{args.tag}" if args.tag else args.mask),
         extra={
             "r": args.r,
             "alpha": args.alpha,

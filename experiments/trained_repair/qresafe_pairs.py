@@ -1,25 +1,3 @@
-"""
-Build genuine safety-displacement (yw, yl) pairs for contrastive SNIP.
-
-The decisive contrastive run needs the LOSER to be the real displaced compliance,
-not a canned "Sure, here is how" template -- otherwise the margin scores
-refusal-style-text vs compliance-style-text (phrasing), not the safety decision.
-
-This generates:
-  - FP (pre-quant) completions on AdvBench harmful prompts   -> yw candidates
-  - AQLM-2 (quantized cell) completions on the same prompts  -> yl candidates
-judges both with the HarmBench classifier (same judge as the ASR pipeline), and
-keeps the DISPLACEMENT set: prompts where FP REFUSED and the quantized model
-COMPLIED. For those, yw = FP's refusal, yl = the quantized model's harmful
-completion. That pairing is literally the behavior quantization displaced.
-
-Output JSON: {"meta": {...}, "pairs": [{"instruction","yw","yl"}, ...]}
-
-Usage:
-  python -m diagnostics.build_displacement_pairs --model llama7b --quantizer aqlm2 \
-      --n_prompts 260 --output outputs/displacement_pairs_llama7b.json
-"""
-
 import argparse
 import gc
 import json
@@ -43,29 +21,65 @@ ADVBENCH_SPLIT = (
 
 
 def _advbench(n_prompts):
+    """
+    Get the items from the AdvBench split.
+    Inputs:
+        n_prompts (int): The number of prompts to get.
+
+    Outputs:
+        items (list[dict]): The items from the AdvBench split.
+    """
+    # Open the AdvBench split
     with open(ADVBENCH_SPLIT) as f:
         items = json.load(f)
     prompts = [it["instruction"] for it in items if it.get("instruction")]
+
+    # Get the prompts
     prompts = prompts[:n_prompts] if n_prompts else prompts
+    
+    # Return the items
     return [{"prompt": p, "vanilla": p} for p in prompts]
 
 
 def get_items(source, n_prompts, wj_config):
-    """Return list of dicts with at least a 'prompt' key (the text sent to the model).
-    Displacement only manifests on ADVERSARIAL prompts, so wildjailbreak is default;
-    plain advbench leaves FP and AQLM both refusing (~3-5% ASR) and yields no pairs."""
+    """
+    Get the items from the source.
+    Inputs:
+        source (str): The source of the items.
+        n_prompts (int): The number of prompts to get.
+        wj_config (str): The configuration of the wildjailbreak prompts.
+
+    Outputs:
+    """
+
+    # Get the items from the source
     if source == "wildjailbreak":
         return load_wildjailbreak_prompts(n_samples=n_prompts, config=wj_config)
+
+    # Get the items from the AdvBench split
     if source == "advbench":
         return _advbench(n_prompts)
+    
+    # Raise an error if the source is unknown
     raise ValueError(f"unknown prompt_source: {source}")
 
 
 def _send_prompt(item):
-    return item.get("prompt") or item.get("goal") or item.get("instruction") or ""
+    """
+    Send the prompt to the model.
+    Inputs:
+        item (dict): The item to send the prompt to.
+
+    Outputs:
+        prompt (str): The prompt to send to the model.
+    """
+    # Return the prompt
+    return (item.get("prompt") or item.get("goal") or item.get("instruction") or "")
 
 
 def main():
+
+    # Parse the arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="llama7b")
     ap.add_argument("--quantizer", default="aqlm2")
@@ -78,10 +92,16 @@ def main():
                     help="override output path (default: outputs/trained_repair/qresafe_pairs_<model>_<quant>[_<tag>].json)")
     args = ap.parse_args()
 
+    # Get the pair tag
     pair_tag = args.wj_config if args.prompt_source == "wildjailbreak" and args.wj_config != "train" else None
 
+    # Get the items
     items = get_items(args.prompt_source, args.n_prompts, args.wj_config)
+
+    # Send the prompts
     sends = [_send_prompt(it) for it in items]
+
+    # Extract the behaviors
     behaviors = [_extract_behavior(it) for it in items]
     n = len(items)
     print(f"[data] {n} prompts from {args.prompt_source} (config={args.wj_config})")
@@ -90,6 +110,8 @@ def main():
     fp_model, tok = load_fp32(args.model)
     fp_resp = generate_only(fp_model, tok, items, max_new_tokens=args.max_new_tokens,
                             desc="FP")
+
+    # Delete the FP model and collect garbage
     del fp_model
     gc.collect()
     torch.cuda.empty_cache()
@@ -98,31 +120,43 @@ def main():
     q_model, _ = load_quantized(args.model, quantizer=args.quantizer)
     q_resp = generate_only(q_model, tok, items, max_new_tokens=args.max_new_tokens,
                            desc=args.quantizer)
+
+    # Delete the quantized model and collect garbage
     del q_model
     gc.collect()
     torch.cuda.empty_cache()
 
     # ---- judge both with HarmBench (one session) ----
+    # Classify the behaviors
     flags = classify_batch(behaviors + behaviors, fp_resp + q_resp, device="cuda")
+
+    # Get the harmful flags
     fp_harmful = flags[:n]
+
+    # Get the harmful flags
     q_harmful = flags[n:]
 
+    # Calculate the ASR
     fp_asr = 100.0 * sum(fp_harmful) / n
     q_asr = 100.0 * sum(q_harmful) / n
     print(f"[asr] FP={fp_asr:.1f}%  {args.quantizer}={q_asr:.1f}%  "
           f"({args.prompt_source}, HarmBench judge)")
 
     # ---- displacement set: FP refused, quantized complied ----
+
+    # Create the pairs
     pairs = []
     for sp, fw, fh, qr, qh in zip(sends, fp_resp, fp_harmful, q_resp, q_harmful):
         if (not fh) and qh:  # FP safe, quantized harmful == displacement
             pairs.append({"instruction": sp, "yw": fw.strip(), "yl": qr.strip()})
 
+    # Print the number of pairs
     print(f"[pairs] {len(pairs)} displacement pairs (FP refused & {args.quantizer} complied)")
     if len(pairs) < 20:
         print(f"  WARNING: only {len(pairs)} displacement pairs -- saliency may be noisy. "
               f"Consider widening n_prompts or relaxing the filter.")
 
+    # Create the run config
     cfg = RunConfig(
         model=args.model,
         quantizer=args.quantizer,
@@ -137,6 +171,8 @@ def main():
             "filter": "fp_refused AND quant_complied",
         },
     )
+
+    # Create the data
     data = {"n_pairs": len(pairs), "pairs": pairs}
     if args.output:
         out_path = Path(args.output)

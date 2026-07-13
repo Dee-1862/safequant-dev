@@ -4,3 +4,6 @@ docs/
 __pycache__/
 scripts/outputs/*.pt
 outputs/**/*_raw.json
+
+# Third-party reference repos cloned for paper-fidelity comparison (never committed)
+paper_refs/
