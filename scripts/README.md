@@ -17,6 +17,7 @@ scripts/
   _env.sh                 # shared Bridges-2 env (sourced by every job)
   setup_env.sh            # one-time login-node bootstrap
   logs/                   # Slurm stdout/stderr
+  tests/                  # smoke jobs — run these before the full grid
   signal_geometry/        # Table 1
   behavioral_direction/   # Sec. 5 Arditi
   regime_sweep/           # Table 2
@@ -32,7 +33,21 @@ scripts/
 bash scripts/setup_env.sh
 ```
 
-## Submit examples
+## Smoke before scaling
+
+Do **not** mass-submit multi-model jobs until the smoke chain is green. Details: [`scripts/tests/README.md`](tests/README.md).
+
+```bash
+cd /jet/home/bhoomire/projects/safequant_v2
+pytest tests/ -v                                          # login node
+bash scripts/tests/submit_smoke.sh                        # env → llama+phi → pairs
+# or one at a time:
+sbatch scripts/tests/00_env_check.sbatch
+sbatch scripts/tests/01_smoke_llama_aqlm2.sbatch
+sbatch scripts/tests/03_smoke_phi3_aqlm2.sbatch
+```
+
+## Submit examples (full paper runs)
 
 ```bash
 # From the Jet checkout
