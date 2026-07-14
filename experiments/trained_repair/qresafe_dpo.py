@@ -12,6 +12,7 @@ from core.evaluation import generate_only, classify_batch, _extract_behavior, ev
 from core.manifest import RunConfig, find_result, result_path, save_result
 from core.model_loader import load_quantized
 from core.restoration import measure_arc
+from core.seeds import set_global_seed, DEFAULT_SEED
 from experiments.trained_repair.qresafe_fold import quant_cfg, fold_and_writeback_, dequantize_module
 from experiments.trained_repair.qresafe_repair import attach_masked_lora, set_lora_enabled, unwrap_lora
 
@@ -233,17 +234,12 @@ def main():
                     help = "use 8-bit AdamW (bitsandbytes) to fit large rank (e.g. r=2048)")
     ap.add_argument("--save_adapter", action = "store_true", default = False,
                     help = "save the large LoRA adapter .pt (off by default; only for re-folding)")
-    ap.add_argument("--seed", type = int, default = 0,
+    ap.add_argument("--seed", type = int, default = DEFAULT_SEED,
                     help = "global RNG seed for reproducible LoRA init + DPO training")
     args = ap.parse_args()
 
     # Seed every RNG before LoRA init and DPO
-    import random as _random
-    import numpy as _np
-    _random.seed(args.seed)
-    _np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
+    set_global_seed(args.seed)
     print(f"[seed] global seed = {args.seed}")
 
     # Resolve displacement pairs path

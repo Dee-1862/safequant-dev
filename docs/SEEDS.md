@@ -32,7 +32,6 @@ Implication: changing the global Python RNG state elsewhere in the codebase does
 
 Every diagnostic script calls `set_global_seed(DEFAULT_SEED)` near the top. This sets:
 
-- `PYTHONHASHSEED` (for dict/set ordering)
 - Python's `random` module
 - NumPy's global RNG
 - PyTorch CPU RNG

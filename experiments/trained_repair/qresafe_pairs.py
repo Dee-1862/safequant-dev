@@ -10,6 +10,7 @@ from core.datasets import load_wildjailbreak_prompts
 from core.evaluation import generate_only, classify_batch, _extract_behavior
 from core.manifest import RunConfig, save_result
 from core.model_loader import load_fp32, load_quantized
+from core.seeds import set_global_seed, DEFAULT_SEED
 
 _SCRIPT = Path(__file__)
 
@@ -86,6 +87,8 @@ def main():
     ap.add_argument("--output", default = None,
                     help = "override output path (default: outputs/trained_repair/qresafe_pairs_<model>_<quant>[_<tag>].json)")
     args = ap.parse_args()
+
+    set_global_seed(DEFAULT_SEED)
 
     # Variant tag for non-default WildJailbreak splits
     pair_tag = args.wj_config if args.prompt_source == "wildjailbreak" and args.wj_config != "train" else None

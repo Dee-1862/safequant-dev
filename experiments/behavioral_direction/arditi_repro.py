@@ -16,6 +16,7 @@ from core.evaluation import (
 )
 from core.manifest import RunConfig, save_result
 from core.residuals import get_inner, prompt_text
+from core.seeds import set_global_seed, DEFAULT_SEED
 
 _SCRIPT = Path(__file__)
 K_POSITIONS = 5      # last K post-instruction token positions (Arditi uses len(eoi_toks))
@@ -25,7 +26,7 @@ N_EVAL = 200         # final HarmBench eval, matches your 62.5 baseline
 KL_MAX = 0.10        # Chhabra App. B threshold; TUNE on a few dirs first
 KL_SUBSET = 16       # harmless prompts used for the KL estimate (cost control)
 LAYER_FRAC = 0.80    # restrict source layer to l < 0.8L (Chhabra App. B)
-SEED = 42
+SEED = set_global_seed(DEFAULT_SEED)
 
 _hook_handles = []
 
@@ -377,9 +378,8 @@ def run_cell(name, quantizer):
     Outputs:
         - data (dict): Baseline/ablated ASR and selection metadata
     """
-    # Seed and load model + refusal tokens
-    torch.manual_seed(SEED)
-    np.random.seed(SEED)
+    # Re-seed each cell so multi-model loops stay comparable
+    set_global_seed(SEED)
     model, tok, n_layers = load_model(name, quantizer)
     refusal_toks = get_refusal_toks(tok)
 
