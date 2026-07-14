@@ -1,4 +1,4 @@
-"""Experiment manifest and self-enforcing output mirror paths."""
+# Experiment manifest and self-enforcing output mirror paths.
 
 from __future__ import annotations
 
@@ -31,62 +31,69 @@ class RunConfig:
     variant: str | None = None
     output_stem: str | None = None
     omit_quantizer: bool = False
-    extra: dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory = dict)
 
     def __post_init__(self):
         """
-        Initialize the RunConfig.
+        Map short CLI model aliases onto canonical model ids.
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            None
+            - None
         """
-        # Initialize the model
+        # Resolve short aliases (llama -> llama7b) when present
         self.model = MODEL_ALIASES.get(self.model, self.model)
 
-    def filename_model(self) -> str:
+    def filename_model(self):
         """
-        Get the filename model.
+        Short model token used in output JSON filenames.
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            filename_model (str): The filename model.
+            - short (str): Filename model token
         """
-        # Get the filename model
+        # Fall back to the full model id when no short token is registered
         return FILENAME_MODEL.get(self.model, self.model)
 
-    def to_dict(self) -> dict:
+    def to_dict(self):
         """
-        Convert the RunConfig to a dictionary.
+        Serialize the config, dropping empty optional fields.
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            d (dict): The dictionary.
+            - d (dict): Manifest-ready dictionary
         """
-        # Convert the RunConfig to a dictionary
+        # Convert the dataclass to a plain dict
         d = asdict(self)
 
-        # loop through the keys and pop the ones that are not in the dictionary
+        # Drop unset optional keys so manifests stay compact
         for k in ("variant", "output_stem", "omit_quantizer"):
             if not d.get(k):
                 d.pop(k, None)
         return d
 
 
-def _git_sha() -> str | None:
+def _git_sha():
     """
-    Get the git SHA.
+    Resolve the current repository HEAD SHA, or None if unavailable.
+
     Inputs:
-        None
+        - None
+
     Outputs:
-        git_sha (str): The git SHA.
+        - git_sha (str | None): Current HEAD, or None
     """
-    # Get the git SHA
+    # Ask git for HEAD; tolerate missing git or non-repo checkouts
     try:
-        # Check the output of the git command
         return (
             subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+                ["git", "rev-parse", "HEAD"], stderr = subprocess.DEVNULL
             )
             .decode()
             .strip()
@@ -95,109 +102,124 @@ def _git_sha() -> str | None:
         return None
 
 
-def _build_stem(calling_file: Path, cfg: RunConfig) -> str:
+def _build_stem(calling_file, cfg):
     """
-    Build the stem.
+    Build the basename stem for a result JSON filename.
+
     Inputs:
-        calling_file (Path): The calling file.
-        cfg (RunConfig): The run config.
+        - calling_file (Path): Experiment script path
+        - cfg (RunConfig): Run configuration
+
     Outputs:
-        stem (str): The stem.
+        - name (str): Stem without directory or .json suffix
     """
-    # Build the stem
+    # Prefer an explicit output_stem when the script requests a custom name
+    stem = cfg.output_stem or Path(calling_file).stem
     parts = [stem, cfg.filename_model()]
 
-    # Add the quantizer if it is not omitted
+    # Include quantizer unless the experiment opts out (e.g. fp32-only)
     if not cfg.omit_quantizer:
         parts.append(cfg.quantizer)
     name = "_".join(parts)
 
-    # Add the variant if it is not None
+    # Append variant suffix when present (read, L11-22, etc.)
     if cfg.variant:
         name += f"_{cfg.variant}"
     return name
 
 
-def result_path(calling_file: Path | str, cfg: RunConfig) -> Path:
+def result_path(calling_file, cfg):
     """
     Derive outputs/<experiment_folder>/<stem>_<model>_<quant>[_variant].json.
+
     Inputs:
-        calling_file (Path): The calling file.
-        cfg (RunConfig): The run config.
+        - calling_file (Path | str): Experiment script path
+        - cfg (RunConfig): Run configuration
+
     Outputs:
-        path (Path): The path.
+        - path (Path): Canonical result JSON path
     """
-    # Derive the result path
+    # Mirror the claim folder name under outputs/
     calling_file = Path(calling_file)
     exp_dir = calling_file.parent.name
     return Path("outputs") / exp_dir / f"{_build_stem(calling_file, cfg)}.json"
 
 
-def legacy_result_path(calling_file: Path | str, cfg: RunConfig) -> Path:
+def legacy_result_path(calling_file, cfg):
     """
     Pre-short-name layout: long model id and script stem (no output_stem).
+
     Inputs:
-        calling_file (Path): The calling file.
-        cfg (RunConfig): The run config.
+        - calling_file (Path | str): Experiment script path
+        - cfg (RunConfig): Run configuration
+
     Outputs:
-        path (Path): The path.
+        - path (Path): Legacy result JSON path
     """
-    # Derive the legacy result path
+    # Rebuild the older naming scheme for find_result fall-backs
     calling_file = Path(calling_file)
     exp_dir = calling_file.parent.name
     parts = [calling_file.stem, cfg.model]
 
-    # Add the quantizer if it is not omitted
+    # Include quantizer unless the experiment opts out
     if not cfg.omit_quantizer:
         parts.append(cfg.quantizer)
     name = "_".join(parts)
 
-    # Add the variant if it is not None
+    # Append variant suffix when present
     if cfg.variant:
         name += f"_{cfg.variant}"
     return Path("outputs") / exp_dir / f"{name}.json"
 
 
-def find_result(calling_file: Path | str, cfg: RunConfig) -> Path | None:
-    """Return first existing path among current and legacy naming schemes."""
+def find_result(calling_file, cfg):
+    """
+    Return the first existing path among current and legacy naming schemes.
+
+    Inputs:
+        - calling_file (Path | str): Experiment script path
+        - cfg (RunConfig): Run configuration
+
+    Outputs:
+        - path (Path | None): Existing result file, or None
+    """
+    # Prefer the current short-name layout, then the legacy folder layout
     for builder in (result_path, legacy_result_path):
         path = builder(calling_file, cfg)
         if path.exists():
             return path
+
+    # Last fall-back: flat pre-mirror name still under outputs/
     flat_legacy = Path("outputs") / legacy_result_path(calling_file, cfg).name
     if flat_legacy.exists():
         return flat_legacy
     return None
 
 
-def save_result(
-    calling_file: Path | str,
-    cfg: RunConfig,
-    data: dict,
-    *,
-    raw: bool = False,
-) -> Path:
+def save_result(calling_file, cfg, data, raw = False):
     """
-    Save the result.
+    Write a result JSON with an embedded run manifest and git SHA.
+
     Inputs:
-        calling_file (Path): The calling file.
-        cfg (RunConfig): The run config.
-        data (dict): The data to save.
-        raw (bool): Whether to save the raw data.
+        - calling_file (Path | str): Experiment script path
+        - cfg (RunConfig): Run configuration
+        - data (dict): Experiment payload to merge into the JSON
+        - raw (bool): If True, write a *_raw.json sidecar instead
+
     Outputs:
-        path (Path): The path.
+        - path (Path): Path of the written JSON file
     """
-    # Save the result
+    # Resolve the canonical output path for this script + config
     path = result_path(calling_file, cfg)
 
-    # Add the raw suffix if it is not omitted
+    # Raw sidecars keep large dumps out of the primary artifact name
     if raw:
         path = path.with_name(path.stem + "_raw" + path.suffix)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents = True, exist_ok = True)
     payload = {
         "manifest": {**cfg.to_dict(), **cfg.extra},
         "git_sha": _git_sha(),
         **data,
     }
-    path.write_text(json.dumps(payload, indent=2, default=str))
+    path.write_text(json.dumps(payload, indent = 2, default = str))
     return path

@@ -1,6 +1,4 @@
-"""
-Quant-domain low-rank repair (LR-QAT) for SafeQuant v2.
-"""
+# Quant-domain low-rank repair (LR-QAT) for SafeQuant v2.
 
 import math
 
@@ -16,10 +14,30 @@ from core.residuals import get_inner
 class _RoundSTE(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
+        """
+        Round tensor to nearest integer (STE forward).
+
+        Inputs:
+            - ctx: Autograd context (unused)
+            - x (torch.Tensor): Real-valued tensor
+
+        Outputs:
+            - y (torch.Tensor): Rounded tensor
+        """
         return torch.round(x)
 
     @staticmethod
     def backward(ctx, grad_output):
+        """
+        Straight-through backward: pass gradient unchanged.
+
+        Inputs:
+            - ctx: Autograd context (unused)
+            - grad_output (torch.Tensor): Upstream gradient
+
+        Outputs:
+            - grad_input (torch.Tensor): Same as grad_output
+        """
         return grad_output
 
 
@@ -27,55 +45,48 @@ round_ste = _RoundSTE.apply
 
 
 # -- symmetric group-wise integer PTQ -----------------------------------------
-def symmetric_int_ptq(weight, n_bits, group_size=128, eps=1e-8):
+def symmetric_int_ptq(weight, n_bits, group_size = 128, eps = 1e-8):
     """
     Group-wise symmetric signed INT-b post-training quantization.
 
     Inputs:
-        weight (torch.Tensor): The weight to quantize.
-        n_bits (int): The number of bits to quantize the weight to.
-        group_size (int): The size of the group to quantize the weight to.
-        eps (float): The epsilon to use for the quantization.
+        - weight (torch.Tensor): Dense weight to quantize
+        - n_bits (int): Integer bitwidth
+        - group_size (int): Group size along in_features (or full row if invalid)
+        - eps (float): Floor for absmax scale
 
     Outputs:
-        W_int (torch.Tensor): The quantized weight.
-        scale (torch.Tensor): The scale of the quantized weight.
+        - W_int (torch.Tensor): Integer codes
+        - scale (torch.Tensor): Per-group scales [out, n_groups]
+        - qmin (int): Minimum representable integer
+        - qmax (int): Maximum representable integer
+        - group_size (int): Effective group size used
     """
-    # Initialize the variables
-    qmax = 2 ** (n_bits - 1) - 1  # b=2 -> 1
-    qmin = -(2 ** (n_bits - 1))  # b=2 -> -2
+    # Signed integer range for n_bits
+    qmax = 2 ** (n_bits - 1) - 1
+    qmin = -(2 ** (n_bits - 1))
 
-    # Get the shape of the weight
+    # Materialize float weight and shape
     w = weight.detach().float()
     out_f, in_f = w.shape
 
-    # Check if the group size is valid
+    # Fall back to whole-row groups when group_size is unset or too large
     if group_size is None or group_size <= 0 or group_size >= in_f:
         group_size = in_f
-
-    # Check if the group size is divisible by the number of input features
     if in_f % group_size != 0:
         raise ValueError(f"in_features={in_f} not divisible by group_size={group_size}")
     n_groups = in_f // group_size
 
-    # View the weight as a tensor of shape [out, n_groups, group_size]
+    # Per-group absmax scales and rounded codes
     wg = w.view(out_f, n_groups, group_size)
-    amax = wg.abs().amax(dim=2, keepdim=True).clamp_min(eps)  # [out, n_groups, 1]
-
-    # Compute the scale of the quantized weight and the quantized weight
-    scale_g = amax / max(qmax, 1)  # symmetric
+    amax = wg.abs().amax(dim = 2, keepdim = True).clamp_min(eps)
+    scale_g = amax / max(qmax, 1)
     W_int = torch.clamp(torch.round(wg / scale_g), qmin, qmax).view(out_f, in_f)
     scale = scale_g.squeeze(2).to(torch.float32)
-
-    # Return the quantized weight, the scale, the minimum and maximum values, and the group size
     return W_int, scale, qmin, qmax, group_size
 
 
 class LRQATLinear(nn.Module):
-    """
-    Linear layer whose weight is a frozen INT-b grid plus a trainable integer-domain low-rank adapter (LR-QAT, W_int variant).
-    """
-
     def __init__(
         self,
         weight_fp,
@@ -84,61 +95,56 @@ class LRQATLinear(nn.Module):
         rank,
         alpha,
         device,
-        compute_dtype=torch.float16,
-        group_size=128,
+        compute_dtype = torch.float16,
+        group_size = 128,
     ):
-    """
-    Initialize the LRQATLinear module.
-    Inputs:
-        weight_fp (torch.Tensor): The weight to quantize.
-        bias (torch.Tensor): The bias to use for the linear layer.
-        n_bits (int): The number of bits to quantize the weight to.
-        rank (int): The rank of the low-rank adapter.
-        alpha (float): The scaling factor for the low-rank adapter.
-        device (torch.device): The device to use for the linear layer.
-        compute_dtype (torch.dtype): The dtype to use for the linear layer.
-        group_size (int): The size of the group to quantize the weight to.
-    """
-    # Initialize the module
+        """
+        Build an INT-b grid linear plus trainable integer-domain low-rank adapter.
+
+        Inputs:
+            - weight_fp (torch.Tensor): Dense FP weight to quantize
+            - bias (torch.Tensor | None): Optional bias
+            - n_bits (int): Integer bitwidth
+            - rank (int): LoRA rank
+            - alpha (float): LoRA alpha (scaling = alpha / rank)
+            - device (torch.device): Parameter device
+            - compute_dtype (torch.dtype): Bias / compute dtype
+            - group_size (int): Group size for symmetric PTQ
+
+        Outputs:
+            - None
+        """
         super().__init__()
 
-        # Get the shape of the weight
+        # Shape bookkeeping
         out_f, in_f = weight_fp.shape
-
-        # Initialize the variables
         self.in_features = in_f
         self.out_features = out_f
         self.n_bits = int(n_bits)
         self.rank = int(rank)
         self.lora_scaling = float(alpha) / float(rank)
 
-        # Quantize the weight
+        # Freeze a group-wise integer grid from the FP weight
         W_int, scale, qmin, qmax, gs = symmetric_int_ptq(
-            weight_fp, n_bits, group_size=group_size
+            weight_fp, n_bits, group_size = group_size
         )
-
-        # Initialize the group size
         self.group_size = int(gs)
         self.n_groups = in_f // self.group_size
-
-        # Frozen integer codes + group-wise scale (buffers: saved, not trained).
         self.register_buffer("W_int", W_int.to(device))
-        self.register_buffer("scale", scale.to(device))  # [out, n_groups]
-
-        # Initialize the minimum and maximum values
+        self.register_buffer("scale", scale.to(device))
         self.qmin = int(qmin)
         self.qmax = int(qmax)
 
-        # Trainable low-rank adapter, kept in fp32 for stable optimisation.
+        # Trainable low-rank adapter in fp32
         self.lora_A = nn.Parameter(
-            torch.zeros(out_f, self.rank, device=device, dtype=torch.float32)
+            torch.zeros(out_f, self.rank, device = device, dtype = torch.float32)
         )
         self.lora_Bt = nn.Parameter(
-            torch.empty(self.rank, in_f, device=device, dtype=torch.float32)
+            torch.empty(self.rank, in_f, device = device, dtype = torch.float32)
         )
-        nn.init.kaiming_uniform_(self.lora_Bt, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_Bt, a = math.sqrt(5))
 
-        # Initialize the bias
+        # Optional bias buffer
         if bias is not None:
             self.register_buffer("bias", bias.detach().to(device).to(compute_dtype))
         else:
@@ -146,117 +152,123 @@ class LRQATLinear(nn.Module):
 
         self.merged = False
 
-    # -- weight construction --------------------------------------------------
     def _delta(self):
         """
-        Compute the delta of the low-rank adapter.
+        Compute the scaled low-rank adapter delta in integer space.
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            delta (torch.Tensor): The delta of the low-rank adapter.
+            - delta (torch.Tensor): (lora_A @ lora_Bt) * scaling
         """
-        # Compute the delta of the low-rank adapter
         return (self.lora_A @ self.lora_Bt) * self.lora_scaling
 
     def _scale_full(self):
         """
-        Expand group-wise scale [out, n_groups] -> [out, in].
+        Expand group-wise scale [out, n_groups] to [out, in].
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            scale (torch.Tensor): The expanded scale.
+            - scale (torch.Tensor): Broadcastable / expanded scale
         """
-        # Expand the scale
         if self.group_size >= self.in_features:
-            return self.scale  # already [out, 1] broadcastable
-        return self.scale.repeat_interleave(self.group_size, dim=1)
+            return self.scale
+        return self.scale.repeat_interleave(self.group_size, dim = 1)
 
     def _w_hat(self):
         """
         Differentiable repaired weight (un-merged path).
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            w_hat (torch.Tensor): The repaired weight.
+            - w_hat (torch.Tensor): scale * clamp(W_int + round_ste(delta))
         """
-        # Compute the repaired weight
-        W_int_hat = torch.clamp(self.W_int + round_ste(self._delta()), self.qmin, self.qmax)
+        W_int_hat = torch.clamp(
+            self.W_int + round_ste(self._delta()), self.qmin, self.qmax
+        )
         return self._scale_full() * W_int_hat
 
     def forward(self, x):
         """
-        Forward pass.
+        Apply the (merged or repaired) quantized linear to x.
+
         Inputs:
-            x (torch.Tensor): The input tensor.
+            - x (torch.Tensor): Input activations
+
         Outputs:
-            y (torch.Tensor): The output tensor.
+            - y (torch.Tensor): Linear output
         """
-        # Compute the weight
+        # Merged path uses frozen codes only
         if self.merged:
             weight = (self._scale_full() * self.W_int).to(x.dtype)
         else:
             weight = self._w_hat().to(x.dtype)
-
-        # Compute the bias
         bias = self.bias.to(x.dtype) if self.bias is not None else None
         return F.linear(x, weight, bias)
 
-    # -- fuse / requantize ----------------------------------------------------
     @torch.no_grad()
     def merge_and_requantize(self):
         """
-        Fold the trained adapter into the integer grid (LR-QAT lr_qat_int merge)
+        Fold the trained adapter into the integer grid (LR-QAT merge).
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            None
+            - None
         """
-        # Check if the adapter is already merged
+        # No-op if already merged
         if self.merged:
             return
 
-        # Compute the delta and fuse the adapter into the integer grid
+        # Fuse rounded delta into W_int and clear the adapter
         C = self._delta()
         W_int_fused = torch.clamp(self.W_int + torch.round(C), self.qmin, self.qmax)
         self.W_int.copy_(W_int_fused)
-
-        # Zero the adapter so any later forward is pure INT-b regardless of path
         self.lora_A.data.zero_()
         self.merged = True
 
-    # -- bit accounting -------------------------------------------------------
     def effective_bits(self):
-        """Effective storage bits/weight for THIS matrix once fused: n_bits per code + one fp16 scale per group. For INT2 with group_size=128 this is 2 + 16/128 = 2.125 bits.
-        Inputs:
-            None
-        Outputs:
-            effective_bits (float): The effective storage bits/weight.
         """
-        # Compute the effective storage bits/weight
+        Effective storage bits/weight once fused (codes + fp16 scales).
+
+        Inputs:
+            - None
+
+        Outputs:
+            - effective_bits (float): Mean bits per weight element
+        """
         numel = self.W_int.numel()
         scale_bits = 16 * self.scale.numel()
         return (self.n_bits * numel + scale_bits) / numel
 
     def trainable_parameters(self):
         """
-        Get the trainable parameters.
+        Return the trainable low-rank adapter parameters.
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            trainable_parameters (list[torch.Tensor]): The trainable parameters.
+            - params (list): [lora_A, lora_Bt]
         """
-        # Get the trainable parameters
         return [self.lora_A, self.lora_Bt]
 
     def extra_repr(self):
         """
-        Get the extra representation.
+        Compact string for Module printing.
+
         Inputs:
-            None
+            - None
+
         Outputs:
-            extra_repr (str): The extra representation.
+            - extra_repr (str): Summary of shapes and hyperparams
         """
-        # Get the extra representation
         return (
             f"in={self.in_features}, out={self.out_features}, "
             f"n_bits={self.n_bits}, group_size={self.group_size}, "
@@ -268,14 +280,15 @@ class LRQATLinear(nn.Module):
 # -- module tree helpers (kept local so core/ has no diagnostics dependency) ---
 def _get_submodule(layer, dotted):
     """
-    Get the submodule.
+    Resolve a dotted submodule path under a layer.
+
     Inputs:
-        layer (torch.nn.Module): The layer to get the submodule from.
-        dotted (str): The dotted path to the submodule.
+        - layer (torch.nn.Module): Parent module
+        - dotted (str): Dotted attribute path
+
     Outputs:
-        m (torch.nn.Module): The submodule.
+        - m (torch.nn.Module): Resolved submodule
     """
-    # Get the submodule
     m = layer
     for p in dotted.split("."):
         m = getattr(m, p)
@@ -284,20 +297,20 @@ def _get_submodule(layer, dotted):
 
 def _set_submodule(layer, dotted, new_module):
     """
-    Set the submodule.
+    Replace a dotted submodule path under a layer.
+
     Inputs:
-        layer (torch.nn.Module): The layer to set the submodule on.
-        dotted (str): The dotted path to the submodule.
-        new_module (torch.nn.Module): The new submodule.
+        - layer (torch.nn.Module): Parent module
+        - dotted (str): Dotted attribute path
+        - new_module (torch.nn.Module): Replacement module
+
     Outputs:
-        None
+        - None
     """
     parts = dotted.split(".")
-    # Set the submodule
     parent = layer
     for p in parts[:-1]:
         parent = getattr(parent, p)
-
     setattr(parent, parts[-1], new_module)
 
 
@@ -308,66 +321,64 @@ def inject_lrqat_adapters(
     rank,
     alpha,
     get_weight_fn,
-    compute_dtype=torch.float16,
-    group_size=128,
-    verbose=True,
+    compute_dtype = torch.float16,
+    group_size = 128,
+    verbose = True,
 ):
     """
     Replace each selected QuantLinear with an LRQATLinear (Route A1).
+
     Inputs:
-        model (torch.nn.Module): The model to inject the LRQATLinear adapters into.
-        proj_paths (list[str]): The paths to the projection modules to inject the LRQATLinear adapters into.
-        n_bits (int): The number of bits to quantize the weight to.
-        rank (int): The rank of the low-rank adapter.
-        alpha (float): The scaling factor for the low-rank adapter.
-        get_weight_fn (callable): The function to use to get the weight of the module.
-        compute_dtype (torch.dtype): The dtype to use for the linear layer.
-        group_size (int): The size of the group to quantize the weight to.
-        verbose (bool): Whether to print verbose output.
+        - model (torch.nn.Module): Model to modify in place
+        - proj_paths (list): Projection dotted paths per layer
+        - n_bits (int): Integer bitwidth
+        - rank (int): LoRA rank
+        - alpha (float): LoRA alpha
+        - get_weight_fn (callable): Weight extractor (module, as_dtype=...)
+        - compute_dtype (torch.dtype): Bias / compute dtype
+        - group_size (int): PTQ group size
+        - verbose (bool): Print injection summary
 
     Outputs:
-        injected (list[LRQATLinear]): The injected LRQATLinear adapters.
-        trainable (list[torch.Tensor]): The trainable parameters.
+        - injected (list): Injected LRQATLinear modules
+        - trainable (list): Trainable adapter parameter tensors
     """
-    # Get the inner model and the device
+    # Freeze base and resolve layer stack / device
     inner = get_inner(model)
     device = next(model.parameters()).device
     n_layers = model.config.num_hidden_layers
-
-    # Freeze the entire base model
     for p in model.parameters():
         p.requires_grad_(False)
 
-    # Initialize the injected list
+    # Swap each selected projection for an LRQATLinear
     injected = []
     for l in range(n_layers):
         layer = inner.layers[l]
         for proj in proj_paths:
             mod = _get_submodule(layer, proj)
-            w = get_weight_fn(mod, as_dtype=torch.float32).to(device)
+            w = get_weight_fn(mod, as_dtype = torch.float32).to(device)
             bias = getattr(mod, "bias", None)
             bias = bias if (bias is not None) else None
             new = LRQATLinear(
                 w,
                 bias,
-                n_bits=n_bits,
-                rank=rank,
-                alpha=alpha,
-                device=device,
-                compute_dtype=compute_dtype,
-                group_size=group_size,
+                n_bits = n_bits,
+                rank = rank,
+                alpha = alpha,
+                device = device,
+                compute_dtype = compute_dtype,
+                group_size = group_size,
             )
             _set_submodule(layer, proj, new)
             injected.append(new)
 
-    # Initialize the trainable list
+    # Collect trainable adapter params
     trainable = []
     for m in injected:
         for p in m.trainable_parameters():
             p.requires_grad_(True)
             trainable.append(p)
 
-    # Print the verbose output
     if verbose:
         n_train = sum(p.numel() for p in trainable)
         print(
@@ -381,16 +392,17 @@ def inject_lrqat_adapters(
     return injected, trainable
 
 
-def merge_all(injected, verbose=True):
+def merge_all(injected, verbose = True):
     """
     Fuse + requantize every injected adapter into its INT-b grid.
+
     Inputs:
-        injected (list[LRQATLinear]): The injected LRQATLinear adapters.
-        verbose (bool): Whether to print verbose output.
+        - injected (list): Injected LRQATLinear modules
+        - verbose (bool): Print merge summary
+
     Outputs:
-        None
+        - None
     """
-    # Fuse and requantize every injected adapter into its INT-b grid
     for m in injected:
         m.merge_and_requantize()
     if verbose:
@@ -402,13 +414,13 @@ def merge_all(injected, verbose=True):
 def injected_effective_bits(injected):
     """
     Mean effective bits/weight across all injected (repaired) matrices.
+
     Inputs:
-        injected (list[LRQATLinear]): The injected LRQATLinear adapters.
-        
+        - injected (list): Injected LRQATLinear modules
+
     Outputs:
-        effective_bits (float): The mean effective bits/weight across all injected (repaired) matrices.
+        - effective_bits (float): Mean bits/weight, or nan if empty
     """
-    # Compute the mean effective bits/weight across all injected (repaired) matrices
     if not injected:
         return float("nan")
     return sum(m.effective_bits() for m in injected) / len(injected)

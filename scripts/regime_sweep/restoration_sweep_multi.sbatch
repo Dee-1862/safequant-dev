@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=sq_f3a_multi
+#SBATCH --account=cis250287p
+#SBATCH --partition=GPU-shared
+#SBATCH --gpus=h100-80:1
+#SBATCH -N 1
+#SBATCH --time=16:00:00
+#SBATCH --mem=128G
+#SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/f3a_multi_%j.out
+#SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/f3a_multi_%j.err
+source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+
+# From scripts_old/f3a_static_restoration_*.sbatch (condensed).
+
+
+echo "=== restoration sweep multi-model | $(date) ==="
+for MODEL in llama7b mistral7b-v02 qwen7b; do
+  for QUANTIZER in aqlm2 awq gptq4 gptq2; do
+    echo "---- ${MODEL} / ${QUANTIZER} ----"
+    python -u -m experiments.regime_sweep.restoration_sweep \
+      --model ${MODEL} --quantizer ${QUANTIZER} --n_eval 200 --n_reasoning 50 \
+      || echo "FAILED ${MODEL}/${QUANTIZER}"
+  done
+done
+echo "=== done | $(date) ==="

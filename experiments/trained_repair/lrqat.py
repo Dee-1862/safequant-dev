@@ -1,40 +1,8 @@
-"""
-experiments/trained_repair/lrqat.py
-===================================
-Reader-side (vs writer-side) low-bit REPAIR via quant-domain LR-QAT.
-
-Kills the "safety came back because you added bits" objection. We train ONLY the
-selected projections (readers q/k/v/gate/up, or writers o/down) at the SAME
-bit-width as the damaged AQLM-2 baseline, on a NEUTRAL corpus (C4 web text, no
-harmful/safety data), distilling toward the FP16 teacher. After training the
-adapter is fused back into the integer grid, so the deployed model is genuinely
-INT-b -- no added precision.
-
-Grid route: A1 (hybrid). Only the selected projections are moved AQLM-2 ->
-uniform INT-b + LR-QAT integer adapter; every other weight stays the original
-AQLM-2 checkpoint, byte-for-byte. The 62.5%-ASR AQLM-2 cell is the untouched
-baseline. See core/lrqat.py for the reparameterization.
-
-Three conditions come out of ONE run (per --role):
-  * "ptq_untrained"  -- readers requantized to INT-b, adapter delta = 0
-                        (the control: re-quantization without training).
-  * "lrqat_trained"  -- same INT-b grid, adapter trained + fused.
-  * baselines (fp16 41.0, aqlm2 62.5) are read from the existing F3a output
-    or fall back to the spec constants; they are NOT recomputed here.
-
-Eval is the EXISTING harness, unchanged: WildJailbreak + HarmBench classifier
-for ASR, log-prob ARC-Challenge for coherence.
-
-Usage:
-    python -u experiments/trained_repair/lrqat.py --model llama7b --quantizer aqlm2 \
-        --role read --n_bits 2 --steps 3000 --n_eval 200 --n_reasoning 50
-"""
-
+# Reader-side (vs writer-side) low-bit REPAIR via quant-domain LR-QAT.
 import argparse
 import gc
 import json
 import random
-import sys
 import time
 from pathlib import Path
 
@@ -42,33 +10,25 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from core.datasets import (
+    load_wildjailbreak_prompts, load_c4_calibration, load_arc_challenge, load_xstest,
+)
+from core.evaluation import (
+    generate_only, classify_batch, _extract_behavior, eval_xstest,
+)
+from core.lrqat import (
+    inject_lrqat_adapters, merge_all, injected_effective_bits,
+)
+from core.manifest import RunConfig, find_result, save_result
+from core.model_loader import load_fp32, load_quantized, get_weight
+from core.restoration import READ_PROJS, WRITE_PROJS, measure_arc
+from core.seeds import set_global_seed, DEFAULT_SEED
 
-# -- Reproducibility (identical protocol to the rest of SafeQuant v2) ----------
-from core.seeds import set_global_seed, DEFAULT_SEED          # noqa: E402
 SEED = set_global_seed(DEFAULT_SEED)
 random.seed(SEED)
 np.random.seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
-
-from core.model_loader import load_fp32, load_quantized, get_weight   # noqa: E402
-from core.datasets import (                                    # noqa: E402
-    load_wildjailbreak_prompts, load_c4_calibration, load_arc_challenge,
-)
-from core.evaluation import (                                  # noqa: E402
-    generate_only, classify_batch, _extract_behavior, eval_xstest,
-)
-from core.datasets import load_xstest                          # noqa: E402
-from core.lrqat import (                                       # noqa: E402
-    inject_lrqat_adapters, merge_all, injected_effective_bits,
-)
-# Reuse the EXACT projection lists and ARC scorer from the static-restoration
-# experiment so read/write definitions and coherence eval are identical.
-from core.restoration import (                # noqa: E402
-    READ_PROJS, WRITE_PROJS, measure_arc,
-)
-from core.manifest import RunConfig, find_result, save_result  # noqa: E402
 
 _SCRIPT = Path(__file__)
 
@@ -80,90 +40,124 @@ ASR_QUANT_DEFAULT = 62.5
 TRAIN_CORPUS = "allenai/c4 (en) -- general web text, no harmful/safety data"
 
 
-# -----------------------------------------------------------------------------
-# Neutral corpus -> fixed-length LM token blocks (no chat template, no safety)
-# -----------------------------------------------------------------------------
-def build_token_blocks(tokenizer, n_docs, seq_len, device, max_chars=4000):
-    """Stream C4, concatenate, and chunk into [seq_len] LM blocks."""
-    docs = load_c4_calibration(n_samples=n_docs, max_chars=max_chars)
+def build_token_blocks(tokenizer, n_docs, seq_len, device, max_chars = 4000):
+    """
+    Stream C4, concatenate, and chunk into fixed-length LM blocks.
+
+    Inputs:
+        - tokenizer (PreTrainedTokenizer): Tokenizer for C4 docs
+        - n_docs (int): Number of C4 documents to stream
+        - seq_len (int): Tokens per training block
+        - device (str | torch.device): Unused here; blocks stay on CPU
+        - max_chars (int): Per-document character cap
+
+    Outputs:
+        - blocks (Tensor): CPU long tensor shaped [n_blocks, seq_len]
+    """
+    # Tokenize streamed C4 docs and append EOS between documents
+    docs = load_c4_calibration(n_samples = n_docs, max_chars = max_chars)
     ids = []
     for d in docs:
-        ids.extend(tokenizer(d, add_special_tokens=False).input_ids)
+        ids.extend(tokenizer(d, add_special_tokens = False).input_ids)
         ids.append(tokenizer.eos_token_id)
     n_blocks = len(ids) // seq_len
     if n_blocks == 0:
         raise RuntimeError(f"C4 produced only {len(ids)} tokens (< seq_len={seq_len}); "
                            f"raise --n_train_docs.")
-    blocks = torch.tensor(ids[: n_blocks * seq_len], dtype=torch.long).view(n_blocks, seq_len)
+    blocks = torch.tensor(ids[: n_blocks * seq_len], dtype = torch.long).view(n_blocks, seq_len)
     print(f"  Built {n_blocks} blocks of {seq_len} tokens "
           f"({n_blocks * seq_len:,} tokens) from {len(docs)} C4 docs")
-    return blocks  # CPU tensor; moved per-step
+    return blocks
 
 
-# -----------------------------------------------------------------------------
-# Distillation loss: forward KL from FP16 teacher onto the student
-# -----------------------------------------------------------------------------
-def kl_distill_loss(student_logits, teacher_logits, temperature=1.0):
+def kl_distill_loss(student_logits, teacher_logits, temperature = 1.0):
     """
-    KL( p_teacher || p_student ) over tokens (see normalization note).
-    F.kl_div expects log-probs for the input (student) and probs for the target
-    (teacher). NOTE: with a single block per step (batch=1), reduction='batchmean'
-    divides by the batch dim (=1), so this returns the loss SUMMED over token
-    positions (~seq_len x a per-token mean). Switching to a per-token mean is a
-    STAGED change -- it alters grad-clip binding and early-stop, so run-and-compare
-    against the current Table 7 before applying; do NOT silently change the loss.
+    Forward KL from teacher to student over tokens (batchmean reduction).
+
+    Inputs:
+        - student_logits (Tensor): Student next-token logits
+        - teacher_logits (Tensor): Teacher next-token logits
+        - temperature (float): Softmax temperature
+
+    Outputs:
+        - loss (Tensor): Scaled KL divergence loss
     """
+    # F.kl_div expects log-probs for student and probs for teacher
     t = temperature
-    s_logp = F.log_softmax(student_logits / t, dim=-1)
-    t_prob = F.softmax(teacher_logits / t, dim=-1)
-    return F.kl_div(s_logp, t_prob, reduction="batchmean") * (t * t)
+    s_logp = F.log_softmax(student_logits / t, dim = -1)
+    t_prob = F.softmax(teacher_logits / t, dim = -1)
+    return F.kl_div(s_logp, t_prob, reduction = "batchmean") * (t * t)
 
 
 @torch.no_grad()
-def eval_val_kl(student, teacher, val_blocks, device, max_batches=8):
+def eval_val_kl(student, teacher, val_blocks, device, max_batches = 8):
+    """
+    Mean KL on held-out C4 blocks between student and frozen teacher.
+
+    Inputs:
+        - student (nn.Module): Student model with adapters
+        - teacher (nn.Module): Frozen FP teacher
+        - val_blocks (Tensor): Validation token blocks
+        - device (str | torch.device): Device for forwards
+        - max_batches (int): Cap on validation blocks
+
+    Outputs:
+        - mean_kl (float): Average KL over evaluated batches
+    """
+    # Eval mode for student during validation, then restore train mode
     student.eval()
     total, n = 0.0, 0
     for i in range(min(max_batches, val_blocks.size(0))):
         x = val_blocks[i:i + 1].to(device)
-        s = student(input_ids=x).logits
-        t = teacher(input_ids=x).logits
+        s = student(input_ids = x).logits
+        t = teacher(input_ids = x).logits
         total += kl_distill_loss(s, t).item()
         n += 1
     student.train()
     return total / max(n, 1)
 
 
-# -----------------------------------------------------------------------------
-# Training loop (8-bit AdamW, grad checkpointing, grad accumulation)
-# -----------------------------------------------------------------------------
 def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, device):
+    """
+    Distill LR-QAT adapters toward the FP teacher on neutral C4 blocks.
+
+    Inputs:
+        - student (nn.Module): Student with trainable adapters
+        - teacher (nn.Module): Frozen FP teacher
+        - trainable (list[Parameter]): Adapter parameters
+        - train_blocks (Tensor): Training token blocks
+        - val_blocks (Tensor): Validation token blocks
+        - args (Namespace): Training hyperparameters from CLI
+        - device (str | torch.device): Training device
+
+    Outputs:
+        - stats (dict): Steps, tokens, best val KL, wall clock, history
+    """
+    # Prefer 8-bit AdamW when bitsandbytes is available
     try:
         import bitsandbytes as bnb
-        optim = bnb.optim.AdamW8bit(trainable, lr=args.lr, weight_decay=0.0)
+        optim = bnb.optim.AdamW8bit(trainable, lr = args.lr, weight_decay = 0.0)
         opt_name = "bitsandbytes.AdamW8bit"
     except Exception as e:  # pragma: no cover - fallback if bnb unavailable
         print(f"  [warn] bitsandbytes optimizer unavailable ({e}); using torch.AdamW")
-        optim = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.0)
+        optim = torch.optim.AdamW(trainable, lr = args.lr, weight_decay = 0.0)
         opt_name = "torch.AdamW"
     print(f"  Optimizer: {opt_name} | lr={args.lr} | grad_accum={args.grad_accum}")
 
+    # Optional gradient checkpointing for partial fine-tuning
     if args.grad_checkpointing:
-        # Only the adapters are trainable, so the (frozen) embedding output does
-        # not require grad. Make inputs require grad and use the non-reentrant
-        # checkpoint so gradients still reach the adapter params -- the standard
-        # PEFT recipe for partial fine-tuning under checkpointing.
         if hasattr(student, "enable_input_require_grads"):
             student.enable_input_require_grads()
         student.gradient_checkpointing_enable(
-            gradient_checkpointing_kwargs={"use_reentrant": False})
+            gradient_checkpointing_kwargs = {"use_reentrant": False})
     student.config.use_cache = False
     student.train()
     teacher.eval()
 
+    # Epoch pointer over shuffled block order
     n_blocks = train_blocks.size(0)
     order = np.random.permutation(n_blocks)
     ptr = 0
-
     best_val = float("inf")
     best_state = None
     patience_left = args.patience
@@ -171,8 +165,9 @@ def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, 
     t0 = time.time()
     history = []
 
-    optim.zero_grad(set_to_none=True)
+    optim.zero_grad(set_to_none = True)
     for step in range(1, args.steps + 1):
+        # Gradient accumulation over fixed blocks
         accum_loss = 0.0
         for _ in range(args.grad_accum):
             if ptr >= n_blocks:
@@ -183,24 +178,27 @@ def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, 
             tokens_seen += x.numel()
 
             with torch.no_grad():
-                t_logits = teacher(input_ids=x).logits
-            s_logits = student(input_ids=x).logits
-            loss = kl_distill_loss(s_logits, t_logits, temperature=args.temperature)
-            if args.ce_weight > 0:  # optional small next-token CE on the corpus
-                ce = F.cross_entropy(s_logits[:, :-1].reshape(-1, s_logits.size(-1)),
-                                     x[:, 1:].reshape(-1))
+                t_logits = teacher(input_ids = x).logits
+            s_logits = student(input_ids = x).logits
+            loss = kl_distill_loss(s_logits, t_logits, temperature = args.temperature)
+            if args.ce_weight > 0:
+                ce = F.cross_entropy(
+                    s_logits[:, :-1].reshape(-1, s_logits.size(-1)),
+                    x[:, 1:].reshape(-1),
+                )
                 loss = loss + args.ce_weight * ce
             (loss / args.grad_accum).backward()
             accum_loss += loss.item() / args.grad_accum
 
         torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
         optim.step()
-        optim.zero_grad(set_to_none=True)
+        optim.zero_grad(set_to_none = True)
 
         if step % args.log_every == 0:
             print(f"    step {step:>5}/{args.steps} | KL+CE {accum_loss:.4f} "
                   f"| tokens {tokens_seen:,} | {time.time() - t0:.0f}s")
 
+        # Early-stop on validation KL with patience
         if step % args.val_every == 0 or step == args.steps:
             val = eval_val_kl(student, teacher, val_blocks, device)
             history.append({"step": step, "train_loss": accum_loss, "val_kl": val})
@@ -215,7 +213,7 @@ def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, 
                     print(f"    early stop at step {step} (no val improvement)")
                     break
 
-    # restore best adapter state
+    # Restore best adapter state
     if best_state is not None:
         with torch.no_grad():
             for p in trainable:
@@ -233,10 +231,21 @@ def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, 
     }
 
 
-# -----------------------------------------------------------------------------
 def load_baseline_asr(model, quantizer):
-    """Read fp16/aqlm baseline ASR from the F3a output; fall back to spec consts."""
-    cfg = RunConfig(model=model, quantizer=quantizer)
+    """
+    Read FP16/quant baseline ASR from the F3a sweep output, or use defaults.
+
+    Inputs:
+        - model (str): Model alias
+        - quantizer (str): Quantizer id
+
+    Outputs:
+        - asr_fp16 (float): FP baseline ASR
+        - asr_quant (float): Quantized baseline ASR
+        - source (str): Path or "spec-constants"
+    """
+    # Prefer the mirrored restoration_sweep result when present
+    cfg = RunConfig(model = model, quantizer = quantizer)
     p = find_result(Path("experiments/regime_sweep/restoration_sweep.py"), cfg)
     if p and p.exists():
         try:
@@ -248,48 +257,57 @@ def load_baseline_asr(model, quantizer):
 
 
 def recovery_fraction(asr_repaired, asr_quant, asr_fp16):
+    """
+    Fraction of quantization ASR damage recovered by a repair condition.
+
+    Inputs:
+        - asr_repaired (float): ASR after repair
+        - asr_quant (float): Quantized baseline ASR
+        - asr_fp16 (float): FP baseline ASR
+
+    Outputs:
+        - rho (float): Recovery fraction, or NaN if damage is zero
+    """
+    # (quant - repaired) / (quant - fp16)
     denom = (asr_quant - asr_fp16)
     if denom == 0:
         return float("nan")
     return (asr_quant - asr_repaired) / denom
 
 
-# -----------------------------------------------------------------------------
 def main():
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--role", choices=["read", "write"], required=True)
-    ap.add_argument("--n_bits", type=int, default=2, help="2 for the strict story, 4 for sweep")
-    ap.add_argument("--group_size", type=int, default=128,
-                    help="input-dim group width for INT scales (coherence at low bits)")
-    ap.add_argument("--aqlm_eff_bits", type=float, default=2.2,
-                    help="realistic AQLM-2 effective-bit ceiling for the no-added-precision assert")
-    # adapter
-    ap.add_argument("--rank", type=int, default=32)
-    ap.add_argument("--alpha", type=float, default=64.0)
-    # training budget (KEEP IDENTICAL across read and write)
-    ap.add_argument("--steps", type=int, default=3000)
-    ap.add_argument("--lr", type=float, default=1e-4)
-    ap.add_argument("--seq_len", type=int, default=512)
-    ap.add_argument("--grad_accum", type=int, default=8)
-    ap.add_argument("--n_train_docs", type=int, default=4000)
-    ap.add_argument("--temperature", type=float, default=1.0)
-    ap.add_argument("--ce_weight", type=float, default=0.0)
-    ap.add_argument("--grad_clip", type=float, default=1.0)
-    ap.add_argument("--grad_checkpointing", action="store_true", default=True)
-    ap.add_argument("--val_every", type=int, default=250)
-    ap.add_argument("--log_every", type=int, default=50)
-    ap.add_argument("--patience", type=int, default=3)
-    ap.add_argument("--n_val_blocks", type=int, default=16)
-    # eval budget (matches F3a)
-    ap.add_argument("--n_eval", type=int, default=200, help="WildJailbreak prompts (ASR)")
-    ap.add_argument("--n_reasoning", type=int, default=50, help="ARC-Challenge questions")
-    ap.add_argument("--n_xstest", type=int, default=50,
-                    help="XSTest prompts for the over-refusal check (0 to skip)")
-    ap.add_argument("--max_new_tokens", type=int, default=256)
-    ap.add_argument("--output", default=None,
-                    help="override output path (default via save_result mirror)")
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--role", choices = ["read", "write"], required = True)
+    ap.add_argument("--n_bits", type = int, default = 2, help = "2 for the strict story, 4 for sweep")
+    ap.add_argument("--group_size", type = int, default = 128,
+                    help = "input-dim group width for INT scales (coherence at low bits)")
+    ap.add_argument("--aqlm_eff_bits", type = float, default = 2.2,
+                    help = "realistic AQLM-2 effective-bit ceiling for the no-added-precision assert")
+    ap.add_argument("--rank", type = int, default = 32)
+    ap.add_argument("--alpha", type = float, default = 64.0)
+    ap.add_argument("--steps", type = int, default = 3000)
+    ap.add_argument("--lr", type = float, default = 1e-4)
+    ap.add_argument("--seq_len", type = int, default = 512)
+    ap.add_argument("--grad_accum", type = int, default = 8)
+    ap.add_argument("--n_train_docs", type = int, default = 4000)
+    ap.add_argument("--temperature", type = float, default = 1.0)
+    ap.add_argument("--ce_weight", type = float, default = 0.0)
+    ap.add_argument("--grad_clip", type = float, default = 1.0)
+    ap.add_argument("--grad_checkpointing", action = "store_true", default = True)
+    ap.add_argument("--val_every", type = int, default = 250)
+    ap.add_argument("--log_every", type = int, default = 50)
+    ap.add_argument("--patience", type = int, default = 3)
+    ap.add_argument("--n_val_blocks", type = int, default = 16)
+    ap.add_argument("--n_eval", type = int, default = 200, help = "WildJailbreak prompts (ASR)")
+    ap.add_argument("--n_reasoning", type = int, default = 50, help = "ARC-Challenge questions")
+    ap.add_argument("--n_xstest", type = int, default = 50,
+                    help = "XSTest prompts for the over-refusal check (0 to skip)")
+    ap.add_argument("--max_new_tokens", type = int, default = 256)
+    ap.add_argument("--output", default = None,
+                    help = "override output path (default via save_result mirror)")
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -307,30 +325,24 @@ def main():
           f"n_xstest={args.n_xstest}  seed={SEED}")
     print("=" * 74)
 
-    # -- datasets (eval) ------------------------------------------------------
-    items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
+    # Load eval datasets
+    items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = [_extract_behavior(it) for it in items]
-    arc_items = load_arc_challenge(n_samples=args.n_reasoning)
-    # ARC chance level (used to flag coherence collapse): 1/num_choices.
+    arc_items = load_arc_challenge(n_samples = args.n_reasoning)
     arc_chance = 100.0 / max(2, len(arc_items[0]["choices"]))
-    xstest_items = load_xstest(n_samples=args.n_xstest) if args.n_xstest > 0 else []
+    xstest_items = load_xstest(n_samples = args.n_xstest) if args.n_xstest > 0 else []
 
-    # -- student: AQLM-2 + injected INT-b adapters on the selected role -------
+    # Student: AQLM-2 + injected INT-b adapters on the selected role
     print("\n[1] Loading AQLM-2 student and injecting adapters ...")
-    student, tokenizer = load_quantized(args.model, quantizer=args.quantizer)
+    student, tokenizer = load_quantized(args.model, quantizer = args.quantizer)
     injected, trainable = inject_lrqat_adapters(
-        student, proj_paths, n_bits=args.n_bits, rank=args.rank, alpha=args.alpha,
-        get_weight_fn=get_weight, group_size=args.group_size)
+        student, proj_paths, n_bits = args.n_bits, rank = args.rank, alpha = args.alpha,
+        get_weight_fn = get_weight, group_size = args.group_size)
     eff_bits_repaired = injected_effective_bits(injected)
     print(f"  Repaired-matrix effective bits/weight: {eff_bits_repaired:.4f} "
           f"(INT-{args.n_bits}, group_size={args.group_size})")
 
-    # -- effective-bit-width ASSERTION (core control) -------------------------
-    # Group-wise INT-b adds one fp16 scale per group: INT-2 @ group 128 = 2.125
-    # bits. The "no added precision" claim is vs the REALISTIC AQLM-2 effective
-    # bits (PV-2Bit-1x16 is ~2.0-2.2, NOT exactly 2.0). We assert the repaired
-    # readers do not exceed that ceiling. The binding comparison is at n_bits=2;
-    # n_bits=4 is the intentionally-higher mixed-precision sweep point.
+    # Effective-bit-width assertion (core control at n_bits=2)
     aqlm_nominal_bits = 2.0
     bit_assert_ok = None
     if args.n_bits == 2:
@@ -345,18 +357,18 @@ def main():
         print(f"  [sweep] n_bits={args.n_bits}: effective bits {eff_bits_repaired:.4f} "
               f"(mixed-precision point, not bit-matched to baseline)")
 
-    # -- condition A: PTQ untrained (adapter delta = 0) -----------------------
+    # Condition A: PTQ untrained (adapter delta = 0)
     print("\n[2] Eval condition: ptq_untrained (INT-b readers, NO training) ...")
-    resp_ptq = generate_only(student, tokenizer, items, max_new_tokens=args.max_new_tokens,
-                             desc="PTQ-untrained")
+    resp_ptq = generate_only(student, tokenizer, items, max_new_tokens = args.max_new_tokens,
+                             desc = "PTQ-untrained")
     arc_ptq = measure_arc(student, tokenizer, arc_items)
-    xstest_ptq = (eval_xstest(student, tokenizer, xstest_items, desc="XSTest-ptq")
+    xstest_ptq = (eval_xstest(student, tokenizer, xstest_items, desc = "XSTest-ptq")
                   if xstest_items else None)
     print(f"  ARC(ptq_untrained) = {arc_ptq:.1f}%"
           + (f" | false-refusal = {xstest_ptq['false_refusal_rate']:.1f}%"
              if xstest_ptq else ""))
 
-    # -- training -------------------------------------------------------------
+    # Build neutral C4 blocks and distill adapters
     print("\n[3] Building neutral C4 token blocks ...")
     blocks = build_token_blocks(tokenizer, args.n_train_docs, args.seq_len, device)
     val_blocks = blocks[: args.n_val_blocks]
@@ -372,7 +384,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # -- fuse + requantize (deployed model is genuinely INT-b) ----------------
+    # Fuse + requantize so the deployed model is genuinely INT-b
     print("\n[5] Fusing adapters into INT-b grid (requantize) ...")
     merge_all(injected)
     eff_bits_fused = injected_effective_bits(injected)
@@ -380,12 +392,12 @@ def main():
         assert eff_bits_fused <= args.aqlm_eff_bits + 1e-3, "post-fuse bit-width drifted"
     print(f"  Post-fuse effective bits/weight: {eff_bits_fused:.4f}")
 
-    # -- condition B: LR-QAT trained -----------------------------------------
+    # Condition B: LR-QAT trained
     print("\n[6] Eval condition: lrqat_trained (INT-b, trained + fused) ...")
-    resp_lrqat = generate_only(student, tokenizer, items, max_new_tokens=args.max_new_tokens,
-                               desc="LRQAT-trained")
+    resp_lrqat = generate_only(student, tokenizer, items, max_new_tokens = args.max_new_tokens,
+                               desc = "LRQAT-trained")
     arc_lrqat = measure_arc(student, tokenizer, arc_items)
-    xstest_lrqat = (eval_xstest(student, tokenizer, xstest_items, desc="XSTest-lrqat")
+    xstest_lrqat = (eval_xstest(student, tokenizer, xstest_items, desc = "XSTest-lrqat")
                     if xstest_items else None)
     print(f"  ARC(lrqat_trained) = {arc_lrqat:.1f}%"
           + (f" | false-refusal = {xstest_lrqat['false_refusal_rate']:.1f}%"
@@ -394,33 +406,39 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # -- classify both conditions in ONE classifier session -------------------
+    # Classify both conditions in one classifier session
     print("\n[7] Classifying responses (single HarmBench load) ...")
     n = args.n_eval
     flat_beh = behaviors + behaviors
     flat_resp = resp_ptq + resp_lrqat
-    flags = classify_batch(flat_beh, flat_resp, device=device)
+    flags = classify_batch(flat_beh, flat_resp, device = device)
     asr_ptq = 100.0 * sum(flags[:n]) / n
     asr_lrqat = 100.0 * sum(flags[n:2 * n]) / n
 
-    # -- baselines + recovery -------------------------------------------------
+    # Baselines + recovery fractions
     asr_fp16, asr_quant, base_src = load_baseline_asr(args.model, args.quantizer)
     rho_ptq = recovery_fraction(asr_ptq, asr_quant, asr_fp16)
     rho_lrqat = recovery_fraction(asr_lrqat, asr_quant, asr_fp16)
 
-    # -- coherence gate -------------------------------------------------------
-    # If ARC is within 5pp of chance the model has collapsed; its ASR reflects
-    # incoherence (it produces no usable text), NOT recovered safety, so rho is
-    # meaningless. Flag it loudly instead of reporting a misleading rho.
+    # Coherence gate near ARC chance
     collapse_ptq = arc_ptq <= arc_chance + 5.0
     collapse_lrqat = arc_lrqat <= arc_chance + 5.0
     fr_ptq = xstest_ptq["false_refusal_rate"] if xstest_ptq else None
     fr_lrqat = xstest_lrqat["false_refusal_rate"] if xstest_lrqat else None
 
     def _fr(v):
+        """
+        Format an optional false-refusal percentage for the result table.
+
+        Inputs:
+            - v (float | None): False-refusal rate, or None when skipped
+
+        Outputs:
+            - text (str): Fixed-width percentage string or dash placeholder
+        """
         return f"{v:>6.0f}%" if v is not None else f"{'-':>7}"
 
-    # -- report ---------------------------------------------------------------
+    # Print summary table
     print("\n" + "=" * 86)
     print(f"  RESULT  |  {args.model} / {args.quantizer}  |  role={args.role}  INT-{args.n_bits}")
     print(f"  baselines from: {base_src}  (FP16 {asr_fp16:.1f} | AQLM-2 {asr_quant:.1f})  "
@@ -446,6 +464,7 @@ def main():
         print(f"  NOTE: rho={rho_lrqat:.2f} > 1 -> ASR fell BELOW FP16. Check false-refusal "
               f"({fr_lrqat}) for over-refusal vs genuine recovery.")
 
+    # Persist result payload
     out = {
         "model": args.model,
         "quantizer": args.quantizer,
@@ -454,13 +473,11 @@ def main():
         "proj_paths": proj_paths,
         "n_bits": args.n_bits,
         "seed": SEED,
-        # bit-width control
         "aqlm_nominal_bits": aqlm_nominal_bits,
         "aqlm_eff_bits_ceiling": args.aqlm_eff_bits,
         "group_size": args.group_size,
         "repaired_effective_bits": eff_bits_fused,
         "bit_width_assert_ok": bit_assert_ok,
-        # training provenance / reproducibility
         "train_corpus": TRAIN_CORPUS,
         "contains_safety_data": False,
         "adapter": {"rank": args.rank, "alpha": args.alpha, "scaling": args.alpha / args.rank},
@@ -478,13 +495,11 @@ def main():
         "eval": {"asr_prompts": args.n_eval, "asr_set": "wildjailbreak/eval",
                  "judge": "harmbench", "arc_questions": args.n_reasoning,
                  "arc_chance": arc_chance, "n_xstest": args.n_xstest},
-        # results
         "baseline_source": base_src,
         "asr_fp16": asr_fp16, "asr_aqlm2": asr_quant,
         "asr_ptq_untrained": asr_ptq, "asr_lrqat_trained": asr_lrqat,
         "arc_ptq_untrained": arc_ptq, "arc_lrqat_trained": arc_lrqat,
         "rho_ptq_untrained": rho_ptq, "rho_lrqat_trained": rho_lrqat,
-        # over-refusal (XSTest false-refusal rate on safe prompts) + coherence gate
         "false_refusal_ptq_untrained": fr_ptq,
         "false_refusal_lrqat_trained": fr_lrqat,
         "xstest_refusal_on_unsafe_lrqat": (xstest_lrqat["refusal_rate_on_unsafe"]
@@ -496,15 +511,15 @@ def main():
         "train_history": train_stats["history"],
     }
     run_cfg = RunConfig(
-        model=args.model,
-        quantizer=args.quantizer,
-        variant=lrqat_variant,
-        extra={"role": args.role, "n_bits": args.n_bits, "seed": SEED},
+        model = args.model,
+        quantizer = args.quantizer,
+        variant = lrqat_variant,
+        extra = {"role": args.role, "n_bits": args.n_bits, "seed": SEED},
     )
     if args.output:
         out_path = Path(args.output)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps(out, indent=2))
+        out_path.parent.mkdir(parents = True, exist_ok = True)
+        out_path.write_text(json.dumps(out, indent = 2))
     else:
         out_path = save_result(_SCRIPT, run_cfg, out)
     print(f"\n> Saved {out_path}")

@@ -1,13 +1,10 @@
-"""Table 1: direction drift (delta_med + cosmed)."""
+# Table 1: direction drift (delta_med + cosmed).
 import argparse
 import gc
-import sys
 from pathlib import Path
 
 import numpy as np
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_harmbench_prompts, load_harmless_prompts, load_wildjailbreak_prompts
 from core.directions import compute_r_hat, cos_sim, per_layer_separation
@@ -20,33 +17,34 @@ SEED = set_global_seed(DEFAULT_SEED)
 _SCRIPT = Path(__file__)
 
 
-def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, token_pos=-1):
+def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, token_pos = -1):
     """
-    Run the model for the given label.
-    Inputs:
-        model: The model to run.
-        tokenizer: The tokenizer to use.
-        harmful: The harmful prompts.
-        harmless: The harmless prompts.
-        layers: The layers to run.
-        device: The device to run on.
-        label: The label to run.
-        token_pos: The token position to run.
-    Outputs:
-        r_hats: The r hats.
-        seps: The separations.
-    """
+    Extract per-layer refusal directions and separations for one model.
 
-    # Extract the residuals
+    Inputs:
+        - model (nn.Module): Model to extract residuals from
+        - tokenizer (PreTrainedTokenizer): Tokenizer matched to model
+        - harmful (list): Harmful prompts
+        - harmless (list): Harmless prompts
+        - layers (list[int]): Layer indices
+        - device (str | torch.device): Device for extraction
+        - label (str): Log label for this condition
+        - token_pos (int): Token position for residuals
+
+    Outputs:
+        - r_hats (dict[int, Tensor]): Unit refusal direction per layer
+        - seps (dict[int, dict]): Separation statistics per layer
+    """
+    # Extract last-token residuals for both prompt sets
     print(f"\n[{label}] extracting residuals (token_pos={token_pos})")
     h_caps = extract_last_token_residuals(
-        model, tokenizer, harmful, layers, device, token_pos=token_pos
+        model, tokenizer, harmful, layers, device, token_pos = token_pos
     )
     s_caps = extract_last_token_residuals(
-        model, tokenizer, harmless, layers, device, token_pos=token_pos
+        model, tokenizer, harmless, layers, device, token_pos = token_pos
     )
 
-    # Compute the r hats and separations
+    # Diff-in-means directions and separation scores
     r_hats, seps = {}, {}
     for layer_idx in layers:
         r = compute_r_hat(h_caps[layer_idx], s_caps[layer_idx])
@@ -58,20 +56,22 @@ def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, to
 
 def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib, model_name):
     """
-    Analyze the results.
+    Compare FP32 vs quantized directions and package the result payload.
+
     Inputs:
-        quantizer: The quantizer to use.
-        fp32_r_hats: The r hats for the fp32 model.
-        fp32_seps: The separations for the fp32 model.
-        q_r_hats: The r hats for the quantized model.
-        q_seps: The separations for the quantized model.
-        layers: The layers to analyze.
-        n_calib: The number of calibration samples.
-        model_name: The name of the model.
+        - quantizer (str): Quantizer id used for the quantized cell
+        - fp32_r_hats (dict): FP32 directions by layer
+        - fp32_seps (dict): FP32 separations by layer
+        - q_r_hats (dict): Quantized directions by layer
+        - q_seps (dict): Quantized separations by layer
+        - layers (list[int]): Layer indices
+        - n_calib (int): Calibration sample count
+        - model_name (str): Model alias
+
     Outputs:
-        data: The data to save.
+        - data (dict): Result payload for save_result
     """
-    # Compute the cosine similarity per layer
+    # Cosine similarity and Pearson of sep vs cosine
     cos_per_layer = {L: cos_sim(fp32_r_hats[L], q_r_hats[L]) for L in layers}
     cos_vals = list(cos_per_layer.values())
     fp32_seps_arr = np.array([fp32_seps[L]["separation_sigma"] for L in layers])
@@ -82,7 +82,7 @@ def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib
         else 0.0
     )
 
-    # Compute the weak and very weak layers
+    # Weak-layer thresholds from the paper screens
     weak = [L for L, c in cos_per_layer.items() if c < 0.95]
     very_weak = [L for L, c in cos_per_layer.items() if c < 0.80]
     return {
@@ -105,32 +105,32 @@ def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_calib", type=int, default=50)
-    ap.add_argument("--dataset", default="wildjailbreak", choices=["wildjailbreak", "harmbench"])
-    ap.add_argument("--token_pos", type=int, default=None)
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_calib", type = int, default = 50)
+    ap.add_argument("--dataset", default = "wildjailbreak", choices = ["wildjailbreak", "harmbench"])
+    ap.add_argument("--token_pos", type = int, default = None)
     args = ap.parse_args()
 
-    # Get the quantizers and the device
+    # Resolve quantizer list, device, and token position
     quantizers = [q.strip() for q in args.quantizer.split(",") if q.strip()]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     token_pos = args.token_pos if args.token_pos is not None else default_token_pos(args.model)
 
-    # Load the prompts and extract the harmful and harmless prompts
+    # Load harmful prompts from the selected dataset
     if args.dataset == "wildjailbreak":
-        harmful_items = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
+        harmful_items = load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")
         harmful = [
             (it.get("behavior") or it.get("prompt") or "") if isinstance(it, dict) else str(it)
             for it in harmful_items
         ]
     else:
-        harmful = load_harmbench_prompts(n_samples=args.n_calib)
-    harmless = load_harmless_prompts(n_samples=args.n_calib)
+        harmful = load_harmbench_prompts(n_samples = args.n_calib)
+    harmless = load_harmless_prompts(n_samples = args.n_calib)
 
-    # Load the fp32 model and extract the r hats and separations
+    # FP32 directions once, then compare each quantizer
     fp32_model, tokenizer = load_fp32(args.model)
     n_layers = fp32_model.config.num_hidden_layers
     layers = list(range(n_layers))
@@ -141,9 +141,9 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Load the quantized model and extract the r hats and separations
+    # One output artifact per quantizer cell
     for q in quantizers:
-        q_model, _ = load_quantized(args.model, quantizer=q)
+        q_model, _ = load_quantized(args.model, quantizer = q)
         q_r_hats, q_seps = run_for_model(
             q_model, tokenizer, harmful, harmless, layers, device, q, token_pos
         )
@@ -153,9 +153,9 @@ def main():
 
         data = analyze(q, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, args.n_calib, args.model)
         cfg = RunConfig(
-            model=args.model,
-            quantizer=q,
-            extra={"n_calib": args.n_calib, "token_pos": token_pos, "dataset": args.dataset},
+            model = args.model,
+            quantizer = q,
+            extra = {"n_calib": args.n_calib, "token_pos": token_pos, "dataset": args.dataset},
         )
         path = save_result(_SCRIPT, cfg, data)
         print(f"Saved to {path}")

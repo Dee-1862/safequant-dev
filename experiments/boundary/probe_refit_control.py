@@ -1,13 +1,11 @@
-"""Probe refit noise-floor control for probe-rotation screen."""
+# Probe refit noise-floor control for probe-rotation screen.
 import argparse
 import gc
-import sys
 from pathlib import Path
 
 import numpy as np
+import torch
 from sklearn.linear_model import LogisticRegression
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_harmless_prompts, load_wildjailbreak_prompts
 from core.manifest import RunConfig, save_result
@@ -21,72 +19,75 @@ _SCRIPT = Path(__file__)
 
 def _cos(a, b):
     """
-    Calculate the cosine similarity between two vectors.
+    Cosine similarity between two vectors.
+
     Inputs:
-        a: The first vector.
-        b: The second vector.
+        - a (array-like): First vector
+        - b (array-like): Second vector
+
     Outputs:
-        The cosine similarity between the two vectors.
+        - cos (float): Cosine similarity, or 0.0 if either vector is near-zero
     """
-    # Convert the vectors to numpy arrays
+    # Cast to float64 for stable norms
     a = np.asarray(a, np.float64)
     b = np.asarray(b, np.float64)
 
-    # Calculate the cosine similarity
+    # Guard against near-zero norms
     na, nb = np.linalg.norm(a), np.linalg.norm(b)
     return 0.0 if na < 1e-12 or nb < 1e-12 else float(np.dot(a, b) / (na * nb))
 
 
 def _fit_w(h_list, s_list):
     """
-    Fit a logistic regression model to the data.
+    Fit a linear probe and return its weight vector.
+
     Inputs:
-        h_list: The list of harmful activations.
-        s_list: The list of harmless activations.
+        - h_list (list[Tensor]): Harmful residual vectors
+        - s_list (list[Tensor]): Harmless residual vectors
+
     Outputs:
-        The weights of the logistic regression model.
+        - weight (ndarray): LogisticRegression coef_[0]
     """
-    # Stack the harmful and harmless activations into a single array
+    # Stack features and binary labels (harmful = 1)
     X = np.stack([t.numpy() for t in h_list] + [t.numpy() for t in s_list])
     y = np.array([1] * len(h_list) + [0] * len(s_list))
 
-    # Fit a logistic regression model to the data
+    # Fit L2-regularized logistic regression
     clf = LogisticRegression(C = 1.0, max_iter = 2000, random_state = SEED)
     clf.fit(X, y)
     return clf.coef_[0]
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--n_calib", type=int, default=200)
-    ap.add_argument("--token_pos", type=int, default=-1)
+    ap.add_argument("--model", required = True)
+    ap.add_argument("--n_calib", type = int, default = 200)
+    ap.add_argument("--token_pos", type = int, default = -1)
     args = ap.parse_args()
 
-    # Load prompts
-    harmful = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
-    harmless = load_harmless_prompts(n_samples=args.n_calib)
+    # Load calibration prompts
+    harmful = load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")
+    harmless = load_harmless_prompts(n_samples = args.n_calib)
 
-    # Load fp32 model and extract last token residuals
+    # Extract last-token residuals from FP32
     fp_model, fp_tok = load_fp32(args.model)
     device = next(fp_model.parameters()).device
     layers = list(range(len(get_inner(fp_model).layers)))
-    h = extract_last_token_residuals(fp_model, fp_tok, harmful, layers, device, token_pos=args.token_pos)
-    s = extract_last_token_residuals(fp_model, fp_tok, harmless, layers, device, token_pos=args.token_pos)
+    h = extract_last_token_residuals(fp_model, fp_tok, harmful, layers, device, token_pos = args.token_pos)
+    s = extract_last_token_residuals(fp_model, fp_tok, harmless, layers, device, token_pos = args.token_pos)
     del fp_model
     gc.collect()
-    import torch
     torch.cuda.empty_cache()
 
-    # Randomly split the harmful and harmless activations into two groups
+    # Random half-split of harmful and harmless indices
     rng = np.random.default_rng(SEED)
     nh, ns = len(h[layers[0]]), len(s[layers[0]])
     hp, sp = rng.permutation(nh), rng.permutation(ns)
     hA, hB = hp[: nh // 2], hp[nh // 2 :]
     sA, sB = sp[: ns // 2], sp[ns // 2 :]
 
-    # Fit a logistic regression model to the data for each layer
+    # Per-layer cosine between independent probe fits
     cos_floor = {}
     for layer_idx in layers:
         wA = _fit_w([h[layer_idx][i] for i in hA], [s[layer_idx][i] for i in sA])
@@ -94,11 +95,11 @@ def main():
         cos_floor[layer_idx] = _cos(wA, wB)
     vals = list(cos_floor.values())
 
-    # Save results
+    # Persist noise-floor summary
     cfg = RunConfig(
-        model=args.model,
-        omit_quantizer=True,
-        extra={"n_calib": args.n_calib, "token_pos": args.token_pos, "seed": SEED},
+        model = args.model,
+        omit_quantizer = True,
+        extra = {"n_calib": args.n_calib, "token_pos": args.token_pos, "seed": SEED},
     )
     data = {
         "summary": {

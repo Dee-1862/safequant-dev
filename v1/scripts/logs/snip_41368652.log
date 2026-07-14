@@ -1,6 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-[data] 260 harmful prompts x 3 refusals  mode=contrastive
-[load] llama7b -> meta-llama/Llama-3.1-8B-Instruct  (dtype=torch.bfloat16)
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [07:07<21:22, 427.51s/it]Loading checkpoint shards:  50%|█████     | 2/4 [11:16<10:44, 322.33s/it]slurmstepd: error: *** JOB 41368652 ON w005 CANCELLED AT 2026-06-12T11:03:47 ***

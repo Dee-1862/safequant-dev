@@ -1,3 +1,5 @@
+# Model / tokenizer loaders for FP32 and common quantization backends.
+
 import os
 
 # Force gptqmodel to use pure-pytorch backend (no triton/exllama kernel issues)
@@ -6,14 +8,10 @@ os.environ["GPTQMODEL_FORCE_BACKEND"] = "torch"
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from pathlib import Path
-import sys
-from transformers import GPTQConfig
 from datasets import load_dataset as _load_ds
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import GPTQConfig
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import MODELS, DEVICE, HF_HOME, QUANTIZED_CHECKPOINTS
 
 try:
@@ -22,162 +20,144 @@ except ImportError:
     MODEL_REVISIONS = {}
 
 
-def _resolve_model_path(model_name: str) -> str:
+def _resolve_model_path(model_name):
     """
-    Resolve a model name to a HuggingFace model path.
+    Resolve a model alias to a HuggingFace model path.
 
-    Input:
-    - model_name (str): the name of the model to resolve
+    Inputs:
+        - model_name (str): Short alias or HF model id
 
-    Output:
-    - model_path (str): the path to the model
+    Outputs:
+        - model_path (str): Resolved HF path / id
     """
     return MODELS.get(model_name, model_name)
 
 
-def _use_remote_code(model_path: str) -> bool:
+def _use_remote_code(model_path):
     """
-    Phi-3's bundled modeling code calls DynamicCache.seen_tokens (removed in transformers >=4.41); use transformers' native Phi-3 instead. All other models keep trust_remote_code=True as before.
+    Decide trust_remote_code; Phi-3 uses transformers-native modeling code.
 
-    Input:
-    - model_path (str): the path to the model
+    Inputs:
+        - model_path (str): HF model path / id
 
-    Output:
-    - use_remote_code (bool): whether to use remote code
+    Outputs:
+        - use_remote_code (bool): Whether to set trust_remote_code=True
     """
-    # Get the path of the model
+    # Phi-3 remote modeling is incompatible with newer transformers DynamicCache
     p = str(model_path).lower()
     return "phi-3" not in p and "phi3" not in p
 
 
-def load_fp32(model_name: str, device: str = None):
+def load_fp32(model_name, device = None):
     """
     Load model in FP32 precision.
 
-    Input:
-    - model_name (str): the name of the model to load
-    - device (str): the device to load the model on (default: DEVICE)
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
 
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
     """
-    # Get the device
     if device is None:
         device = DEVICE
-
-    # Get the path of the model
     model_path = _resolve_model_path(model_name)
 
     print(f"Loading FP32 model: {model_name}")
     print(f"  Path: {model_path}")
     print(f"  Device: {device}")
 
-    # Get the revision of the model
+    # Optional revision pin to match quantized checkpoint provenance
     rev = MODEL_REVISIONS.get(model_name)
     if rev:
-        print(f"  Revision pin: {rev[:12]} (FP weights matched to the quantizer's source)")
+        print(
+            f"  Revision pin: {rev[:12]} (FP weights matched to the quantizer's source)"
+        )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path, cache_dir=HF_HOME, revision=rev
+        model_path, cache_dir = HF_HOME, revision = rev
     )
-
-    # Load the model
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        torch_dtype=torch.float32,
-        device_map=device,
-        trust_remote_code=_use_remote_code(model_path),
-        cache_dir=HF_HOME,
-        revision=rev,
+        torch_dtype = torch.float32,
+        device_map = device,
+        trust_remote_code = _use_remote_code(model_path),
+        cache_dir = HF_HOME,
+        revision = rev,
     )
 
     print(
         f"  OK Loaded ({sum(p.numel() for p in model.parameters()) / 1e9:.2f}B params)"
     )
     print(f"  Cache: {HF_HOME}")
-
     return model, tokenizer
 
 
-def load_nf4(model_name: str, device: str = None):
+def load_nf4(model_name, device = None):
     """
     Load model in NF4 quantization (bitsandbytes 4-bit NormalFloat).
 
-    Input:
-    - model_name (str): the name of the model to load
-    - device (str): the device to load the model on (default: DEVICE)
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
 
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
     """
-    # Get the device
     if device is None:
         device = DEVICE
-
-    # Get the path of the model
     model_path = _resolve_model_path(model_name)
 
     print(f"Loading NF4 model: {model_name}")
     print(f"  Path: {model_path}")
     print(f"  Device: {device}")
 
-    # Use float32 compute on CPU, float16 on GPU
+    # float32 compute on CPU, float16 on GPU
     compute_dtype = torch.float32 if device == "cpu" else torch.float16
-
-    # Get the BitsAndBytes configuration
     bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=compute_dtype,
-        bnb_4bit_use_double_quant=True,
+        load_in_4bit = True,
+        bnb_4bit_quant_type = "nf4",
+        bnb_4bit_compute_dtype = compute_dtype,
+        bnb_4bit_use_double_quant = True,
     )
 
-    # Load the tokenizer and the model
-    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir = HF_HOME)
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        quantization_config=bnb_config,
-        device_map=device,
-        trust_remote_code=True,
-        cache_dir=HF_HOME,
+        quantization_config = bnb_config,
+        device_map = device,
+        trust_remote_code = True,
+        cache_dir = HF_HOME,
     )
 
     print(f"  OK Loaded in 4-bit NF4 (compute dtype: {compute_dtype})")
     print(f"  Cache: {HF_HOME}")
-
     return model, tokenizer
 
 
-def load_int8(model_name: str, device: str = None):
+def load_int8(model_name, device = None):
     """
     Load model in INT8 quantization (bitsandbytes 8-bit).
-    Less aggressive than NF4 and is useful for ablation: does 8-bit also collapse?
 
-    Input:
-    - model_name (str): the name of the model to load
-    - device (str): the device to load the model on (default: DEVICE)
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
 
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
     """
-    # Get the device
     if device is None:
         device = DEVICE
-
-    # Get the path of the model
     model_path = _resolve_model_path(model_name)
 
     print(f"Loading INT8 model: {model_name}")
     print(f"  Path: {model_path}")
     print(f"  Device: {device}")
 
-    # Get the BitsAndBytes configuration
-    bnb_config = BitsAndBytesConfig(load_in_8bit=True)
-
-    # Load the tokenizer and the model
-    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_HOME)
+    bnb_config = BitsAndBytesConfig(load_in_8bit = True)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir = HF_HOME)
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         quantization_config = bnb_config,
@@ -188,22 +168,21 @@ def load_int8(model_name: str, device: str = None):
 
     print(f"  OK Loaded in 8-bit INT8")
     print(f"  Cache: {HF_HOME}")
-
     return model, tokenizer
 
 
-def load_quantized(model_name: str, quantizer: str = "nf4", device: str = None):
+def load_quantized(model_name, quantizer = "nf4", device = None):
     """
-    Unified loader that dispatches to the right quantizer.
+    Unified loader that dispatches to the right quantizer backend.
 
-    Input:
-        model_name: Short alias or any HF model ID.
-    - quantizer (str): the quantizer to use
-    - device (str): the device to load the model on (default: DEVICE)
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - quantizer (str): Quantizer key (fp32, nf4, int8, awq, gptq*, aqlm*, quip*)
+        - device (str | None): Device map target (default: DEVICE)
 
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
     """
     quantizer = quantizer.lower()
 
@@ -227,7 +206,7 @@ def load_quantized(model_name: str, quantizer: str = "nf4", device: str = None):
         return _load_aqlm(model_name, device, bits = 3)
     elif quantizer in ("quip2", "quip4"):
         bits = 2 if quantizer == "quip2" else 4
-        return _load_quip(model_name, device, bits=bits)
+        return _load_quip(model_name, device, bits = bits)
     else:
         raise ValueError(
             f"Unknown quantizer: '{quantizer}'. "
@@ -235,181 +214,167 @@ def load_quantized(model_name: str, quantizer: str = "nf4", device: str = None):
         )
 
 
-def _load_awq(model_name: str, device: str = None):
+def _load_awq(model_name, device = None):
     """
     Load a pre-quantized AWQ model via transformers native AWQ support.
 
-    The AWQ GEMM kernel in transformers 4.47.1 has a PY_SSIZE_T_CLEAN bug with Python 3.11. We work around it by dequantizing AWQ layers to FP16 nn.Linear modules after loading, which also makes weight extraction and module-swap restoration work seamlessly.
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
 
-    Input:
-    - model_name (str): the name of the model to load
-    - device (str): the device to load the model on (default: DEVICE)
-
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
     """
-    # Get the device
     if device is None:
         device = DEVICE
 
-    # Get the checkpoint key
+    # Prefer an entry in QUANTIZED_CHECKPOINTS when registered
     ckpt_key = (model_name, "awq")
     if ckpt_key in QUANTIZED_CHECKPOINTS:
-        # Get the model path
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
         print(f"Loading AWQ model: {model_name} -> {model_path}")
     else:
         model_path = _resolve_model_path(model_name)
         print(f"Loading AWQ model: {model_path}")
 
-    # Load the tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path, cache_dir=HF_HOME, trust_remote_code=True
+        model_path, cache_dir = HF_HOME, trust_remote_code = True
     )
-
-    # Load the model
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        device_map=device,
-        trust_remote_code=True,
-        cache_dir=HF_HOME,
-        torch_dtype=torch.float16,
+        device_map = device,
+        trust_remote_code = True,
+        cache_dir = HF_HOME,
+        torch_dtype = torch.float16,
     )
-
     model.eval()
     print(f"  OK Loaded AWQ 4-bit model")
     return model, tokenizer
 
 
-def _load_aqlm(model_name: str, device: str = None, bits: int = 2):
+def _load_aqlm(model_name, device = None, bits = 2):
     """
     Load an AQLM-quantized model (SOTA for 2-bit).
 
-    Checks for pre-quantized checkpoint first. AQLM models load natively through transformers and just needs `pip install aqlm[gpu]`.
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+        - bits (int): AQLM bitwidth
 
-    Input:
-    - model_name (str): the name of the model to load
-    - device (str): the device to load the model on (default: DEVICE)
-    - bits (int): the number of bits to quantize the model to
-
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer (from base model)
     """
-    # Get the device
     if device is None:
         device = DEVICE
 
-    # Get the bit suffix
+    # Resolve checkpoint: registry, then local aqlm_cache, else error
     bit_suffix = f"aqlm{bits}"
     ckpt_key = (model_name, bit_suffix)
     if ckpt_key in QUANTIZED_CHECKPOINTS:
-        # Get the model path
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
         print(f"Loading AQLM-{bits}bit model: {model_name} -> {model_path}")
     else:
-        # Check local aqlm_cache
         safe_name = model_name.replace("/", "_")
-        local_path = os.path.join(HF_HOME, "aqlm_cache", f"{safe_name}-aqlm-{bits}bit")
-
-        # Check if the local path exists
-        if os.path.isdir(local_path) and os.path.exists(os.path.join(local_path, "config.json")):
-            # Get the model path
+        local_path = os.path.join(
+            HF_HOME, "aqlm_cache", f"{safe_name}-aqlm-{bits}bit"
+        )
+        if os.path.isdir(local_path) and os.path.exists(
+            os.path.join(local_path, "config.json")
+        ):
             model_path = local_path
-            # Print the model path
-            print(f"Loading AQLM-{bits}bit model: {model_name} (cached at {local_path})")
+            print(
+                f"Loading AQLM-{bits}bit model: {model_name} (cached at {local_path})"
+            )
         else:
-            # Raise an error
             raise ValueError(
                 f"No pre-quantized AQLM checkpoint for ({model_name}, {bit_suffix}). "
                 f"AQLM requires pre-quantized checkpoints -- on-the-fly quantization "
                 f"takes hours. Add the checkpoint to config.QUANTIZED_CHECKPOINTS."
             )
 
-    # AQLM checkpoints often lack a chat template, so load tokenizer from the base model to get the full chat template and special tokens.
+    # Tokenizer from base model (AQLM repos often lack chat templates)
     base_path = _resolve_model_path(model_name)
-
-    # Load the tokenizer and the model
-    tokenizer = AutoTokenizer.from_pretrained(base_path, cache_dir=HF_HOME, trust_remote_code=_use_remote_code(base_path))
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_path,
+        cache_dir = HF_HOME,
+        trust_remote_code = _use_remote_code(base_path),
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map = device,
         trust_remote_code = _use_remote_code(model_path),
-        cache_dir=HF_HOME,
-        torch_dtype=torch.float16,
+        cache_dir = HF_HOME,
+        torch_dtype = torch.float16,
     )
     model.eval()
     print(f"  OK Loaded AQLM {bits}-bit model")
     return model, tokenizer
 
 
-def _load_quip(model_name: str, device: str = None, bits: int = 4):
+def _load_quip(model_name, device = None, bits = 4):
     """
     Load a pre-quantized QuIP# model.
-    
-    Input:
-    - model_name (str): the name of the model to load
-    - device (str): the device to load the model on (default: DEVICE)
-    - bits (int): the number of bits to quantize the model to
 
-    Output:
-    - model (torch.nn.Module): the loaded model
-    - tokenizer (transformers.Tokenizer): the tokenizer for the model
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+        - bits (int): QuIP# bitwidth
+
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer (from base model)
     """
-    # Get the device
     if device is None:
         device = DEVICE
 
-    # Get the bit suffix and checkpoint key
     bit_suffix = f"quip{bits}"
     ckpt_key = (model_name, bit_suffix)
     if ckpt_key in QUANTIZED_CHECKPOINTS:
         model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
         print(f"Loading QuIP#-{bits}bit model: {model_name} -> {model_path}")
     else:
-        raise ValueError(f"No pre-quantized QuIP# checkpoint for ({model_name}, {bit_suffix})")
+        raise ValueError(
+            f"No pre-quantized QuIP# checkpoint for ({model_name}, {bit_suffix})"
+        )
 
     # Tokenizer from base model (QuIP# repos don't include tokenizer)
     base_path = _resolve_model_path(model_name)
     tokenizer = AutoTokenizer.from_pretrained(
-        base_path, cache_dir=HF_HOME, trust_remote_code=True
+        base_path, cache_dir = HF_HOME, trust_remote_code = True
     )
-
-    # Load the model
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        device_map=device,
-        trust_remote_code=True,
-        cache_dir=HF_HOME,
-        torch_dtype=torch.float16,
+        device_map = device,
+        trust_remote_code = True,
+        cache_dir = HF_HOME,
+        torch_dtype = torch.float16,
     )
     model.eval()
     print(f"  OK Loaded QuIP# {bits}-bit model")
     return model, tokenizer
 
 
-def _load_gptq(model_name: str, device: str = None, bits: int = 4):
+def _load_gptq(model_name, device = None, bits = 4):
     """
-    Load a GPTQ-quantized model.
+    Load a GPTQ-quantized model (pre-quantized or on-the-fly).
 
-    For 4-bit and 8-bit: loads pre-quantized HF checkpoint via GPTQConfig.
-    For 3-bit and 2-bit: quantizes on-the-fly (requires optimum + auto-gptq).
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+        - bits (int): Quantization bits (2, 3, 4, or 8)
 
-    Args:
-        model_name: model alias or HF ID
-        device: target device
-        bits: quantization bits (2, 3, 4, or 8)
+    Outputs:
+        - model (torch.nn.Module): Loaded / quantized model
+        - tokenizer (Tokenizer): Matching tokenizer
     """
-    # Get the device
     if device is None:
         device = DEVICE
 
-    # Check for pre-quantized checkpoint
+    # Look up a registered pre-quantized checkpoint when bits map to a suffix
     bit_suffix = {4: "gptq4", 3: "gptq3", 8: "gptq8"}.get(bits)
     ckpt_key_alias = (model_name, bit_suffix) if bit_suffix else None
-
-
     pre_quantized = None
     if ckpt_key_alias and ckpt_key_alias in QUANTIZED_CHECKPOINTS:
         pre_quantized = QUANTIZED_CHECKPOINTS[ckpt_key_alias]
@@ -420,27 +385,27 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         if "compressed-llm" in pre_quantized:
             revision = f"{bits}bit_128g"
             print(
-                f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized} (rev: {revision})"
+                f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized} "
+                f"(rev: {revision})"
             )
         else:
             print(f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized}")
 
-        # Load via transformers native GPTQ support
+        # Tokenizer: base model for compressed-llm, else from the checkpoint
         if "compressed-llm" in pre_quantized:
             base_path = _resolve_model_path(model_name)
             tokenizer = AutoTokenizer.from_pretrained(
-                base_path, cache_dir=HF_HOME, trust_remote_code=True
+                base_path, cache_dir = HF_HOME, trust_remote_code = True
             )
         else:
             tokenizer = AutoTokenizer.from_pretrained(
                 pre_quantized,
-                cache_dir=HF_HOME,
-                trust_remote_code=True,
-                revision=revision,
+                cache_dir = HF_HOME,
+                trust_remote_code = True,
+                revision = revision,
             )
 
-        # Create the GPTQ configuration
-        gptq_cfg = GPTQConfig(bits=bits, use_exllama=False)
+        gptq_cfg = GPTQConfig(bits = bits, use_exllama = False)
         model = AutoModelForCausalLM.from_pretrained(
             pre_quantized,
             quantization_config = gptq_cfg,
@@ -454,8 +419,7 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         print(f"  OK Loaded GPTQ {bits}-bit (pre-quantized)")
         return model, tokenizer
 
-    # On-the-fly quantization for 3-bit and 2-bit
-    # Check if we already cached a quantized version on Ocean
+    # Cached on-the-fly result, or quantize from scratch
     model_path = _resolve_model_path(model_name)
     safe_name = model_name.replace("/", "_")
     cache_path = os.path.join(HF_HOME, "gptq_cache", f"{safe_name}-gptq-{bits}bit")
@@ -466,67 +430,63 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
         print(f"Loading GPTQ-{bits}bit model: {model_name} (cached at {cache_path})")
         try:
             tokenizer = AutoTokenizer.from_pretrained(
-                cache_path, trust_remote_code=True
+                cache_path, trust_remote_code = True
             )
         except Exception as e:
             print(
-                f"  cache-path tokenizer load failed ({type(e).__name__}); loading from base HF repo {model_path}"
+                f"  cache-path tokenizer load failed ({type(e).__name__}); "
+                f"loading from base HF repo {model_path}"
             )
             tokenizer = AutoTokenizer.from_pretrained(
-                model_path, trust_remote_code=True
+                model_path, trust_remote_code = True
             )
-        gptq_cfg = GPTQConfig(bits=bits, use_exllama=False)
+        gptq_cfg = GPTQConfig(bits = bits, use_exllama = False)
         model = AutoModelForCausalLM.from_pretrained(
             cache_path,
-            quantization_config=gptq_cfg,
-            device_map=device,
-            trust_remote_code=True,
-            torch_dtype=torch.float16,
+            quantization_config = gptq_cfg,
+            device_map = device,
+            trust_remote_code = True,
+            torch_dtype = torch.float16,
         )
         model.eval()
         print(f"  OK Loaded GPTQ {bits}-bit from cache")
         return model, tokenizer
 
-    # Quantize from scratch
+    # Quantize from scratch with wikitext calibration strings
     print(f"Loading GPTQ-{bits}bit model: {model_name} (on-the-fly quantization)")
-
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path, cache_dir=HF_HOME, trust_remote_code=True
+        model_path, cache_dir = HF_HOME, trust_remote_code = True
     )
-
-    # Load calibration data as a list of strings to avoid optimum trying to download allenai/c4 at runtime (fails on compute nodes without internet, and the dataset= string param doesn't reliably propagate to optimum).
     try:
         _wiki = _load_ds(
-            "wikitext", "wikitext-2-raw-v1", split="train", cache_dir=HF_HOME
+            "wikitext", "wikitext-2-raw-v1", split = "train", cache_dir = HF_HOME
         )
         calib_texts = [t for t in _wiki["text"] if len(t.strip()) > 100][:128]
     except Exception:
-        _wiki = _load_ds("wikitext", "wikitext-2-raw-v1", split="train")
+        _wiki = _load_ds("wikitext", "wikitext-2-raw-v1", split = "train")
         calib_texts = [t for t in _wiki["text"] if len(t.strip()) > 100][:128]
 
     gptq_config = GPTQConfig(
-        bits=bits,
-        dataset=calib_texts,
-        tokenizer=tokenizer,
-        group_size=128,
-        use_exllama=False,
+        bits = bits,
+        dataset = calib_texts,
+        tokenizer = tokenizer,
+        group_size = 128,
+        use_exllama = False,
     )
-
-    # Quantize the model
     print(f"  Quantizing to {bits}-bit GPTQ (this may take a few minutes)...")
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        quantization_config=gptq_config,
-        device_map=device,
-        trust_remote_code=True,
-        cache_dir=HF_HOME,
+        quantization_config = gptq_config,
+        device_map = device,
+        trust_remote_code = True,
+        cache_dir = HF_HOME,
     )
     model.eval()
     print(f"  OK Quantized to GPTQ {bits}-bit on-the-fly")
 
-    # Save to cache for future runs
+    # Best-effort local cache for future runs
     try:
-        os.makedirs(cache_path, exist_ok=True)
+        os.makedirs(cache_path, exist_ok = True)
         model.save_pretrained(cache_path)
         tokenizer.save_pretrained(cache_path)
         print(f"  OK Saved to cache: {cache_path}")
@@ -536,44 +496,42 @@ def _load_gptq(model_name: str, device: str = None, bits: int = 4):
     return model, tokenizer
 
 
-def get_weight(module, as_dtype=torch.float32):
+def get_weight(module, as_dtype = torch.float32):
     """
-    Extract weight from a module, handling both regular and quantized weights.
+    Extract weight from a module, handling regular and quantized layouts.
 
-    Args:
-        module: nn.Linear module (possibly quantized)
-        as_dtype: Target dtype for output
+    Inputs:
+        - module (nn.Module): Linear or quantized linear module
+        - as_dtype (torch.dtype): Target dtype for the returned weight
 
-    Returns:
-        Weight tensor of shape (out_features, in_features)
+    Outputs:
+        - weight (torch.Tensor): Dense (out_features, in_features) weight
     """
     import torch.nn as nn
 
-    # Get dimensions -- different quantizers use different attribute names
+    # Dimension attrs differ across quantizer wrappers
     in_f = getattr(module, "in_features", None) or getattr(module, "infeatures", None)
     out_f = getattr(module, "out_features", None) or getattr(
         module, "outfeatures", None
     )
 
-    # Check if it's an auto_gptq QuantLinear
+    # auto_gptq QuantLinear -- dequantize via identity forward
     if hasattr(module, "qweight"):
-        # auto_gptq QuantLinear -- use identity matrix forward pass to dequantize
         device = module.qweight.device
-        identity = torch.eye(in_f, device=device, dtype=torch.float16)
+        identity = torch.eye(in_f, device = device, dtype = torch.float16)
         with torch.no_grad():
             weight = module(identity).T.float()
         return weight.to(as_dtype)
 
-    # Check if it's a regular nn.Linear or bitsandbytes quantized
+    # Unknown non-Linear module -- identity forward fall-back
     if not isinstance(module, nn.Linear):
-        # Unknown module type -- try identity matrix forward pass as fallback
         device = next(module.parameters()).device
-        identity = torch.eye(in_f, device=device, dtype=torch.float16)
+        identity = torch.eye(in_f, device = device, dtype = torch.float16)
         with torch.no_grad():
             weight = module(identity).T.float()
         return weight.to(as_dtype)
 
-    # Check if quantized (BitsAndBytes Params4bit -- NF4)
+    # BitsAndBytes Params4bit (NF4)
     if hasattr(module.weight, "quant_type"):
         try:
             import bitsandbytes.functional as bnb_F
@@ -587,20 +545,20 @@ def get_weight(module, as_dtype=torch.float32):
                 .view(out_f, in_f)
             )
         except Exception:
-            identity = torch.eye(in_f, device=module.weight.device, dtype=torch.float32)
+            identity = torch.eye(
+                in_f, device = module.weight.device, dtype = torch.float32
+            )
             with torch.no_grad():
                 weight = module(identity).T
         return weight.to(as_dtype)
 
-    # Check if quantized (BitsAndBytes Int8Params -- LLM.int8)
+    # BitsAndBytes Int8Params (LLM.int8)
     if hasattr(module.weight, "CB") or module.weight.dtype == torch.int8:
-        # Int8 stores weights as int8 + row-wise absmax scales
-        # Use identity matrix forward pass to get dequantized weight
         device = module.weight.device
-        identity = torch.eye(in_f, device=device, dtype=torch.float16)
+        identity = torch.eye(in_f, device = device, dtype = torch.float16)
         with torch.no_grad():
             weight = module(identity).T.float()
         return weight.to(as_dtype)
 
-    # Regular weight
+    # Dense nn.Linear
     return module.weight.data.to(as_dtype)

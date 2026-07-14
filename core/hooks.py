@@ -1,25 +1,36 @@
+# Forward hooks that ablate a direction from residual-stream layer outputs.
+
 from core.residuals import get_inner
 
 
 def make_ablation_hook(r_hat_cpu):
     """
-    Forward hook that projects r_hat out of the residual stream output (h <- h - (h @ r) * r). 
-    r_hat_cpu must be pre-normalized; it is moved to the activation's device/dtype on the fly.
-    
-    Input:
-    - r_hat_cpu: the reference vector
+    Build a forward hook that projects r_hat out of the residual stream.
 
-    Output: hook function
+    Inputs:
+        - r_hat_cpu (torch.Tensor): Pre-normalized direction on CPU
+
+    Outputs:
+        - hook (callable): Forward hook applying h <- h - (h @ r) * r
     """
-    # Define the hook function
+    # Closure over the CPU direction; move to activation device/dtype on the fly
     def hook(module, inputs, output):
-        # Check if the output is a tuple
-        is_tuple = isinstance(output, tuple)
+        """
+        Ablate r_hat from a layer's residual-stream output.
 
-        # Get the hidden state
+        Inputs:
+            - module (nn.Module): Hooked module (unused)
+            - inputs (tuple): Forward inputs (unused)
+            - output (Tensor | tuple): Layer output or (hidden, ...)
+
+        Outputs:
+            - output (Tensor | tuple): Ablated output matching the input layout
+        """
+        # Preserve tuple vs tensor return layout
+        is_tuple = isinstance(output, tuple)
         h = output[0] if is_tuple else output
 
-        # Check if the hidden state is a 3D tensor
+        # Only ablate batched sequence residuals (B, T, D)
         if h.dim() != 3:
             return output
         r = r_hat_cpu.to(h.device).to(h.dtype)
@@ -34,36 +45,38 @@ def make_ablation_hook(r_hat_cpu):
 
 def install_ablation(model, r_hat_cpu, layers):
     """
-    Install a forward hook that projects a (pre-normalized) direction out of the residual stream at each listed layer:
-    h <- h - (h . r) r
-    
-    Input:
-    - model: the model to install the hook on
-    - r_hat_cpu: the reference vector
-    - layers: list of layer names
+    Register ablation hooks on the listed residual-stream layers.
 
-    Output: list of handles
+    Inputs:
+        - model (torch.nn.Module): Model (possibly wrapped)
+        - r_hat_cpu (torch.Tensor): Pre-normalized direction on CPU
+        - layers (list): Layer indices to ablate
+
+    Outputs:
+        - handles (list): Forward-hook handles for later removal
     """
-    # Get the inner model
+    # Resolve inner transformer that owns .layers
     inner = get_inner(model)
     handles = []
 
-    # Install the hook for each layer
+    # One hook per requested layer
     for L in layers:
-        handles.append(inner.layers[L].register_forward_hook(make_ablation_hook(r_hat_cpu)))
+        handles.append(
+            inner.layers[L].register_forward_hook(make_ablation_hook(r_hat_cpu))
+        )
     return handles
 
 
 def remove_handles(handles):
     """
-    Remove a list of forward hook handles.
+    Remove a list of forward-hook handles.
 
-    Input:
-    - handles: list of forward hook handles
+    Inputs:
+        - handles (list): Hook handles from install_ablation
 
-    Output: None
+    Outputs:
+        - None
     """
-
-    # Remove the handles
+    # Detach every registered hook
     for h in handles:
         h.remove()

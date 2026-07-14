@@ -1,17 +1,0 @@
-=== probe refit noise-floor llama | Mon Jun 29 08:09:44 EDT 2026 ===
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-=== probe refit noise-floor | llama7b | n_calib=200 token_pos=-1 seed=42
-Loading FP32 model: llama7b
-  Path: meta-llama/Llama-3.1-8B-Instruct
-  Device: cuda
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [01:21<04:05, 81.76s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:24<02:20, 70.33s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:20<01:04, 64.07s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:30<00:00, 42.47s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:30<00:00, 52.52s/it]
-  OK Loaded (8.03B params)
-  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
-
-  FP-vs-FP refit cos (noise floor): min=0.684 median=0.883 max=0.994
-  (FP-vs-quant cos_med for this model's AQLM-2 was ~0.79 Llama / ~0.70 Phi-3)
-  -> if floor >> 0.79, the drift is REAL rotation, not refit noise
-
-[saved] outputs/probe_refit_control_llama7b.json

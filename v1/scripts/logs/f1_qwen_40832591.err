@@ -1,153 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:55<02:46, 55.43s/it]Loading checkpoint shards:  50%|█████     | 2/4 [01:40<01:38, 49.38s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:01<01:03, 63.96s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:55<00:00, 59.93s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:55<00:00, 58.91s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:239: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend', 'use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
-  warnings.warn(warning_msg)
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/backends/__init__.py:46: UserWarning: Please use the new API settings to control TF32 behavior, such as torch.backends.cudnn.conv.fp32_precision = 'tf32' or torch.backends.cuda.matmul.fp32_precision = 'ieee'. Old settings, e.g, torch.backends.cuda.matmul.allow_tf32 = True, torch.backends.cudnn.allow_tf32 = True, allowTF32CuDNN() and allowTF32CuBLAS() will be deprecated after Pytorch 2.9. Please see https://pytorch.org/docs/main/notes/cuda.html#tensorfloat-32-tf32-on-ampere-and-later-devices (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:80.)
-  self.setter(val)
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:410: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
-  @custom_fwd
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:418: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
-  @custom_bwd
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/auto_gptq/nn_modules/triton_utils/kernels.py:461: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
-  @custom_fwd(cast_inputs=torch.float16)
-CUDA extension not installed.
-CUDA extension not installed.
-Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [03:22<03:22, 202.93s/it]Fetching 2 files: 100%|██████████| 2/2 [03:22<00:00, 101.47s/it]
-`loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [01:36<01:36, 96.44s/it]Loading checkpoint shards: 100%|██████████| 2/2 [01:39<00:00, 41.42s/it]Loading checkpoint shards: 100%|██████████| 2/2 [01:39<00:00, 49.67s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:124: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-Downloading readme: 0.00B [00:00, ?B/s]Downloading readme: 16.2kB [00:00, 48.3MB/s]
-Downloading readme: 0.00B [00:00, ?B/s]Downloading readme: 11.6kB [00:00, 47.8MB/s]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.84s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.71s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.73s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.68s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.70s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/__init__.py:21: DeprecationWarning: 
-I have left this message as the final dev message to help you transition.
-
-Important Notice:
-- AutoAWQ is officially deprecated and will no longer be maintained.
-- The last tested configuration used Torch 2.6.0 and Transformers 4.51.3.
-- If future versions of Transformers break AutoAWQ compatibility, please report the issue to the Transformers project.
-
-Alternative:
-- AutoAWQ has been adopted by the vLLM Project: https://github.com/vllm-project/llm-compressor
-
-For further inquiries, feel free to reach out:
-- X: https://x.com/casper_hansen_
-- LinkedIn: https://www.linkedin.com/in/casper-hansen-804005170/
-
-  warnings.warn(_FINAL_DEV_MESSAGE, category=DeprecationWarning, stacklevel=1)
-Traceback (most recent call last):
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/direction_drift.py", line 257, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/direction_drift.py", line 225, in main
-    q_model, _ = load_quantized(args.model, quantizer=q)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 184, in load_quantized
-    return _load_awq(model_name, device)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 230, in _load_awq
-    model = AutoModelForCausalLM.from_pretrained(
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py", line 563, in from_pretrained
-    return model_class.from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_utils.py", line 3564, in from_pretrained
-    hf_quantizer.preprocess_model(
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/base.py", line 182, in preprocess_model
-    return self._process_model_before_weight_loading(model, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/quantizer_awq.py", line 85, in _process_model_before_weight_loading
-    model, has_been_replaced = replace_with_awq_linear(
-                               ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/integrations/awq.py", line 100, in replace_with_awq_linear
-    from awq.modules.linear.gemm import WQLinear_GEMM
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/__init__.py", line 24, in <module>
-    from awq.models.auto import AutoAWQForCausalLM
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/models/__init__.py", line 1, in <module>
-    from .mpt import MptAWQForCausalLM
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/models/mpt.py", line 1, in <module>
-    from .base import BaseAWQForCausalLM
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/models/base.py", line 33, in <module>
-    from transformers import (
-ImportError: cannot import name 'BaseImageProcessor' from 'transformers' (/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/__init__.py)
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:124: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-Downloading readme: 0.00B [00:00, ?B/s]Downloading readme: 11.6kB [00:00, 49.4MB/s]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.73s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.60s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.56s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.59s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.60s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Traceback (most recent call last):
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/direction_drift.py", line 257, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/direction_drift.py", line 225, in main
-    q_model, _ = load_quantized(args.model, quantizer=q)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 188, in load_quantized
-    return _load_gptq(model_name, device, bits=3)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 489, in _load_gptq
-    tokenizer = AutoTokenizer.from_pretrained(cache_path, trust_remote_code=True)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/auto/tokenization_auto.py", line 862, in from_pretrained
-    return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2089, in from_pretrained
-    return cls._from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2311, in _from_pretrained
-    tokenizer = cls(*init_inputs, **init_kwargs)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/qwen2/tokenization_qwen2_fast.py", line 120, in __init__
-    super().__init__(
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/tokenization_utils_fast.py", line 111, in __init__
-    fast_tokenizer = TokenizerFast.from_file(fast_tokenizer_file)
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Exception: data did not match any variant of untagged enum ModelWrapper at line 757443 column 3
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:124: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.74s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.61s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.62s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.58s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.60s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/huggingface_hub/file_download.py:949: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
-  warnings.warn(
-Traceback (most recent call last):
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/direction_drift.py", line 257, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/direction_drift.py", line 225, in main
-    q_model, _ = load_quantized(args.model, quantizer=q)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 190, in load_quantized
-    return _load_gptq(model_name, device, bits=2)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 489, in _load_gptq
-    tokenizer = AutoTokenizer.from_pretrained(cache_path, trust_remote_code=True)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/auto/tokenization_auto.py", line 862, in from_pretrained
-    return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2089, in from_pretrained
-    return cls._from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2311, in _from_pretrained
-    tokenizer = cls(*init_inputs, **init_kwargs)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/qwen2/tokenization_qwen2_fast.py", line 120, in __init__
-    super().__init__(
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/tokenization_utils_fast.py", line 111, in __init__
-    fast_tokenizer = TokenizerFast.from_file(fast_tokenizer_file)
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Exception: data did not match any variant of untagged enum ModelWrapper at line 757443 column 3

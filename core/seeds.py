@@ -1,3 +1,5 @@
+# Global RNG seeding for reproducible SafeQuant experiments.
+
 import os
 import random as _python_random
 
@@ -12,31 +14,31 @@ import torch
 DEFAULT_SEED = 42
 
 
-def set_global_seed(seed: int = DEFAULT_SEED, *, deterministic: bool = False) -> int:
-    """Seed Python, NumPy, PyTorch CPU, and PyTorch CUDA RNGs.
-
-    Input:
-        seed: integer seed (default 42).
-        deterministic: if True, also force torch.use_deterministic_algorithms
-            and cudnn.deterministic. This eliminates most non-determinism but
-            can disable some fast kernels. Default False (we accept tiny
-            non-determinism from atomic adds in attention kernels in exchange
-            for speed; reported numbers still reproduce to within +/-1 prompt
-            on n_eval=1000).
-
-    Output: the seed that was set.
+def set_global_seed(seed = DEFAULT_SEED, *, deterministic = False):
     """
+    Seed Python, NumPy, PyTorch CPU, and PyTorch CUDA RNGs.
+
+    Inputs:
+        - seed (int): Integer seed (default 42)
+        - deterministic (bool): If True, force deterministic torch/cudnn algorithms
+
+    Outputs:
+        - seed (int): The seed that was set
+    """
+    # Seed host-side RNGs
     _python_random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    # Mirror seed across all CUDA devices when present
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
+    # Optional strict determinism (slower; may disable some fast kernels)
     if deterministic:
-        # Required before the first CUDA matmul when deterministic algorithms are on.
+        # Required before the first CUDA matmul when deterministic algorithms are on
         os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
-        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.use_deterministic_algorithms(True, warn_only = True)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     return seed

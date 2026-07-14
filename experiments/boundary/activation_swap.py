@@ -1,12 +1,9 @@
-"""Activation swap control: weight vs activation damage."""
+# Activation swap control: weight vs activation damage.
 import argparse
 import gc
-import sys
 from pathlib import Path
 
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_wildjailbreak_prompts
 from core.evaluation import _extract_behavior, classify_batch
@@ -21,25 +18,40 @@ _SCRIPT = Path(__file__)
 
 def capture_quant_activations(q_model, q_tok, prompts, layer_idx):
     """
-    Capture the quantized activations for a given layer.
+    Capture residual stream activations at one layer for each prompt.
+
     Inputs:
-        q_model (torch.nn.Module): The quantized model to use for capturing activations.
-        q_tok (transformers.PreTrainedTokenizer): The tokenizer to use for capturing activations.
-        prompts (list): A list of prompts to capture activations for.
-        layer_idx (int): The index of the layer to capture activations for.
+        - q_model (nn.Module): Quantized model
+        - q_tok (PreTrainedTokenizer): Tokenizer matched to q_model
+        - prompts (list): Prompt items
+        - layer_idx (int): Layer index to hook
 
     Outputs:
-        captured (list): A list of captured activations.
+        - captured (list[Tensor]): CPU tensors of residual activations per prompt
     """
+    # Hook buffer for the target layer
     inner = get_inner(q_model)
     device = next(q_model.parameters()).device
     captured = []
     buf = {}
 
     def hook(module, inputs, output):
+        """
+        Store the residual stream tensor from the hooked layer.
+
+        Inputs:
+            - module (nn.Module): Hooked module
+            - inputs (tuple): Forward inputs (unused)
+            - output (Tensor | tuple): Layer output
+
+        Outputs:
+            - None
+        """
+        # Prefer the hidden-state tensor when output is a tuple
         r = output[0] if isinstance(output, (tuple, list)) else output
         buf["x"] = r.detach()
 
+    # Run each prompt and keep the captured activation on CPU
     h = inner.layers[layer_idx].register_forward_hook(hook)
     try:
         for p in prompts:
@@ -56,25 +68,25 @@ def capture_quant_activations(q_model, q_tok, prompts, layer_idx):
 
 def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_acts, max_new_tokens = 256):
     """
-    Generate responses for a list of prompts using a model and tokenizer with a layer swap.
+    Generate with FP32 weights while injecting quantized activations at one layer.
 
     Inputs:
-        fp32_model (torch.nn.Module): The model to use for generation.
-        fp32_tok (transformers.PreTrainedTokenizer): The tokenizer to use for generation.
-        prompts (list): A list of prompts to generate responses for.
-        layer_idx (int): The index of the layer to swap.
-        quant_acts (list): A list of quantized activations to use for the layer swap.
-        max_new_tokens (int): The maximum number of new tokens to generate.
+        - fp32_model (nn.Module): FP32 model used for generation
+        - fp32_tok (PreTrainedTokenizer): Tokenizer matched to fp32_model
+        - prompts (list): Prompt items
+        - layer_idx (int): Layer index to overwrite on the first forward
+        - quant_acts (list[Tensor]): Pre-captured quantized activations
+        - max_new_tokens (int): Generation length cap
 
     Outputs:
-        fp_responses (list): A list of generated responses.
+        - fp_responses (list[str]): Decoded completions
     """
-    # Get the inner model
+    # Resolve device and accumulate outputs
     inner = get_inner(fp32_model)
     device = next(fp32_model.parameters()).device
     fp_responses = []
 
-    # Generate responses for each prompt
+    # One prompt at a time so the swap hook can use the matching activation
     for i, p in enumerate(prompts):
         text = prompt_text(p, fp32_tok)
         inputs = fp32_tok(text, return_tensors = "pt", truncation = True, max_length = 512).to(device)
@@ -84,8 +96,19 @@ def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_act
             q_act = q_act[:, : min(q_act.shape[1], prompt_len), :]
         first_call = [True]
 
-        # Hook to swap the quantized activations into the fp32 model
         def hook(module, inputs_, output):
+            """
+            Replace the first prompt-length residual with the quantized activation.
+
+            Inputs:
+                - module (nn.Module): Hooked module
+                - inputs_ (tuple): Forward inputs (unused)
+                - output (Tensor | tuple): Layer output
+
+            Outputs:
+                - output (Tensor | tuple): Swapped or original output
+            """
+            # Only rewrite the first forward that still covers the prompt
             r = output[0] if isinstance(output, (tuple, list)) else output
             if first_call[0] and r.shape[1] == prompt_len:
                 first_call[0] = False
@@ -96,7 +119,7 @@ def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_act
                     return new_r
             return output
 
-        # Register the hook to the layer
+        # Register, generate, then always remove the hook
         h = inner.layers[layer_idx].register_forward_hook(hook)
         try:
             with torch.no_grad():
@@ -106,31 +129,29 @@ def generate_with_layer_swap(fp32_model, fp32_tok, prompts, layer_idx, quant_act
                     do_sample = False,
                     pad_token_id = fp32_tok.eos_token_id,
                 )
-            fp_responses.append(fp32_tok.decode(gen[0, prompt_len:], skip_special_tokens=True).strip())
+            fp_responses.append(fp32_tok.decode(gen[0, prompt_len:], skip_special_tokens = True).strip())
         finally:
             h.remove()
 
-    # Return the generated responses
     return fp_responses
 
 
 def baseline_generate(model, tok, prompts, max_new_tokens = 256):
     """
-    Generate responses for a list of prompts using a model and tokenizer.
+    Greedy-generate completions without activation intervention.
 
     Inputs:
-        model (torch.nn.Module): The model to use for generation.
-        tok (transformers.PreTrainedTokenizer): The tokenizer to use for generation.
-        prompts (list): A list of prompts to generate responses for.
-        max_new_tokens (int): The maximum number of new tokens to generate.
+        - model (nn.Module): Model used for generation
+        - tok (PreTrainedTokenizer): Tokenizer matched to model
+        - prompts (list): Prompt items
+        - max_new_tokens (int): Generation length cap
 
     Outputs:
-        out (list): A list of generated responses.
+        - out (list[str]): Decoded completions
     """
+    # Decode one completion per prompt
     out = []
     device = next(model.parameters()).device
-
-    # Generate responses for each prompt
     for p in prompts:
         text = prompt_text(p, tok)
         inputs = tok(text, return_tensors = "pt", truncation = True, max_length = 512).to(device)
@@ -142,12 +163,12 @@ def baseline_generate(model, tok, prompts, max_new_tokens = 256):
                 do_sample = False,
                 pad_token_id = tok.eos_token_id,
             )
-        out.append(tok.decode(gen[0, prompt_len:], skip_special_tokens=True).strip())
+        out.append(tok.decode(gen[0, prompt_len:], skip_special_tokens = True).strip())
     return out
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required = True)
     ap.add_argument("--quantizer", required = True)
@@ -158,13 +179,13 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     swap_layers = [int(x) for x in args.swap_layers.split(",")]
 
-    # Load prompts
+    # Load eval prompts and behaviors
     items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = []
     for item in items:
         behaviors.append(_extract_behavior(item))
 
-    # Load quantized model and capture activations
+    # Capture quantized activations and baseline quantized responses
     q_model, q_tok = load_quantized(args.model, quantizer = args.quantizer)
     quant_acts_by_layer = {}
     for layer_idx in swap_layers:
@@ -174,7 +195,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Load fp32 model and generate responses
+    # FP32 baseline responses
     fp32_model, fp32_tok = load_fp32(args.model)
     fp32_responses = baseline_generate(
         model = fp32_model,
@@ -183,7 +204,7 @@ def main():
         max_new_tokens = args.max_new_tokens,
     )
 
-    # Generate responses with layer swap
+    # Layer-swap intervention conditions
     all_responses = {"fp32_baseline": fp32_responses, "quant_baseline": quant_responses}
     for layer_idx in swap_layers:
         all_responses[f"swap_q_into_fp32_L{layer_idx}"] = generate_with_layer_swap(
@@ -198,7 +219,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Classify responses
+    # Classify all conditions in one HarmBench session
     keys = list(all_responses.keys())
     flat_b, flat_r = [], []
     for k in keys:
@@ -206,11 +227,9 @@ def main():
         flat_r.extend(all_responses[k])
     flags = classify_batch(flat_b, flat_r, device = device)
     n = args.n_eval
-
-    # Calculate the ASR for each key
     asr = {k: 100.0 * sum(flags[i * n : (i + 1) * n]) / n for i, k in enumerate(keys)}
 
-    # Save results
+    # Persist ASR table
     cfg = RunConfig(
         model = args.model,
         quantizer = args.quantizer,

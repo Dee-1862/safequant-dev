@@ -1,8 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-Traceback (most recent call last):
-  File "/jet/home/bhoomire/projects/safequant_v2/refusal_direction/pipeline/run_pipeline.py", line 14, in <module>
-    from pipeline.submodules.select_direction import select_direction, get_refusal_scores
-  File "/jet/home/bhoomire/projects/safequant_v2/refusal_direction/pipeline/submodules/select_direction.py", line 5, in <module>
-    import matplotlib.pyplot as plt
-ModuleNotFoundError: No module named 'matplotlib'

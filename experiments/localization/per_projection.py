@@ -1,12 +1,9 @@
-"""Tables 3-4: per-projection restoration sweep."""
+# Tables 3-4: per-projection restoration sweep.
 import argparse
 import gc
-import sys
 from pathlib import Path
 
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
 from core.evaluation import _extract_behavior, classify_batch, generate_only
@@ -28,15 +25,15 @@ PROJ_TYPES_PHI3 = ["self_attn.qkv_proj", "self_attn.o_proj", "mlp.gate_up_proj",
 
 def _proj_types(model):
     """
-    Get the projection types for the model.
+    Return the projection-type paths for this model architecture.
 
     Inputs:
-        model: The model to get the projection types for.
+        - model (nn.Module): Loaded model (Llama-style or Phi-3)
 
     Outputs:
-        The projection types for the model.
+        - proj_types (list[str]): Projection paths to restore one at a time
     """
-    # Get the submodules of the model
+    # Detect Phi-3 fused qkv vs Llama-style separate projections
     submods = {n.rsplit(".", 1)[-1] for n, _ in model.named_modules()}
     if "qkv_proj" in submods:
         return PROJ_TYPES_PHI3
@@ -44,88 +41,85 @@ def _proj_types(model):
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_eval", type=int, default=200)
-    ap.add_argument("--n_reasoning", type=int, default=50)
-    ap.add_argument("--layer_lo", type=int, default=None)
-    ap.add_argument("--layer_hi", type=int, default=None)
+    ap.add_argument("--model", required = True)
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_eval", type = int, default = 200)
+    ap.add_argument("--n_reasoning", type = int, default = 50)
+    ap.add_argument("--layer_lo", type = int, default = None)
+    ap.add_argument("--layer_hi", type = int, default = None)
     args = ap.parse_args()
 
-    # Get the quantizer and the device
+    # Resolve runtime device and optional middle-layer band
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
     layer_range = None
-
-    # Get the variant
     variant = None
     if args.layer_lo is not None and args.layer_hi is not None:
         layer_range = (args.layer_lo, args.layer_hi)
         variant = f"L{args.layer_lo}-{args.layer_hi}"
 
-    # Load the prompts and extract the behaviors
-    items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
+    # Load eval prompts and extract HarmBench behaviors
+    items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = [_extract_behavior(it) for it in items]
-    arc_items = load_arc_challenge(n_samples=args.n_reasoning)
-    proj_types = None
+    arc_items = load_arc_challenge(n_samples = args.n_reasoning)
 
-    # Load the fp32 model and extract the weights
+    # FP32: cache weights per projection, then measure baseline ASR/ARC
     all_responses, all_arc = {}, {}
     fp32_model, tokenizer = load_fp32(args.model)
     proj_types = _proj_types(fp32_model)
     fp32_weights_by_proj = {p: extract_fp32_weights(fp32_model, [p]) for p in proj_types}
-    all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
+    all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc = "FP32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Load the quantized model and generate responses
-    q_model, _ = load_quantized(args.model, quantizer=qtz)
-    all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
+    # Quantized baseline without restoration
+    q_model, _ = load_quantized(args.model, quantizer = qtz)
+    all_responses[qtz] = generate_only(q_model, tokenizer, items, desc = qtz)
     all_arc[qtz] = measure_arc(q_model, tokenizer, arc_items)
     del q_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Restore the projections and generate responses
+    # One-at-a-time projection restore conditions
     for proj in proj_types:
         suffix = "_middle" if layer_range else ""
         cond = f"only_{proj.replace('.', '_')}{suffix}"
-        q_model, _ = load_quantized(args.model, quantizer=qtz)
+        q_model, _ = load_quantized(args.model, quantizer = qtz)
         if layer_range:
             restore_projections(q_model, fp32_weights_by_proj[proj], [proj], layer_range = layer_range)
         else:
             restore_projections(q_model, fp32_weights_by_proj[proj], [proj])
-        all_responses[cond] = generate_only(q_model, tokenizer, items, desc=cond)
+        all_responses[cond] = generate_only(q_model, tokenizer, items, desc = cond)
         all_arc[cond] = measure_arc(q_model, tokenizer, arc_items)
         del q_model
         gc.collect()
         torch.cuda.empty_cache()
 
-    # Classify the responses and calculate the ASR for each condition
+    # Classify all conditions in one HarmBench session
     conditions = list(all_responses.keys())
     flat_b, flat_r = [], []
     for cond in conditions:
         flat_b.extend(behaviors)
         flat_r.extend(all_responses[cond])
-    flags = classify_batch(flat_b, flat_r, device=device)
+    flags = classify_batch(flat_b, flat_r, device = device)
     n = args.n_eval
     asr_results = {cond: 100.0 * sum(flags[i * n : (i + 1) * n]) / n for i, cond in enumerate(conditions)}
 
-    # Calculate the ASR for the fp32 model and the quantized model
+    # Damage relative to FP32 and per-projection recovery
     fp32_asr = asr_results["fp32"]
     q_asr = asr_results[qtz]
     damage = q_asr - fp32_asr
 
-    # Create the run config
+    # Persist results under the localization mirror path
     cfg = RunConfig(
-        model=args.model,
-        quantizer=qtz,
-        variant=variant,
-        extra={"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
+        model = args.model,
+        quantizer = qtz,
+        variant = variant,
+        extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
     )
     data = {
         "fp32_asr": fp32_asr,

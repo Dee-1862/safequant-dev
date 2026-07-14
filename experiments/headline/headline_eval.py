@@ -1,13 +1,10 @@
-"""Table 5 / Figure 1: headline ASR+ARC+XSTest with McNemar and bootstrap CIs."""
+# Table 5 / Figure 1: headline ASR+ARC+XSTest with McNemar and bootstrap CIs.
 import argparse
 import gc
 import json
-import sys
 from pathlib import Path
 
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_arc_challenge, load_wildjailbreak_prompts, load_xstest
 from core.evaluation import (
@@ -32,81 +29,89 @@ _SCRIPT = Path(__file__)
 
 def eval_condition(model, tokenizer, name, wj_items, arc_items, xstest_items, max_new_tokens):
     """
-    Evaluate the condition.
+    Run ASR generation, ARC, and XSTest for one model condition.
 
     Inputs:
-        model: The model to evaluate.
-        tokenizer: The tokenizer to use.
-        name: The name of the condition.
-        wj_items: The list of wild jailbreak prompts.
-        arc_items: The list of arc challenge prompts.
-        xstest_items: The list of xstest prompts.
-        max_new_tokens: The maximum number of new tokens to generate.
+        - model (nn.Module): Model under evaluation
+        - tokenizer (PreTrainedTokenizer): Tokenizer matched to model
+        - name (str): Condition label used in progress bars
+        - wj_items (list): WildJailbreak eval prompts
+        - arc_items (list): ARC-Challenge items
+        - xstest_items (list): XSTest items
+        - max_new_tokens (int): ASR generation length cap
 
     Outputs:
-        resp: The list of responses.
-        arc: The list of arc scores.
-        xs: The list of xstest scores.
+        - resp (list[str]): ASR responses
+        - arc (float): ARC score
+        - xs (dict): XSTest metrics
     """
-    # Generate responses
+    # ASR responses on WildJailbreak
     resp = generate_only(
-        model = model, 
-        tok = tokenizer, 
-        prompts = wj_items, 
-        max_new_tokens = max_new_tokens, 
-        desc = f"{name}/ASR"
-        )
+        model = model,
+        tok = tokenizer,
+        prompts = wj_items,
+        max_new_tokens = max_new_tokens,
+        desc = f"{name}/ASR",
+    )
 
-    # Measure the arc scores
+    # ARC coherence
     arc = measure_arc(
-        model = model, 
-        tok = tokenizer, 
+        model = model,
+        tok = tokenizer,
         prompts = arc_items,
-        )
-    # Evaluate the xstest scores
+    )
+
+    # XSTest false-refusal metrics
     xs = eval_xstest(
-        model = model, 
-        tok = tokenizer, 
-        prompts = xstest_items, 
-        desc = f"{name}/XSTest"
-        )
+        model = model,
+        tok = tokenizer,
+        prompts = xstest_items,
+        desc = f"{name}/XSTest",
+    )
     return resp, arc, xs
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_eval", type=int, default=400)
-    ap.add_argument("--n_reasoning", type=int, default=100)
-    ap.add_argument("--asr_max_new_tokens", type=int, default=256)
-    ap.add_argument("--n_boot", type=int, default=2000)
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_eval", type = int, default = 400)
+    ap.add_argument("--n_reasoning", type = int, default = 100)
+    ap.add_argument("--asr_max_new_tokens", type = int, default = 256)
+    ap.add_argument("--n_boot", type = int, default = 2000)
     args = ap.parse_args()
 
-    # Set the global seed
+    # Seed and open the raw checkpoint path up front
     set_global_seed(DEFAULT_SEED)
     qtz = args.quantizer
-
-    # Create the run config
     cfg = RunConfig(
-        model=args.model,
-        quantizer=qtz,
-        output_stem="headline",
-        extra={"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "n_boot": args.n_boot},
+        model = args.model,
+        quantizer = qtz,
+        output_stem = "headline",
+        extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "n_boot": args.n_boot},
     )
-    raw_path = save_result(_SCRIPT, cfg, {}, raw=True)
+    raw_path = save_result(_SCRIPT, cfg, {}, raw = True)
 
-    # Load the prompts and extract the behaviors
-    wj_items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
+    # Load eval sets
+    wj_items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = [_extract_behavior(it) for it in wj_items]
-    arc_items = load_arc_challenge(n_samples=args.n_reasoning)
+    arc_items = load_arc_challenge(n_samples = args.n_reasoning)
     xstest_items = load_xstest()
 
     all_resp, all_arc, all_xs = {}, {}, {}
 
-    # Define the checkpoint function
     def checkpoint():
+        """
+        Flush partial response/ARC/XSTest dumps to the raw sidecar.
+
+        Inputs:
+            - None
+
+        Outputs:
+            - None
+        """
+        # Drop bulky per-prompt XSTest fields from the sidecar
         raw_path.write_text(
             json.dumps(
                 {
@@ -117,11 +122,11 @@ def main():
                         for k, v in all_xs.items()
                     },
                 },
-                indent=2,
+                indent = 2,
             )
         )
 
-    # Load the fp32 model and extract the weights
+    # FP32 weights and baseline metrics
     fp_model, tok = load_fp32(args.model)
     read_p, write_p = get_proj_sets(fp_model)
     write_w = extract_fp32_weights(fp_model, write_p)
@@ -134,7 +139,7 @@ def main():
     torch.cuda.empty_cache()
     checkpoint()
 
-    # Load the quantized model and extract the weights
+    # Quantized and restoration cells
     plan = [
         (qtz, []),
         ("write_restored", [(write_w, write_p)]),
@@ -142,7 +147,7 @@ def main():
         ("both_restored", [(write_w, write_p), (read_w, read_p)]),
     ]
     for name, restores in plan:
-        q_model, _ = load_quantized(args.model, quantizer=qtz)
+        q_model, _ = load_quantized(args.model, quantizer = qtz)
         for weights, projs in restores:
             restore_projections(q_model, weights, projs)
         all_resp[name], all_arc[name], all_xs[name] = eval_condition(
@@ -153,13 +158,13 @@ def main():
         torch.cuda.empty_cache()
         checkpoint()
 
-    # Classify the responses and calculate the ASR for each condition
+    # Shared HarmBench classification across conditions
     conditions = ["fp32", qtz, "write_restored", "read_restored", "both_restored"]
     flat_beh, flat_resp = [], []
     for c in conditions:
         flat_beh.extend(behaviors)
         flat_resp.extend(all_resp[c])
-    flat_flags = classify_batch(flat_beh, flat_resp, device="cuda")
+    flat_flags = classify_batch(flat_beh, flat_resp, device = "cuda")
     n = args.n_eval
     flags_by_cond = {
         c: [bool(x) for x in flat_flags[i * n : (i + 1) * n]] for i, c in enumerate(conditions)
@@ -171,15 +176,15 @@ def main():
     write_rec = q_asr - asr["write_restored"]
     both_rec = q_asr - asr["both_restored"]
 
-    # Calculate the McNemar test and the bootstrap recovery
+    # McNemar pairs and bootstrap recovery CIs
     mcnemar = {
         f"{qtz}_vs_read": mcnemar_exact(flags_by_cond[qtz], flags_by_cond["read_restored"]),
         f"{qtz}_vs_write": mcnemar_exact(flags_by_cond[qtz], flags_by_cond["write_restored"]),
         "read_vs_write": mcnemar_exact(flags_by_cond["read_restored"], flags_by_cond["write_restored"]),
     }
-    boot = bootstrap_recovery(flags_by_cond, qtz, n_boot=args.n_boot)
+    boot = bootstrap_recovery(flags_by_cond, qtz, n_boot = args.n_boot)
 
-    # Calculate the xstest summary
+    # Compact XSTest summary with Wilson CIs
     xstest_summary = {}
     for c in conditions:
         xs = all_xs[c]
@@ -191,7 +196,7 @@ def main():
             "n_safe": ns,
         }
 
-    # Save the results
+    # Persist primary headline artifact
     data = {
         "asr": asr,
         "arc": all_arc,

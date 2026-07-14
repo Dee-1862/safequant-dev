@@ -1,124 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-[data] 260 AdvBench harmful prompts
-Loading FP32 model: llama7b
-  Path: meta-llama/Llama-3.1-8B-Instruct
-  Device: cuda
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:53<02:40, 53.39s/it]Loading checkpoint shards:  50%|█████     | 2/4 [01:50<01:50, 55.33s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [02:58<01:01, 61.11s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:13<00:00, 43.04s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:13<00:00, 48.35s/it]
-  OK Loaded (8.03B params)
-  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
-
-  Generating responses (260 prompts)...
-FP:   0%|          | 0/260 [00:00<?, ?it/s]The following generation flags are not valid and may be ignored: ['temperature', 'top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-FP:   0%|          | 1/260 [00:09<40:34,  9.40s/it]FP:   1%|          | 2/260 [00:09<17:46,  4.13s/it]FP:   1%|          | 3/260 [00:10<10:34,  2.47s/it]FP:   2%|▏         | 4/260 [00:10<06:53,  1.61s/it]FP:   2%|▏         | 5/260 [00:11<05:05,  1.20s/it]FP:   2%|▏         | 6/260 [00:11<03:46,  1.12it/s]FP:   3%|▎         | 7/260 [00:11<02:58,  1.42it/s]FP:   3%|▎         | 8/260 [00:12<02:26,  1.72it/s]FP:   3%|▎         | 9/260 [00:19<11:32,  2.76s/it]FP:   4%|▍         | 10/260 [00:20<08:31,  2.04s/it]FP:   4%|▍         | 11/260 [00:21<07:16,  1.75s/it]FP:   5%|▍         | 12/260 [00:21<05:25,  1.31s/it]FP:   5%|▌         | 13/260 [00:21<04:16,  1.04s/it]FP:   5%|▌         | 14/260 [00:22<03:20,  1.22it/s]FP:   6%|▌         | 15/260 [00:22<02:31,  1.62it/s]FP:   6%|▌         | 16/260 [00:22<02:07,  1.91it/s]FP:   7%|▋         | 17/260 [00:22<01:40,  2.41it/s]FP:   7%|▋         | 18/260 [00:23<01:34,  2.56it/s]FP:   7%|▋         | 19/260 [00:27<06:03,  1.51s/it]FP:   8%|▊         | 20/260 [00:27<04:35,  1.15s/it]FP:   8%|▊         | 21/260 [00:27<03:38,  1.10it/s]FP:   8%|▊         | 22/260 [00:28<02:54,  1.36it/s]FP:   9%|▉         | 23/260 [00:28<02:24,  1.64it/s]FP:   9%|▉         | 24/260 [00:28<01:51,  2.11it/s]FP:  10%|▉         | 25/260 [00:28<01:29,  2.63it/s]FP:  10%|█         | 26/260 [00:29<01:24,  2.77it/s]FP:  10%|█         | 27/260 [00:29<01:26,  2.69it/s]FP:  11%|█         | 28/260 [00:29<01:22,  2.81it/s]FP:  11%|█         | 29/260 [00:33<05:43,  1.49s/it]FP:  12%|█▏        | 30/260 [00:34<04:10,  1.09s/it]FP:  12%|█▏        | 31/260 [00:34<03:29,  1.09it/s]FP:  12%|█▏        | 32/260 [00:34<02:46,  1.37it/s]FP:  13%|█▎        | 33/260 [00:35<02:16,  1.66it/s]FP:  13%|█▎        | 34/260 [00:35<01:55,  1.95it/s]FP:  13%|█▎        | 35/260 [00:35<01:42,  2.21it/s]FP:  14%|█▍        | 36/260 [00:36<01:31,  2.45it/s]FP:  14%|█▍        | 37/260 [00:36<01:23,  2.66it/s]FP:  15%|█▍        | 38/260 [00:36<01:09,  3.21it/s]FP:  15%|█▌        | 39/260 [00:37<01:15,  2.93it/s]FP:  15%|█▌        | 40/260 [00:37<01:13,  2.99it/s]FP:  16%|█▌        | 41/260 [00:37<01:01,  3.55it/s]FP:  16%|█▌        | 42/260 [00:37<01:10,  3.11it/s]FP:  17%|█▋        | 43/260 [00:38<00:59,  3.66it/s]FP:  17%|█▋        | 44/260 [00:38<00:51,  4.18it/s]FP:  17%|█▋        | 45/260 [00:38<00:45,  4.75it/s]FP:  18%|█▊        | 46/260 [00:38<00:41,  5.12it/s]FP:  18%|█▊        | 47/260 [00:38<00:48,  4.40it/s]FP:  18%|█▊        | 48/260 [00:39<00:43,  4.83it/s]FP:  19%|█▉        | 49/260 [00:39<00:40,  5.19it/s]FP:  19%|█▉        | 50/260 [00:39<00:47,  4.43it/s]FP:  20%|█▉        | 51/260 [00:43<04:51,  1.39s/it]FP:  20%|██        | 52/260 [00:43<03:33,  1.02s/it]FP:  20%|██        | 53/260 [00:45<03:55,  1.14s/it]FP:  21%|██        | 54/260 [00:45<02:52,  1.19it/s]FP:  21%|██        | 55/260 [00:45<02:19,  1.47it/s]FP:  22%|██▏       | 56/260 [00:45<01:56,  1.75it/s]FP:  22%|██▏       | 57/260 [00:46<01:47,  1.89it/s]FP:  22%|██▏       | 58/260 [00:46<01:44,  1.93it/s]FP:  23%|██▎       | 59/260 [00:47<01:32,  2.18it/s]FP:  23%|██▎       | 60/260 [00:47<01:23,  2.40it/s]FP:  23%|██▎       | 61/260 [00:47<01:07,  2.95it/s]FP:  24%|██▍       | 62/260 [00:47<01:04,  3.05it/s]FP:  24%|██▍       | 63/260 [00:48<01:03,  3.08it/s]FP:  25%|██▍       | 64/260 [00:48<00:53,  3.69it/s]FP:  25%|██▌       | 65/260 [00:48<00:46,  4.21it/s]FP:  25%|██▌       | 66/260 [00:48<00:41,  4.67it/s]FP:  26%|██▌       | 67/260 [00:48<00:38,  5.05it/s]FP:  26%|██▌       | 68/260 [00:49<00:55,  3.44it/s]FP:  27%|██▋       | 69/260 [00:53<04:35,  1.44s/it]FP:  27%|██▋       | 70/260 [00:53<03:20,  1.06s/it]FP:  27%|██▋       | 71/260 [00:54<02:39,  1.18it/s]FP:  28%|██▊       | 72/260 [00:54<02:00,  1.57it/s]FP:  28%|██▊       | 73/260 [00:54<01:52,  1.67it/s]FP:  28%|██▊       | 74/260 [00:54<01:26,  2.16it/s]FP:  29%|██▉       | 75/260 [00:55<01:17,  2.38it/s]FP:  29%|██▉       | 76/260 [00:57<03:25,  1.12s/it]FP:  30%|██▉       | 77/260 [00:58<02:39,  1.14it/s]FP:  30%|███       | 78/260 [00:58<02:08,  1.41it/s]FP:  30%|███       | 79/260 [00:59<02:37,  1.15it/s]FP:  31%|███       | 80/260 [00:59<01:58,  1.52it/s]FP:  31%|███       | 81/260 [01:00<01:53,  1.57it/s]FP:  32%|███▏      | 82/260 [01:00<01:35,  1.87it/s]FP:  32%|███▏      | 83/260 [01:01<01:22,  2.15it/s]FP:  32%|███▏      | 84/260 [01:01<01:05,  2.67it/s]FP:  33%|███▎      | 85/260 [01:01<01:07,  2.60it/s]FP:  33%|███▎      | 86/260 [01:01<00:55,  3.15it/s]FP:  33%|███▎      | 87/260 [01:06<04:12,  1.46s/it]FP:  34%|███▍      | 88/260 [01:10<06:28,  2.26s/it]FP:  34%|███▍      | 89/260 [01:14<08:02,  2.82s/it]FP:  35%|███▍      | 90/260 [01:14<05:55,  2.09s/it]FP:  35%|███▌      | 91/260 [01:14<04:15,  1.51s/it]FP:  35%|███▌      | 92/260 [01:14<03:06,  1.11s/it]FP:  36%|███▌      | 93/260 [01:15<02:24,  1.16it/s]FP:  36%|███▌      | 94/260 [01:15<01:48,  1.53it/s]FP:  37%|███▋      | 95/260 [01:15<01:36,  1.71it/s]FP:  37%|███▋      | 96/260 [01:16<01:26,  1.89it/s]FP:  37%|███▋      | 97/260 [01:16<01:15,  2.15it/s]FP:  38%|███▊      | 98/260 [01:20<04:13,  1.56s/it]FP:  38%|███▊      | 99/260 [01:21<03:10,  1.19s/it]FP:  38%|███▊      | 100/260 [01:21<02:34,  1.03it/s]FP:  39%|███▉      | 101/260 [01:21<01:55,  1.38it/s]FP:  39%|███▉      | 102/260 [01:21<01:27,  1.80it/s]FP:  40%|███▉      | 103/260 [01:21<01:08,  2.29it/s]FP:  40%|████      | 104/260 [01:22<01:01,  2.52it/s]FP:  40%|████      | 105/260 [01:22<01:02,  2.46it/s]FP:  41%|████      | 106/260 [01:22<00:57,  2.67it/s]FP:  41%|████      | 107/260 [01:27<03:49,  1.50s/it]FP:  42%|████▏     | 108/260 [01:27<02:53,  1.14s/it]FP:  42%|████▏     | 109/260 [01:27<02:14,  1.13it/s]FP:  42%|████▏     | 110/260 [01:28<01:51,  1.34it/s]FP:  43%|████▎     | 111/260 [01:28<01:42,  1.45it/s]FP:  43%|████▎     | 112/260 [01:28<01:24,  1.75it/s]FP:  43%|████▎     | 113/260 [01:29<01:19,  1.86it/s]FP:  44%|████▍     | 114/260 [01:29<01:08,  2.12it/s]FP:  44%|████▍     | 115/260 [01:29<00:54,  2.64it/s]FP:  45%|████▍     | 116/260 [01:30<00:45,  3.20it/s]FP:  45%|████▌     | 117/260 [01:30<00:38,  3.75it/s]FP:  45%|████▌     | 118/260 [01:30<00:39,  3.60it/s]FP:  46%|████▌     | 119/260 [01:30<00:33,  4.21it/s]FP:  46%|████▌     | 120/260 [01:30<00:35,  3.89it/s]FP:  47%|████▋     | 121/260 [01:31<00:50,  2.77it/s]FP:  47%|████▋     | 122/260 [01:35<03:25,  1.49s/it]FP:  47%|████▋     | 123/260 [01:36<02:35,  1.13s/it]FP:  48%|████▊     | 124/260 [01:36<02:00,  1.13it/s]FP:  48%|████▊     | 125/260 [01:40<04:10,  1.86s/it]FP:  48%|████▊     | 126/260 [01:40<03:06,  1.39s/it]FP:  49%|████▉     | 127/260 [01:41<02:37,  1.18s/it]FP:  49%|████▉     | 128/260 [01:41<02:01,  1.09it/s]FP:  50%|████▉     | 129/260 [01:42<01:36,  1.36it/s]FP:  50%|█████     | 130/260 [01:42<01:18,  1.66it/s]FP:  50%|█████     | 131/260 [01:42<01:00,  2.12it/s]FP:  51%|█████     | 132/260 [01:42<00:53,  2.38it/s]FP:  51%|█████     | 133/260 [01:43<00:48,  2.60it/s]FP:  52%|█████▏    | 134/260 [01:43<00:45,  2.78it/s]FP:  52%|█████▏    | 135/260 [01:43<00:42,  2.92it/s]FP:  52%|█████▏    | 136/260 [01:44<00:40,  3.03it/s]FP:  53%|█████▎    | 137/260 [01:44<00:39,  3.11it/s]FP:  53%|█████▎    | 138/260 [01:44<00:38,  3.17it/s]FP:  53%|█████▎    | 139/260 [01:44<00:37,  3.21it/s]FP:  54%|█████▍    | 140/260 [01:45<00:37,  3.24it/s]FP:  54%|█████▍    | 141/260 [01:45<00:36,  3.26it/s]FP:  55%|█████▍    | 142/260 [01:45<00:36,  3.28it/s]FP:  55%|█████▌    | 143/260 [01:46<00:35,  3.29it/s]FP:  55%|█████▌    | 144/260 [01:46<00:35,  3.29it/s]FP:  56%|█████▌    | 145/260 [01:46<00:34,  3.30it/s]FP:  56%|█████▌    | 146/260 [01:46<00:29,  3.92it/s]FP:  57%|█████▋    | 147/260 [01:47<00:30,  3.71it/s]FP:  57%|█████▋    | 148/260 [01:47<00:25,  4.32it/s]FP:  57%|█████▋    | 149/260 [01:47<00:28,  3.96it/s]FP:  58%|█████▊    | 150/260 [01:48<00:37,  2.95it/s]FP:  58%|█████▊    | 151/260 [01:48<00:49,  2.22it/s]FP:  58%|█████▊    | 152/260 [01:49<00:43,  2.46it/s]FP:  59%|█████▉    | 153/260 [01:49<00:40,  2.67it/s]FP:  59%|█████▉    | 154/260 [01:49<00:37,  2.83it/s]FP:  60%|█████▉    | 155/260 [01:50<00:35,  2.96it/s]FP:  60%|██████    | 156/260 [01:50<00:44,  2.34it/s]FP:  60%|██████    | 157/260 [01:51<00:40,  2.57it/s]FP:  61%|██████    | 158/260 [01:51<00:32,  3.17it/s]FP:  61%|██████    | 159/260 [01:51<00:44,  2.25it/s]FP:  62%|██████▏   | 160/260 [01:52<00:40,  2.49it/s]FP:  62%|██████▏   | 161/260 [01:52<00:36,  2.69it/s]FP:  62%|██████▏   | 162/260 [01:53<00:43,  2.27it/s]FP:  63%|██████▎   | 163/260 [01:53<00:38,  2.51it/s]FP:  63%|██████▎   | 164/260 [01:53<00:35,  2.70it/s]FP:  63%|██████▎   | 165/260 [01:54<00:33,  2.86it/s]FP:  64%|██████▍   | 166/260 [01:54<00:31,  2.98it/s]FP:  64%|██████▍   | 167/260 [01:54<00:30,  3.07it/s]FP:  65%|██████▍   | 168/260 [01:54<00:28,  3.24it/s]FP:  65%|██████▌   | 169/260 [01:55<00:27,  3.26it/s]FP:  65%|██████▌   | 170/260 [01:55<00:26,  3.38it/s]FP:  66%|██████▌   | 171/260 [01:55<00:26,  3.36it/s]FP:  66%|██████▌   | 172/260 [01:56<00:26,  3.35it/s]FP:  67%|██████▋   | 173/260 [01:56<00:25,  3.45it/s]FP:  67%|██████▋   | 174/260 [01:56<00:24,  3.52it/s]FP:  67%|██████▋   | 175/260 [01:56<00:20,  4.05it/s]FP:  68%|██████▊   | 176/260 [01:57<00:22,  3.80it/s]FP:  68%|██████▊   | 177/260 [01:57<00:22,  3.64it/s]FP:  68%|██████▊   | 178/260 [01:57<00:23,  3.53it/s]FP:  69%|██████▉   | 179/260 [01:57<00:23,  3.46it/s]FP:  69%|██████▉   | 180/260 [02:02<01:55,  1.44s/it]FP:  70%|██████▉   | 181/260 [02:02<01:26,  1.10s/it]FP:  70%|███████   | 182/260 [02:03<01:14,  1.05it/s]FP:  70%|███████   | 183/260 [02:03<00:58,  1.32it/s]FP:  71%|███████   | 184/260 [02:03<00:47,  1.61it/s]FP:  71%|███████   | 185/260 [02:03<00:39,  1.90it/s]FP:  72%|███████▏  | 186/260 [02:04<00:33,  2.18it/s]FP:  72%|███████▏  | 187/260 [02:04<00:39,  1.85it/s]FP:  72%|███████▏  | 188/260 [02:05<00:33,  2.13it/s]FP:  73%|███████▎  | 189/260 [02:05<00:29,  2.39it/s]FP:  73%|███████▎  | 190/260 [02:06<00:34,  2.03it/s]FP:  73%|███████▎  | 191/260 [02:06<00:30,  2.30it/s]FP:  74%|███████▍  | 192/260 [02:06<00:26,  2.53it/s]FP:  74%|███████▍  | 193/260 [02:07<00:24,  2.72it/s]FP:  75%|███████▍  | 194/260 [02:07<00:22,  2.87it/s]FP:  75%|███████▌  | 195/260 [02:07<00:21,  2.99it/s]FP:  75%|███████▌  | 196/260 [02:08<00:20,  3.08it/s]FP:  76%|███████▌  | 197/260 [02:08<00:20,  3.15it/s]FP:  76%|███████▌  | 198/260 [02:08<00:19,  3.20it/s]FP:  77%|███████▋  | 199/260 [02:08<00:18,  3.23it/s]FP:  77%|███████▋  | 200/260 [02:11<00:52,  1.14it/s]FP:  77%|███████▋  | 201/260 [02:11<00:45,  1.30it/s]FP:  78%|███████▊  | 202/260 [02:12<00:38,  1.50it/s]FP:  78%|███████▊  | 203/260 [02:12<00:35,  1.59it/s]FP:  78%|███████▊  | 204/260 [02:13<00:31,  1.76it/s]FP:  79%|███████▉  | 205/260 [02:17<01:29,  1.63s/it]FP:  79%|███████▉  | 206/260 [02:17<01:05,  1.21s/it]FP:  80%|███████▉  | 207/260 [02:17<00:47,  1.12it/s]FP:  80%|████████  | 208/260 [02:17<00:37,  1.39it/s]FP:  80%|████████  | 209/260 [02:18<00:31,  1.60it/s]FP:  81%|████████  | 210/260 [02:18<00:24,  2.06it/s]FP:  81%|████████  | 211/260 [02:22<01:17,  1.58s/it]FP:  82%|████████▏ | 212/260 [02:24<01:19,  1.66s/it]FP:  82%|████████▏ | 213/260 [02:24<01:00,  1.28s/it]FP:  82%|████████▏ | 214/260 [02:28<01:38,  2.14s/it]FP:  83%|████████▎ | 215/260 [02:29<01:11,  1.60s/it]FP:  83%|████████▎ | 216/260 [02:29<00:53,  1.23s/it]FP:  83%|████████▎ | 217/260 [02:30<00:42,  1.01it/s]FP:  84%|████████▍ | 218/260 [02:30<00:33,  1.24it/s]FP:  84%|████████▍ | 219/260 [02:30<00:26,  1.52it/s]FP:  85%|████████▍ | 220/260 [02:30<00:20,  1.97it/s]FP:  85%|████████▌ | 221/260 [02:31<00:19,  1.95it/s]FP:  85%|████████▌ | 222/260 [02:31<00:18,  2.05it/s]FP:  86%|████████▌ | 223/260 [02:32<00:15,  2.32it/s]FP:  86%|████████▌ | 224/260 [02:32<00:14,  2.43it/s]FP:  87%|████████▋ | 225/260 [02:32<00:13,  2.54it/s]FP:  87%|████████▋ | 226/260 [02:33<00:10,  3.09it/s]FP:  87%|████████▋ | 227/260 [02:33<00:09,  3.65it/s]FP:  88%|████████▊ | 228/260 [02:33<00:07,  4.17it/s]FP:  88%|████████▊ | 229/260 [02:33<00:06,  4.63it/s]FP:  88%|████████▊ | 230/260 [02:34<00:08,  3.52it/s]FP:  89%|████████▉ | 231/260 [02:34<00:10,  2.85it/s]FP:  89%|████████▉ | 232/260 [02:34<00:08,  3.40it/s]FP:  90%|████████▉ | 233/260 [02:34<00:06,  3.94it/s]FP:  90%|█████████ | 234/260 [02:35<00:07,  3.48it/s]FP:  90%|█████████ | 235/260 [02:35<00:07,  3.43it/s]FP:  91%|█████████ | 236/260 [02:35<00:07,  3.39it/s]FP:  91%|█████████ | 237/260 [02:36<00:06,  3.37it/s]FP:  92%|█████████▏| 238/260 [02:36<00:07,  3.06it/s]FP:  92%|█████████▏| 239/260 [02:38<00:14,  1.46it/s]FP:  92%|█████████▏| 240/260 [02:38<00:10,  1.89it/s]FP:  93%|█████████▎| 241/260 [02:38<00:08,  2.17it/s]FP:  93%|█████████▎| 242/260 [02:42<00:28,  1.56s/it]FP:  93%|█████████▎| 243/260 [02:42<00:20,  1.20s/it]FP:  94%|█████████▍| 244/260 [02:43<00:16,  1.03s/it]FP:  94%|█████████▍| 245/260 [02:43<00:12,  1.23it/s]FP:  95%|█████████▍| 246/260 [02:44<00:10,  1.35it/s]FP:  95%|█████████▌| 247/260 [02:44<00:08,  1.49it/s]FP:  95%|█████████▌| 248/260 [02:45<00:07,  1.71it/s]FP:  96%|█████████▌| 249/260 [02:45<00:05,  1.86it/s]FP:  96%|█████████▌| 250/260 [02:49<00:16,  1.61s/it]FP:  97%|█████████▋| 251/260 [02:50<00:11,  1.27s/it]FP:  97%|█████████▋| 252/260 [02:50<00:07,  1.02it/s]FP:  97%|█████████▋| 253/260 [02:50<00:05,  1.36it/s]FP:  98%|█████████▊| 254/260 [02:51<00:03,  1.53it/s]FP:  98%|█████████▊| 255/260 [02:51<00:02,  1.83it/s]FP:  98%|█████████▊| 256/260 [02:52<00:02,  1.99it/s]FP:  99%|█████████▉| 257/260 [02:52<00:01,  2.50it/s]FP:  99%|█████████▉| 258/260 [02:52<00:00,  3.05it/s]FP: 100%|█████████▉| 259/260 [02:52<00:00,  3.13it/s]FP: 100%|██████████| 260/260 [02:56<00:00,  1.46s/it]FP: 100%|██████████| 260/260 [02:56<00:00,  1.47it/s]
-Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
-  OK Loaded AQLM 2-bit model
-
-  Generating responses (260 prompts)...
-aqlm2:   0%|          | 0/260 [00:00<?, ?it/s]aqlm2:   0%|          | 0/260 [00:04<?, ?it/s]
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/build_displacement_pairs.py", line 115, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/build_displacement_pairs.py", line 71, in main
-    q_resp = generate_only(q_model, tok, prompts, max_new_tokens=args.max_new_tokens,
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/evaluation.py", line 346, in generate_only
-    return _generate_responses(model, tokenizer, items,
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/evaluation.py", line 268, in _generate_responses
-    outputs = model.generate(
-              ^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/utils.py", line 2566, in generate
-    result = decoding_method(
-             ^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/generation/utils.py", line 2786, in _sample
-    outputs = self(**model_inputs, return_dict=True)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/generic.py", line 918, in wrapper
-    output = func(self, *args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 459, in forward
-    outputs: BaseModelOutputWithPast = self.model(
-                                       ^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/generic.py", line 1072, in wrapper
-    outputs = func(self, *args, **kwargs)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 395, in forward
-    hidden_states = decoder_layer(
-                    ^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_layers.py", line 94, in __call__
-    return super().__call__(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 294, in forward
-    hidden_states, _ = self.self_attn(
-                       ^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 236, in forward
-    query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference.py", line 70, in forward
-    self.prepare_matmul_op(input)
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference.py", line 86, in prepare_matmul_op
-    get_forward_pass_kernel(self.codebooks, False),
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/kernel_selector.py", line 34, in get_forward_pass_kernel
-    from .cuda_kernel import CUDA_FOLDER
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py", line 8, in <module>
-    CUDA_KERNEL = load(
-                  ^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 1692, in load
-    return _jit_compile(
-           ^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 2134, in _jit_compile
-    _write_ninja_file_and_build_library(
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 2253, in _write_ninja_file_and_build_library
-    extra_ldflags = _prepare_ldflags(
-                    ^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 2352, in _prepare_ldflags
-    if (not os.path.exists(_join_cuda_home(extra_lib_dir)) and
-                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 2986, in _join_cuda_home
-    raise OSError('CUDA_HOME environment variable is not set. '
-OSError: CUDA_HOME environment variable is not set. Please set it to your CUDA install root.
-PHASE1_FAILED

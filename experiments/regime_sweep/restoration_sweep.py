@@ -1,15 +1,12 @@
-"""Table 2: 14-cell FP/quant/+W/+R/+Both restoration matrix."""
+# Table 2: 14-cell FP/quant/+W/+R/+Both restoration matrix.
 import argparse
 import gc
 import math
 import random
-import sys
 from pathlib import Path
 
 import numpy as np
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
 from core.evaluation import _extract_behavior, classify_batch, generate_only
@@ -27,69 +24,69 @@ _SCRIPT = Path(__file__)
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True)
-    parser.add_argument("--quantizer", default="aqlm2")
-    parser.add_argument("--n_eval", type=int, default=1000)
-    parser.add_argument("--n_reasoning", type=int, default=50)
+    parser.add_argument("--model", required = True)
+    parser.add_argument("--quantizer", default = "aqlm2")
+    parser.add_argument("--n_eval", type = int, default = 1000)
+    parser.add_argument("--n_reasoning", type = int, default = 50)
     args = parser.parse_args()
 
-    # Get the quantizer and the device
+    # Resolve quantizer label and device
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Load the prompts and extract the behaviors
-    items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
+    # Load eval prompts and behaviors
+    items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = [_extract_behavior(item) for item in items]
-    arc_items = load_arc_challenge(n_samples=args.n_reasoning)
+    arc_items = load_arc_challenge(n_samples = args.n_reasoning)
 
-    # Load the fp32 model and extract the weights
+    # FP32 baseline and Restorer weight cache
     all_responses, all_arc = {}, {}
     fp32_model, tokenizer = load_fp32(args.model)
     restorer = Restorer(fp32_model)
-    all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
+    all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc = "FP32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Load the quantized model and generate responses
-    q_model, _ = load_quantized(args.model, quantizer=qtz)
-    all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
+    # Quantized baseline
+    q_model, _ = load_quantized(args.model, quantizer = qtz)
+    all_responses[qtz] = generate_only(q_model, tokenizer, items, desc = qtz)
     all_arc[qtz] = measure_arc(q_model, tokenizer, arc_items)
     del q_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Restore the projections and generate responses
+    # Write / read / both restored cells
     for cond, restore_fn in [
         ("write_restored", "restore_write"),
         ("read_restored", "restore_read"),
         ("both_restored", "restore_both"),
     ]:
-        q_model, _ = load_quantized(args.model, quantizer=qtz)
+        q_model, _ = load_quantized(args.model, quantizer = qtz)
         getattr(restorer, restore_fn)(q_model)
-        all_responses[cond] = generate_only(q_model, tokenizer, items, desc=cond)
+        all_responses[cond] = generate_only(q_model, tokenizer, items, desc = cond)
         all_arc[cond] = measure_arc(q_model, tokenizer, arc_items)
         del q_model
         gc.collect()
         torch.cuda.empty_cache()
 
-    # Classify the responses and calculate the ASR for each condition
+    # Classify all conditions in one HarmBench session
     conditions = list(all_responses.keys())
     flat_behaviors, flat_responses = [], []
     for cond in conditions:
         flat_behaviors.extend(behaviors)
         flat_responses.extend(all_responses[cond])
-    flat_flags = classify_batch(flat_behaviors, flat_responses, device=device)
+    flat_flags = classify_batch(flat_behaviors, flat_responses, device = device)
     n = args.n_eval
     asr_results = {}
     for i, cond in enumerate(conditions):
         flags = flat_flags[i * n : (i + 1) * n]
         asr_results[cond] = 100.0 * sum(flags) / n
 
-    # Calculate the ASR for the fp32 model and the quantized model
+    # Swap-validity gate against FP32 with ARC floor
     fp32_asr = asr_results["fp32"]
     q_asr = asr_results[qtz]
     damage = q_asr - fp32_asr
@@ -102,14 +99,12 @@ def main():
     )
     swap_valid = abs(swap_delta) <= swap_tol and arc_floor_ok
 
-    # Create the run config
+    # Persist the restoration matrix
     cfg = RunConfig(
-        model=args.model,
-        quantizer=qtz,
-        extra={"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
+        model = args.model,
+        quantizer = qtz,
+        extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
     )
-
-    # Save the results
     data = {
         "fp32_asr": fp32_asr,
         "quantized_asr": q_asr,

@@ -1,41 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:44<02:13, 44.33s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:47<00:39, 19.87s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:49<00:11, 12.00s/it]Loading checkpoint shards: 100%|██████████| 4/4 [01:00<00:00, 11.42s/it]Loading checkpoint shards: 100%|██████████| 4/4 [01:00<00:00, 15.06s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/__init__.py:21: DeprecationWarning: 
-I have left this message as the final dev message to help you transition.
-
-Important Notice:
-- AutoAWQ is officially deprecated and will no longer be maintained.
-- The last tested configuration used Torch 2.6.0 and Transformers 4.51.3.
-- If future versions of Transformers break AutoAWQ compatibility, please report the issue to the Transformers project.
-
-Alternative:
-- AutoAWQ has been adopted by the vLLM Project: https://github.com/vllm-project/llm-compressor
-
-For further inquiries, feel free to reach out:
-- X: https://x.com/casper_hansen_
-- LinkedIn: https://www.linkedin.com/in/casper-hansen-804005170/
-
-  warnings.warn(_FINAL_DEV_MESSAGE, category=DeprecationWarning, stacklevel=1)
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [01:11<01:11, 71.14s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:15<00:00, 67.03s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:15<00:00, 67.64s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:03,  1.93s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:03<00:01,  1.97s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.92s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:05<00:00,  1.93s/it]
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/__init__.py:21: DeprecationWarning: 
-I have left this message as the final dev message to help you transition.
-
-Important Notice:
-- AutoAWQ is officially deprecated and will no longer be maintained.
-- The last tested configuration used Torch 2.6.0 and Transformers 4.51.3.
-- If future versions of Transformers break AutoAWQ compatibility, please report the issue to the Transformers project.
-
-Alternative:
-- AutoAWQ has been adopted by the vLLM Project: https://github.com/vllm-project/llm-compressor
-
-For further inquiries, feel free to reach out:
-- X: https://x.com/casper_hansen_
-- LinkedIn: https://www.linkedin.com/in/casper-hansen-804005170/
-
-  warnings.warn(_FINAL_DEV_MESSAGE, category=DeprecationWarning, stacklevel=1)

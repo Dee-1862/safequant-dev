@@ -1,40 +1,0 @@
-=== migration-null llama_awq | Mon Jun 29 07:45:44 EDT 2026 ===
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-=== migration-null | llama7b/awq | token_pos=-5 n_random=50 seed=42 (PASS: z>=3 on harmful)
-  n harmful=200 n harmless=200
-[FP32] loading llama7b ...
-Loading FP32 model: llama7b
-  Path: meta-llama/Llama-3.1-8B-Instruct
-  Device: cuda
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [01:05<03:16, 65.64s/it]Loading checkpoint shards:  50%|█████     | 2/4 [01:56<01:53, 56.78s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [02:43<00:52, 52.45s/it]Loading checkpoint shards: 100%|██████████| 4/4 [02:51<00:00, 34.92s/it]Loading checkpoint shards: 100%|██████████| 4/4 [02:51<00:00, 42.89s/it]
-  OK Loaded (8.03B params)
-  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
-  FP sigma-best layer = 10
-[awq] loading quantized model ...
-Loading AWQ model: llama7b -> hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/__init__.py:21: DeprecationWarning: 
-I have left this message as the final dev message to help you transition.
-
-Important Notice:
-- AutoAWQ is officially deprecated and will no longer be maintained.
-- The last tested configuration used Torch 2.6.0 and Transformers 4.51.3.
-- If future versions of Transformers break AutoAWQ compatibility, please report the issue to the Transformers project.
-
-Alternative:
-- AutoAWQ has been adopted by the vLLM Project: https://github.com/vllm-project/llm-compressor
-
-For further inquiries, feel free to reach out:
-- X: https://x.com/casper_hansen_
-- LinkedIn: https://www.linkedin.com/in/casper-hansen-804005170/
-
-  warnings.warn(_FINAL_DEV_MESSAGE, category=DeprecationWarning, stacklevel=1)
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [01:08<01:08, 68.77s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:22<00:00, 71.64s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:22<00:00, 71.21s/it]
-  OK Loaded AWQ 4-bit model
-
-  cond       opFP   opQ  delta  randDelta(mean+/-sd)       z       p  verdict
-  harmful     2.0   2.0    0.0            2.4+/-4.07   -0.59   1.000  FAIL
-  harmless   10.0  10.0    0.0            1.7+/-2.58   -0.64   1.000  FAIL
-
-[saved] outputs/routing_migration_null_llama7b_awq.json

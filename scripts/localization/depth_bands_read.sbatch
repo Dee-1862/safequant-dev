@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --job-name=sq_depth_read
+#SBATCH --account=cis250287p
+#SBATCH --partition=GPU-shared
+#SBATCH --gpus=h100-80:1
+#SBATCH -N 1
+#SBATCH --time=4:00:00
+#SBATCH --mem=128G
+#SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/depth_read_%j.out
+#SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/depth_read_%j.err
+source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+
+# Table 4 — early/middle/late depth bands (read projections).
+
+
+echo "=== depth bands read | $(date) ==="
+python -u -m experiments.localization.depth_bands \
+  --model llama7b --quantizer aqlm2 --projections read \
+  --n_eval 200 --n_reasoning 50
+echo "=== done | $(date) ==="

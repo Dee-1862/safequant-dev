@@ -1,7 +1,0 @@
-=== Q-Resafe write r=256 (8bit-Adam) | Sat Jun 27 22:57:22 EDT 2026 ===
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-[data] 231 WJ displacement pairs | mask=write
-Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
-`torch_dtype` is deprecated! Use `dtype` instead!
-slurmstepd: error: *** JOB 41778401 ON w004 CANCELLED AT 2026-06-27T23:01:39 ***

@@ -1,14 +1,11 @@
-"""Appendix: de-confounded routing null (magnitude-normalized operative layer)."""
+# Appendix: de-confounded routing null (magnitude-normalized operative layer).
 import argparse
 import gc
-import sys
 from collections import Counter
 from pathlib import Path
 
 import numpy as np
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_harmless_prompts, load_wildjailbreak_prompts
 from core.directions import compute_r_hat, per_layer_separation
@@ -24,17 +21,19 @@ _SCRIPT = Path(__file__)
 
 def _summary(op_list):
     """
-    Calculate the summary of the operative layer.
+    Summarize the distribution of per-prompt operative layers.
+
     Inputs:
-        op_list: The list of operative layers.
+        - op_list (list[int]): Operative layer index per prompt
+
     Outputs:
-        The summary of the operative layer.
+        - summary (dict): Mode, mean, std, and distinct-layer count
     """
-    # Calculate the mode of the operative layer
+    # Mode layer and how often it wins
     c = Counter(op_list)
     mode_layer, mode_count = c.most_common(1)[0]
 
-    # Calculate the summary of the operative layer
+    # Aggregate distribution statistics
     return {
         "mode_layer": int(mode_layer),
         "mode_count": int(mode_count),
@@ -46,24 +45,24 @@ def _summary(op_list):
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_calib", type=int, default=200)
-    ap.add_argument("--token_pos", type=int, default=None)
-    ap.add_argument("--normalize", action="store_true", default=False)
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_calib", type = int, default = 200)
+    ap.add_argument("--token_pos", type = int, default = None)
+    ap.add_argument("--normalize", action = "store_true", default = False)
     args = ap.parse_args()
 
-    # Get the token position and the variant
+    # Resolve token position and optional normalize variant label
     token_pos = args.token_pos if args.token_pos is not None else default_token_pos(args.model)
     variant = "norm" if args.normalize else None
 
-    # Load prompts
+    # Load calibration harmful and harmless prompts
     harmful = load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")
     harmless = load_harmless_prompts(n_samples = args.n_calib)
 
-    # Load the fp32 model and extract last token residuals
+    # FP32 residuals, per-layer separations, and best-layer r_hat
     fp32_model, fp32_tok = load_fp32(args.model)
     device = next(fp32_model.parameters()).device
     layers = list(range(len(get_inner(fp32_model).layers)))
@@ -71,29 +70,29 @@ def main():
     fp_s = extract_last_token_residuals(fp32_model, fp32_tok, harmless, layers, device, token_pos)
     fp_r_hats = {L: compute_r_hat(fp_h[L], fp_s[L]) for L in layers}
     fp_seps = {L: per_layer_separation(fp_h[L], fp_s[L], fp_r_hats[L])[0] for L in layers}
-    fp32_best = max(layers, key=lambda L: fp_seps[L])
+    fp32_best = max(layers, key = lambda L: fp_seps[L])
     r_hat_fp = fp_r_hats[fp32_best]
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Load the quantized model and extract last token residuals
-    q_model, q_tok = load_quantized(args.model, quantizer=args.quantizer)
+    # Quantized residuals and best-layer r_hat
+    q_model, q_tok = load_quantized(args.model, quantizer = args.quantizer)
     q_device = next(q_model.parameters()).device
     q_h = extract_last_token_residuals(q_model, q_tok, harmful, layers, q_device, token_pos)
     q_s = extract_last_token_residuals(q_model, q_tok, harmless, layers, q_device, token_pos)
     q_r_hats = {L: compute_r_hat(q_h[L], q_s[L]) for L in layers}
     q_seps = {L: per_layer_separation(q_h[L], q_s[L], q_r_hats[L])[0] for L in layers}
-    quant_best = max(layers, key=lambda L: q_seps[L])
+    quant_best = max(layers, key = lambda L: q_seps[L])
     r_hat_q = q_r_hats[quant_best]
 
-    # Calculate the projections for the fp32 model and the quantized model
-    q_proj_fp_h, _ = per_prompt_projections(q_h, r_hat_fp, normalize=args.normalize)
-    q_proj_fp_s, _ = per_prompt_projections(q_s, r_hat_fp, normalize=args.normalize)
-    q_proj_q_h, _ = per_prompt_projections(q_h, r_hat_q, normalize=args.normalize)
-    q_proj_q_s, _ = per_prompt_projections(q_s, r_hat_q, normalize=args.normalize)
+    # Project quantized residuals onto FP and quantized directions
+    q_proj_fp_h, _ = per_prompt_projections(q_h, r_hat_fp, normalize = args.normalize)
+    q_proj_fp_s, _ = per_prompt_projections(q_s, r_hat_fp, normalize = args.normalize)
+    q_proj_q_h, _ = per_prompt_projections(q_h, r_hat_q, normalize = args.normalize)
+    q_proj_q_s, _ = per_prompt_projections(q_s, r_hat_q, normalize = args.normalize)
 
-    # Calculate the operative layer for the fp32 model and the quantized model
+    # Operative layer per prompt under each direction
     op_fp_h = operative_layer_per_prompt(q_proj_fp_h, layers)
     op_fp_s = operative_layer_per_prompt(q_proj_fp_s, layers)
     op_q_h = operative_layer_per_prompt(q_proj_q_h, layers)
@@ -102,12 +101,12 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Save results
+    # Persist routing summaries
     cfg = RunConfig(
-        model=args.model,
-        quantizer=args.quantizer,
-        variant=variant,
-        extra={
+        model = args.model,
+        quantizer = args.quantizer,
+        variant = variant,
+        extra = {
             "n_calib": args.n_calib,
             "token_pos": token_pos,
             "normalize": args.normalize,

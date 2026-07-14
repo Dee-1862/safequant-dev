@@ -1,13 +1,10 @@
-"""Table 1: per-layer probe accuracy (a_min)."""
+# Table 1: per-layer probe accuracy (a_min).
 import argparse
 import gc
-import sys
 from pathlib import Path
 
 import numpy as np
 import torch
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.datasets import load_harmless_prompts, load_wildjailbreak_prompts
 from core.manifest import RunConfig, save_result
@@ -21,60 +18,58 @@ _SCRIPT = Path(__file__)
 
 
 def main():
-    # Command line arguments
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_calib", type=int, default=200)
-    ap.add_argument("--n_folds", type=int, default=5)
-    ap.add_argument("--probe_type", default="linear", choices=["linear", "mlp"])
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_calib", type = int, default = 200)
+    ap.add_argument("--n_folds", type = int, default = 5)
+    ap.add_argument("--probe_type", default = "linear", choices = ["linear", "mlp"])
     args = ap.parse_args()
 
-    # Load the prompts and extract the harmful and harmless prompts
-    harmful = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
-    harmless = load_harmless_prompts(n_samples=args.n_calib)
+    # Load calibration harmful and harmless prompts
+    harmful = load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")
+    harmless = load_harmless_prompts(n_samples = args.n_calib)
 
-    # Load the fp32 model and extract the residuals
+    # Fit FP32 cross-validated probes
     fp32_model, fp32_tok = load_fp32(args.model)
     device = next(fp32_model.parameters()).device
     layers = list(range(len(get_inner(fp32_model).layers)))
     fp_h = extract_last_token_residuals(fp32_model, fp32_tok, harmful, layers, device)
     fp_s = extract_last_token_residuals(fp32_model, fp32_tok, harmless, layers, device)
-    fp_probes = fit_probe_per_layer(fp_h, fp_s, n_folds=args.n_folds, probe_type=args.probe_type)
+    fp_probes = fit_probe_per_layer(fp_h, fp_s, n_folds = args.n_folds, probe_type = args.probe_type)
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Load the quantized model and extract the residuals
-    q_model, q_tok = load_quantized(args.model, quantizer=args.quantizer)
+    # Fit quantized cross-validated probes
+    q_model, q_tok = load_quantized(args.model, quantizer = args.quantizer)
     q_device = next(q_model.parameters()).device
     q_h = extract_last_token_residuals(q_model, q_tok, harmful, layers, q_device)
     q_s = extract_last_token_residuals(q_model, q_tok, harmless, layers, q_device)
-    q_probes = fit_probe_per_layer(q_h, q_s, n_folds=args.n_folds, probe_type=args.probe_type)
+    q_probes = fit_probe_per_layer(q_h, q_s, n_folds = args.n_folds, probe_type = args.probe_type)
     del q_model
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Compute the probe accuracies
+    # Summarize accuracy deltas and large drops
     fp_accs = [fp_probes[L]["mean_acc"] for L in layers]
     q_accs = [q_probes[L]["mean_acc"] for L in layers]
     layers_drop = [L for L in layers if (q_probes[L]["mean_acc"] - fp_probes[L]["mean_acc"]) < -0.05]
 
-    # Create the run config
+    # Persist per-layer accuracies
     variant = None if args.probe_type == "linear" else args.probe_type
     cfg = RunConfig(
-        model=args.model,
-        quantizer=args.quantizer,
-        variant=variant,
-        extra={
+        model = args.model,
+        quantizer = args.quantizer,
+        variant = variant,
+        extra = {
             "n_calib": args.n_calib,
             "n_folds": args.n_folds,
             "probe_type": args.probe_type,
             "seed": SEED,
         },
     )
-
-    # Save the results
     data = {
         "n_layers": len(layers),
         "fp32_probe_per_layer": {str(L): fp_probes[L] for L in layers},

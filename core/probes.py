@@ -1,4 +1,4 @@
-"""Linear/MLP refusal probes on residual streams."""
+# Linear/MLP refusal probes on residual streams.
 
 from __future__ import annotations
 
@@ -14,26 +14,26 @@ except ModuleNotFoundError:
     SEED = 42
 
 
-def make_probe(probe_type: str):
+def make_probe(probe_type):
     """
-    Make a probe of the given type.
+    Construct an unfitted sklearn probe of the requested type.
 
-    Input:
-    - probe_type (str): the type of probe to make
+    Inputs:
+        - probe_type (str): "linear" or "mlp"
 
-    Output:
-    - probe (sklearn.linear_model.LogisticRegression or sklearn.neural_network.MLPClassifier): the probe
+    Outputs:
+        - probe (LogisticRegression | MLPClassifier): Unfitted estimator
     """
-    # Make a linear probe
+    # Linear logistic regression probe
     if probe_type == "linear":
         return LogisticRegression(
-            C = 1.0, 
-            max_iter = 2000, 
-            n_jobs = 1, 
-            random_state = SEED
+            C = 1.0,
+            max_iter = 2000,
+            n_jobs = 1,
+            random_state = SEED,
         )
 
-    # Make an MLP probe
+    # Small MLP probe with early stopping
     if probe_type == "mlp":
         return MLPClassifier(
             hidden_layer_sizes = (256,),
@@ -50,38 +50,40 @@ def make_probe(probe_type: str):
     raise ValueError(f"Unknown probe_type: {probe_type}")
 
 
-def fit_probe_per_layer(harmful_by_layer, harmless_by_layer, n_folds=5, probe_type="linear"):
+def fit_probe_per_layer(
+    harmful_by_layer, harmless_by_layer, n_folds = 5, probe_type = "linear"
+):
     """
-    Fit a probe per layer.
+    Stratified k-fold probe accuracy per residual layer.
 
-    Input:
-    - harmful_by_layer (dict): a dictionary of the harmful residuals for each layer
-    - harmless_by_layer (dict): a dictionary of the harmless residuals for each layer
-    - n_folds (int): the number of folds to use
-    - probe_type (str): the type of probe to use
+    Inputs:
+        - harmful_by_layer (dict): Layer -> harmful residual tensors
+        - harmless_by_layer (dict): Layer -> harmless residual tensors
+        - n_folds (int): Number of CV folds
+        - probe_type (str): "linear" or "mlp"
 
-    Output:
-    - results (dict): a dictionary of the results for each layer
+    Outputs:
+        - results (dict): Layer -> mean/std and class-wise accuracies
     """
-    # Get the layers and the results
+    # Stable layer order and output dict
     layers = sorted(harmful_by_layer.keys())
     results = {}
 
     for layer_idx in layers:
-        # Get the harmful and harmless residuals
+        # Stack residuals and build binary labels (1 = harmful)
         h = np.stack([t.cpu().numpy() for t in harmful_by_layer[layer_idx]])
         s = np.stack([t.cpu().numpy() for t in harmless_by_layer[layer_idx]])
-        X = np.concatenate([h, s], axis=0).astype(np.float64)
-        y = np.concatenate([np.ones(len(h)), np.zeros(len(s))], axis=0)
-        skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=SEED)
+        X = np.concatenate([h, s], axis = 0).astype(np.float64)
+        y = np.concatenate([np.ones(len(h)), np.zeros(len(s))], axis = 0)
+        skf = StratifiedKFold(n_splits = n_folds, shuffle = True, random_state = SEED)
         fold_accs, fold_h, fold_s = [], [], []
 
-        # Fit the probe per fold
+        # One probe fit per fold
         for tr_idx, te_idx in skf.split(X, y):
             Xtr, ytr = X[tr_idx], y[tr_idx]
             Xte, yte = X[te_idx], y[te_idx]
 
-            # Scale the data if the probe type is an MLP
+            # MLP needs feature scaling
             if probe_type == "mlp":
                 scaler = StandardScaler()
                 Xtr = scaler.fit_transform(Xtr)
@@ -92,13 +94,13 @@ def fit_probe_per_layer(harmful_by_layer, harmless_by_layer, n_folds=5, probe_ty
             h_mask = yte == 1
             s_mask = yte == 0
 
-            # Get the accuracy for the harmful and harmless residuals
+            # Class-conditional accuracies when the fold has that class
             if h_mask.any():
                 fold_h.append(clf.score(Xte[h_mask], yte[h_mask]))
             if s_mask.any():
                 fold_s.append(clf.score(Xte[s_mask], yte[s_mask]))
 
-        # Get the results for the layer
+        # Aggregate fold metrics for this layer
         results[layer_idx] = {
             "mean_acc": float(np.mean(fold_accs)),
             "std_acc": float(np.std(fold_accs)),
@@ -112,33 +114,28 @@ def fit_probe_get_weights(harmful_by_layer, harmless_by_layer):
     """
     Fit one logistic regression per layer on all data and return weight + bias.
 
-    Input:
-    - harmful_by_layer (dict): a dictionary of the harmful residuals for each layer
-    - harmless_by_layer (dict): a dictionary of the harmless residuals for each layer
+    Inputs:
+        - harmful_by_layer (dict): Layer -> harmful residual tensors
+        - harmless_by_layer (dict): Layer -> harmless residual tensors
 
-    Output:
-    - out (dict): a dictionary of the results for each layer
+    Outputs:
+        - out (dict): Layer -> weight, bias, train_acc
     """
-    # Get the layers and the results
+    # Stable layer order
     layers = sorted(harmful_by_layer.keys())
     out = {}
 
-    # Fit the probe per layer
+    # Full-data linear probe per layer
     for layer_idx in layers:
-        # Get the harmful and harmless residuals
         h = np.stack([t.cpu().numpy() for t in harmful_by_layer[layer_idx]])
         s = np.stack([t.cpu().numpy() for t in harmless_by_layer[layer_idx]])
+        X = np.concatenate([h, s], axis = 0).astype(np.float64)
+        y = np.concatenate([np.ones(len(h)), np.zeros(len(s))], axis = 0)
 
-        # Concatenate the harmful and harmless residuals
-        X = np.concatenate([h, s], axis=0).astype(np.float64)
-        y = np.concatenate([np.ones(len(h)), np.zeros(len(s))], axis=0)
-
-        # Fit the probe
-        clf = LogisticRegression(C=1.0, max_iter=2000, random_state=SEED)
+        clf = LogisticRegression(C = 1.0, max_iter = 2000, random_state = SEED)
         clf.fit(X, y)
         w = clf.coef_[0]
 
-        # Get the results for the layer
         out[layer_idx] = {
             "weight": w.tolist(),
             "bias": float(clf.intercept_[0]),
@@ -151,35 +148,34 @@ def per_layer_probe_accuracy(residuals_by_layer, labels):
     """
     5-fold CV accuracy per layer for a logistic-regression probe.
 
-    Input:
-    - residuals_by_layer (dict): a dictionary of the residuals for each layer
-    - labels (list): the labels for the residuals
+    Inputs:
+        - residuals_by_layer (dict): Layer -> residual tensors
+        - labels (list): Per-prompt binary labels
 
-    Output:
-    - accs (dict): a dictionary of the accuracy for each layer
+    Outputs:
+        - accs (dict): Layer -> mean fold accuracy (nan if single class)
     """
-    # Get the layers and the results
+    # Shared fold splitter and label array
     layers = sorted(residuals_by_layer.keys())
     accs = {}
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
-    y = np.asarray(labels, dtype=np.int64)
+    skf = StratifiedKFold(n_splits = 5, shuffle = True, random_state = SEED)
+    y = np.asarray(labels, dtype = np.int64)
 
-    # Fit the probe per layer
     for layer_idx in layers:
-        # Get the residuals for the layer
         X = np.stack([t.numpy() for t in residuals_by_layer[layer_idx]]).astype(
             np.float64
         )
 
-        # Check if there are less than 2 unique labels
+        # Stratified CV needs both classes
         if len(np.unique(y)) < 2:
             accs[layer_idx] = float("nan")
             continue
 
-        # Fit the probe per fold
         fold_accs = []
         for train_idx, test_idx in skf.split(X, y):
-            clf = LogisticRegression(C=1.0, max_iter=2000, n_jobs=1, random_state=SEED)
+            clf = LogisticRegression(
+                C = 1.0, max_iter = 2000, n_jobs = 1, random_state = SEED
+            )
             clf.fit(X[train_idx], y[train_idx])
             fold_accs.append(clf.score(X[test_idx], y[test_idx]))
         accs[layer_idx] = float(np.mean(fold_accs))

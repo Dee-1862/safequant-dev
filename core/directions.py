@@ -1,24 +1,27 @@
+# Refusal-direction (R-hat) computation and cosine / separation helpers.
+
 from __future__ import annotations
+
 import numpy as np
 import torch
 
 
 def compute_r_hat(harmful_lasts, harmless_lasts):
     """
-    Computes the R-hat vector for the harmful and harmless last tokens.
+    Compute the normalized R-hat direction from harmful vs harmless last tokens.
 
-    Input:
-    - harmful_lasts (list): the harmful last tokens
-    - harmless_lasts (list): the harmless last tokens
+    Inputs:
+        - harmful_lasts (list): Harmful last-token residual tensors
+        - harmless_lasts (list): Harmless last-token residual tensors
 
-    Output:
-    - r_hat (torch.Tensor): the R-hat vector
+    Outputs:
+        - r_hat (torch.Tensor): Unit difference direction (or unnormalized if tiny)
     """
-    # Compute the mean of the harmful and harmless last tokens
+    # Mean activations for each class
     h = torch.stack(harmful_lasts).mean(0)
     s = torch.stack(harmless_lasts).mean(0)
 
-    # Compute the R-hat vector
+    # Difference vector, normalized when large enough
     r = h - s
     n = r.norm()
     if n > 1e-6:
@@ -29,28 +32,29 @@ def compute_r_hat(harmful_lasts, harmless_lasts):
 
 def per_layer_separation(harmful_lasts, harmless_lasts, r_hat):
     """
-    
-    Return (separation_sigma, harmful_mean, harmless_mean).
+    Score-class separation along r_hat in pooled-std units.
 
-    Input:
-    - harmful_lasts (list): the harmful last tokens
-    - harmless_lasts (list): the harmless last tokens
-    - r_hat (torch.Tensor): the R-hat vector
+    Inputs:
+        - harmful_lasts (list): Harmful last-token residual tensors
+        - harmless_lasts (list): Harmless last-token residual tensors
+        - r_hat (torch.Tensor): Precomputed refusal direction
 
-    Output:
-    - separation_sigma (float): the separation sigma
-    - harmful_mean (float): the harmful mean
-    - harmless_mean (float): the harmless mean
-
+    Outputs:
+        - separation_sigma (float): (mean_h - mean_s) / pooled_std
+        - harmful_mean (float): Mean projection of harmful residuals
+        - harmless_mean (float): Mean projection of harmless residuals
     """
+    # Project each residual onto r_hat
     h_scores = []
     s_scores = []
     for t in harmful_lasts:
         h_scores.append(float(t @ r_hat))
     for t in harmless_lasts:
         s_scores.append(float(t @ r_hat))
-    h_scores = np.array(h_scores, dtype=np.float64)
-    s_scores = np.array(s_scores, dtype=np.float64)
+
+    # Pooled std and mean-difference separation
+    h_scores = np.array(h_scores, dtype = np.float64)
+    s_scores = np.array(s_scores, dtype = np.float64)
     pooled = np.sqrt((h_scores.var() + s_scores.var()) / 2 + 1e-12)
     sep = (h_scores.mean() - s_scores.mean()) / pooled
 
@@ -60,25 +64,23 @@ def per_layer_separation(harmful_lasts, harmless_lasts, r_hat):
     return separation_sigma, harmful_mean, harmless_mean
 
 
-def cos_sim(a, b) -> float:
+def cos_sim(a, b):
     """
-    Computes the cosine similarity between two tensors.
+    Cosine similarity between two tensors.
 
-    Input:
-    - a (torch.Tensor): the first tensor
-    - b (torch.Tensor): the second tensor
+    Inputs:
+        - a (torch.Tensor): First tensor
+        - b (torch.Tensor): Second tensor
 
-    Output:
-    - cos_sim (float): the cosine similarity
+    Outputs:
+        - cos_sim (float): Cosine similarity, or 0.0 if either norm is tiny
     """
-    # Convert the tensors to float
+    # Work in float for stable norms
     a = a.float()
     b = b.float()
 
-    # Compute the norms of the tensors
+    # Guard near-zero vectors
     na, nb = a.norm(), b.norm()
-
-    # Check if the norms are too small
     if na < 1e-9 or nb < 1e-9:
         return 0.0
     return float((a @ b) / (na * nb))

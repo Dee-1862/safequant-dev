@@ -1,32 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-[data] 260 harmful prompts x 3 refusals  mode=refusal
-[load] llama7b -> meta-llama/Llama-3.1-8B-Instruct  (dtype=torch.bfloat16)
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [02:17<06:51, 137.02s/it]Loading checkpoint shards:  50%|█████     | 2/4 [05:23<05:32, 166.26s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [12:35<04:47, 287.56s/it]Loading checkpoint shards: 100%|██████████| 4/4 [13:58<00:00, 206.88s/it]Loading checkpoint shards: 100%|██████████| 4/4 [13:58<00:00, 209.71s/it]
-[load] 224 target matrices over 32 layers
-  [snip] 25/260 prompts
-  [snip] 50/260 prompts
-  [snip] 75/260 prompts
-  [snip] 100/260 prompts
-  [snip] 125/260 prompts
-  [snip] 150/260 prompts
-  [snip] 175/260 prompts
-  [snip] 200/260 prompts
-  [snip] 225/260 prompts
-  [snip] 250/260 prompts
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/snip_safety_localization.py", line 345, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/snip_safety_localization.py", line 329, in main
-    rep = aggregate(sal, n_layers, args.taus)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/snip_safety_localization.py", line 237, in aggregate
-    thresholds = {tau: float(torch.quantile(sample, 1.0 - tau).item()) for tau in taus}
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/snip_safety_localization.py", line 237, in <dictcomp>
-    thresholds = {tau: float(torch.quantile(sample, 1.0 - tau).item()) for tau in taus}
-                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-RuntimeError: quantile() input tensor is too large

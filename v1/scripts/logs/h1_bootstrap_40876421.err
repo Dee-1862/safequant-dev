@@ -1,21 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:58<02:54, 58.27s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:15<02:19, 69.68s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:27<01:10, 70.61s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:40<00:00, 47.82s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:40<00:00, 55.14s/it]
-Traceback (most recent call last):
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/sigma_vs_probe_bootstrap.py", line 92, in save_npy_chunked
-    f.write(data[offset:end])
-OSError: [Errno 122] Disk quota exceeded
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/sigma_vs_probe_bootstrap.py", line 362, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/sigma_vs_probe_bootstrap.py", line 256, in main
-    extract_condition(model, q, harmful, harmless, force=args.force_extract)
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/sigma_vs_probe_bootstrap.py", line 146, in extract_condition
-    save_npy_chunked(out_path / "S.npy", S)
-  File "/jet/home/bhoomire/projects/safequant_v2/diagnostics/sigma_vs_probe_bootstrap.py", line 83, in save_npy_chunked
-    with open(path, "wb") as f:
-OSError: [Errno 122] Disk quota exceeded

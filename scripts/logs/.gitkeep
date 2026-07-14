@@ -1,1 +1,1 @@
-
+# Slurm logs land here (Bridges-2). Keep the directory in git; ignore *.out/*.err/*.log if needed.

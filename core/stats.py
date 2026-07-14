@@ -1,23 +1,26 @@
+# Exact McNemar, Wilson CIs, and paired bootstrap recovery intervals.
+
 from __future__ import annotations
+
 import math
+
 import numpy as np
 
 
 def mcnemar_exact(flags_a, flags_b):
     """
-    Exact two-sided McNemar on paired binary flags (1=complied).
+    Exact two-sided McNemar on paired binary flags (1 = complied).
 
-    Input:
-    - flags_a (list): list of binary flags for condition A
-    - flags_b (list): list of binary flags for condition B
+    Inputs:
+        - flags_a (list): Binary flags for condition A
+        - flags_b (list): Binary flags for condition B
 
-    Returns:
-    - dictionary containing the number of discordant pairs, the p-value, and the number of successes and failures in each condition
+    Outputs:
+        - result (dict): Keys b, c, n_discordant, p_value
     """
+    # Count discordant pairs (b: A yes B no; c: A no B yes)
     b = 0
     c = 0
-
-    # Count the number of discordant pairs
     for x, y in zip(flags_a, flags_b):
         if x and not y:
             b += 1
@@ -25,64 +28,60 @@ def mcnemar_exact(flags_a, flags_b):
             c += 1
     nbc = b + c
 
-    # Calculate the p-value
+    # Two-sided exact binomial under p = 0.5
     if nbc == 0:
         p = 1.0
     else:
         k = min(b, c)
-        p = 2.0 * sum(math.comb(nbc, i) for i in range(k + 1)) * (0.5**nbc)
+        p = 2.0 * sum(math.comb(nbc, i) for i in range(k + 1)) * (0.5 ** nbc)
         p = min(1.0, p)
     return {"b": b, "c": c, "n_discordant": nbc, "p_value": p}
 
 
-def wilson_ci(k, n, z=1.96):
+def wilson_ci(k, n, z = 1.96):
     """
     Wilson score 95% CI for a proportion k/n.
 
-    Input:
-    - k (int): the number of successes
-    - n (int): the number of trials
-    - z (float): the z-score for the confidence interval
+    Inputs:
+        - k (int): Number of successes
+        - n (int): Number of trials
+        - z (float): Normal quantile (default 1.96)
 
-    Returns:
-    - list of two floats: the lower and upper bounds of the confidence interval
+    Outputs:
+        - bounds (list): [lower, upper] clipped to [0, 1]
     """
-    # Check if the number of trials is zero
+    # Empty trials -> degenerate interval
     if n == 0:
         return [0.0, 0.0]
     p = k / n
 
-    # Calculate the center and half of the confidence interval
+    # Wilson center and half-width
     den = 1 + z * z / n
     center = (p + z * z / (2 * n)) / den
     half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
     return [max(0.0, center - half), min(1.0, center + half)]
 
 
-def bootstrap_recovery(flags_by_cond, qtz, n_boot=2000, seed=0):
+def bootstrap_recovery(flags_by_cond, qtz, n_boot = 2000, seed = 0):
     """
     Paired bootstrap CIs on read/write/both recovery percentages.
 
-    Input:
-    - flags_by_cond (dict): dictionary of lists of binary flags, keyed by condition name
-    - qtz (str): the condition name to compare against
-    - n_boot (int): the number of bootstrap samples
-    - seed (int): the random seed
+    Inputs:
+        - flags_by_cond (dict): Condition name -> list of binary flags
+        - qtz (str): Quantized-condition key to compare against fp32
+        - n_boot (int): Number of bootstrap resamples
+        - seed (int): RNG seed
 
-    Returns:
-    - dictionary of lists of CIs for the recovery percentages
+    Outputs:
+        - rec (dict): Recovery name -> [lo, hi] percentile CI
     """
-    # Initialize the random number generator
+    # Seeded RNG and float arrays
     rng = np.random.default_rng(seed)
-
-    # Convert the flags to numpy arrays
-    arrs = {c: np.asarray(v, dtype=float) for c, v in flags_by_cond.items()}
-
-    # Get the number of samples
+    arrs = {c: np.asarray(v, dtype = float) for c, v in flags_by_cond.items()}
     n = len(next(iter(arrs.values())))
     rec = {"read": [], "write": [], "both": [], "read_minus_write": []}
 
-    # Bootstrap the recovery percentages
+    # Resample and accumulate recovery percentages
     for _ in range(n_boot):
         idx = rng.integers(0, n, n)
         asr = {c: arrs[c][idx].mean() * 100 for c in arrs}
@@ -99,17 +98,18 @@ def bootstrap_recovery(flags_by_cond, qtz, n_boot=2000, seed=0):
 
     def ci(a):
         """
-        Calculate the confidence interval for a given array.
-        Input:
-        - a (numpy array): the array to calculate the confidence interval
+        2.5 / 97.5 percentile interval for a bootstrap sample list.
 
-        Returns:
-        - rec (dict): dictionary of lists of two floats: the lower and upper bounds of the confidence interval for each recovery percentage
+        Inputs:
+            - a (array-like): Bootstrap statistic samples
+
+        Outputs:
+            - bounds (list): [lo, hi] as floats
         """
         a = np.asarray(a)
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 
-    # Calculate the confidence intervals for each recovery percentage
+    # Replace sample lists with percentile CIs
     for k, v in rec.items():
         rec[k] = ci(v)
     return rec
