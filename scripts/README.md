@@ -39,7 +39,8 @@ Do **not** mass-submit multi-model jobs until the smoke chain is green. Details:
 
 ```bash
 cd /jet/home/bhoomire/projects/safequant_v2
-pytest tests/ -v                                          # login node
+pytest tests/ -v                                          # login node; or: python -m pytest tests/ -v
+# if missing: pip install pytest
 bash scripts/tests/submit_smoke.sh                        # env → llama+phi → pairs
 # or one at a time:
 sbatch scripts/tests/00_env_check.sbatch

@@ -31,7 +31,8 @@ source /opt/packages/anaconda3-2024.10-1/etc/profile.d/conda.sh
 conda activate /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
 
 # Unit tests (seed + anchors). Must be 14 passed.
-pytest tests/ -v
+# If pytest is missing:  pip install pytest
+python -m pytest tests/ -v
 
 # Seed fingerprint from docs/SEEDS.md
 python -c "

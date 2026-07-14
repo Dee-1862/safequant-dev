@@ -17,7 +17,7 @@ echo "Torch:  $(python -c 'import torch; print(torch.__version__)')"
 mkdir -p "${OCEAN_BASE}/.cache/huggingface"
 mkdir -p "${OCEAN_BASE}/.cache/huggingface/datasets"
 
-pip install -q "bitsandbytes>=0.43.0" "accelerate>=0.26.0" "scipy>=1.11.0"
+pip install -q "bitsandbytes>=0.43.0" "accelerate>=0.26.0" "scipy>=1.11.0" "pytest>=8.0"
 
 python -c "
 import torch, transformers, bitsandbytes as bnb, accelerate

@@ -45,5 +45,5 @@ print(f"HF_HOME writable check -> {Path('.').resolve()}")
 PY
 
 echo "--- pytest ---"
-pytest tests/ -v
+python -m pytest tests/ -v
 echo "=== smoke env OK | $(date) ==="
