@@ -372,6 +372,26 @@ def _load_gptq(model_name, device = None, bits = 4):
     if device is None:
         device = DEVICE
 
+    # --- optimum 2.2.0 / gptqmodel 7.1.0 load shim (act-order checkpoints) ---
+    # optimum's GPTQQuantizer defaults act_group_aware=True and passes it
+    # EXPLICITLY into gptqmodel's QuantizeConfig, which rejects act_group_aware=True
+    # together with desc_act=True -- i.e. every standard act-order GPTQ checkpoint.
+    # transformers' GPTQConfig.to_dict_optimum() drops the field, so it cannot be
+    # overridden through the config. Force it False here. act_group_aware is a
+    # quantization-TIME knob (it controls how groups are ORDERED while quantizing);
+    # the already-quantized weights load identically, so this changes no results.
+    # Idempotent; load-path only.
+    import optimum.gptq.quantizer as _oq
+    if not getattr(_oq.GPTQQuantizer, "_safequant_agaw_patch", False):
+        _orig_gptq_init = _oq.GPTQQuantizer.__init__
+
+        def _agaw_init(self, *a, **kw):
+            kw["act_group_aware"] = False
+            _orig_gptq_init(self, *a, **kw)
+
+        _oq.GPTQQuantizer.__init__ = _agaw_init
+        _oq.GPTQQuantizer._safequant_agaw_patch = True
+
     # Look up a registered pre-quantized checkpoint when bits map to a suffix
     bit_suffix = {4: "gptq4", 3: "gptq3", 2: "gptq2", 8: "gptq8"}.get(bits)
     ckpt_key_alias = (model_name, bit_suffix) if bit_suffix else None
