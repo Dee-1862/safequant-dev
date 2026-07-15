@@ -13,10 +13,20 @@ uses expensive PV-tuning that we do not reproduce. So provenance is:
 **AQLM = public pinned checkpoints; GPTQ = self-generated, fixed recipe.**
 
 ## Recipe (pin these in the paper)
+These are the **community-standard GPTQ settings** — the operating point used by
+distributed checkpoints (ModelCloud/TheBloke) — pinned explicitly so the recipe
+is fully specified and never inherits a drifting library default.
 - **Library:** `gptqmodel==<PIN THE VERSION YOU INSTALL>` (`pip show gptqmodel`).
 - **bits:** 4 (also 3/2 if you need the low-bit cells) · **group_size:** 128
-- **Calibration:** 128 deterministic C4 samples via `core.datasets.load_c4_calibration`
-  (streams the same first-N documents every run — no random sampling).
+- **act-order:** `desc_act=True` · **sym:** `True` · **damp_percent:** `0.05`.
+  `desc_act=True` (activation-order) is the dominant quality lever and the standard
+  setting; it is **not** tuned toward the refusal direction (it's a generic quality
+  knob). Leaving it off (`desc_act=False`) was an artifact that drifted the Llama
+  refusal direction to cos **0.51** vs the act-order ModelCloud checkpoint's **0.98**.
+- **Calibration:** 128 windows of **2048 tokens** each, concatenated from a fixed
+  deterministic C4 slice (`--seqlen 2048 --n_calib 128`; streams the same documents
+  every run — no random sampling). Full-length windows give a well-conditioned
+  Hessian; the earlier ~500-token snippets under-conditioned it.
 - **Seed:** 42 (`--seed`). GPTQ is deterministic given fixed calibration data;
   `--deterministic` adds bit-exact cuBLAS/torch kernels.
 - **FP base:** pinned to `config.MODEL_REVISIONS` where set (e.g. `phi3` →

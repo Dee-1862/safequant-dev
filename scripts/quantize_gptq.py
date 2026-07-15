@@ -5,10 +5,15 @@ models via GPTQModel (ModelCloud, the maintained successor to auto-gptq), so
 every GPTQ cell shares ONE controlled recipe instead of mismatched third-party
 checkpoints (ModelCloud / TheBloke / Qwen ...).
 
-Fixed recipe (for reproducibility -- record these in the paper):
+Fixed recipe (the community-STANDARD GPTQ operating point, pinned explicitly for
+reproducibility -- record these in the paper):
   - bits / group_size from CLI (default 4 / 128).
-  - calibration: a DETERMINISTIC C4 slice via core.datasets.load_c4_calibration
-    (streams the same first n_calib documents every run -- no random sampling).
+  - desc_act=True (act-order), sym=True, damp_percent=0.05: standard settings used
+    by shipped GPTQ checkpoints (ModelCloud/TheBloke). act-order is the dominant
+    quality lever -- pinned ON explicitly, never left to a library default.
+  - calibration: 128 windows of 2048 tokens concatenated from a DETERMINISTIC C4
+    slice (streams the same documents every run -- no random sampling). Full-length
+    token windows give a well-conditioned Hessian.
   - --seed fixes torch/numpy/python RNG. The GPTQ algorithm itself is
     deterministic given fixed calibration data (Hessian -> Cholesky -> sequential
     error-feedback), so calibration set + settings fully determine the output.
@@ -38,24 +43,49 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import MODELS, MODEL_REVISIONS, HF_HOME  # noqa: E402
 
 
-def load_c4_calibration(n_samples, max_chars, cache_dir=None):
-    """Inlined copy of core.datasets.load_c4_calibration (same deterministic C4
-    slice + revision pin) so this script does NOT import core.datasets -- which
-    pulls in jailbreakbench/pandas and would force them into the isolated
-    quantization env. Only needs the `datasets` package."""
+def load_c4_texts(min_chars, cache_dir=None):
+    """Inlined C4 streamer (same deterministic slice + revision pin as
+    core.datasets.load_c4_calibration) so this script does NOT import
+    core.datasets -- which pulls in jailbreakbench/pandas and would force them
+    into the isolated quantization env. Returns raw documents (concatenated into
+    fixed-length token windows by build_calibration); streams the same first
+    documents every run -- no random sampling. Only needs the `datasets` pkg."""
     from datasets import load_dataset
     ds = load_dataset("allenai/c4", "en", split="train", streaming=True,
                       revision="1588ec454efa1a09f29cd18ddd04fe05fc8653a2",
                       cache_dir=cache_dir)
-    out = []
+    out, total = [], 0
     for doc in ds:
         text = (doc.get("text") or "").strip()
         if len(text) < 100:
             continue
-        out.append(text[:max_chars])
-        if len(out) >= n_samples:
+        out.append(text)
+        total += len(text)
+        if total >= min_chars:
             break
     return out
+
+
+def build_calibration(tokenizer, texts, n_samples, seqlen):
+    """Standard GPTQ calibration: concatenate the corpus and slice it into
+    `n_samples` windows of exactly `seqlen` tokens (the auto-gptq / GPTQModel
+    convention). Full 2048-token rows give a well-conditioned Hessian; short
+    ~500-token rows under-estimate it and degrade the quantization -- especially
+    for subtle features like the refusal direction. Deterministic: the same
+    C4 slice always yields the same windows."""
+    ids = []
+    need = (n_samples + 1) * seqlen
+    for t in texts:
+        ids.extend(tokenizer(t, add_special_tokens=False)["input_ids"])
+        if len(ids) >= need:
+            break
+    samples = []
+    for i in range(n_samples):
+        chunk = ids[i * seqlen:(i + 1) * seqlen]
+        if len(chunk) < seqlen:
+            break
+        samples.append({"input_ids": chunk, "attention_mask": [1] * seqlen})
+    return samples
 
 
 def set_determinism(seed: int, strict: bool = False):
@@ -87,8 +117,8 @@ def main():
     ap.add_argument("--group_size", type=int, default=128)
     ap.add_argument("--n_calib", type=int, default=128,
                     help="calibration samples (GPTQ standard = 128)")
-    ap.add_argument("--max_chars", type=int, default=2048,
-                    help="max chars per calibration sample")
+    ap.add_argument("--seqlen", type=int, default=2048,
+                    help="tokens per calibration sample (GPTQ standard = 2048)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--deterministic", action="store_true",
                     help="bit-exact mode (torch deterministic algorithms + cuBLAS "
@@ -121,19 +151,43 @@ def main():
     print(f"  output: {out_dir}")
     print("=" * 72)
 
-    # 1) deterministic calibration corpus (same C4 samples every run)
-    print(f"\n[1/3] loading {args.n_calib} C4 calibration samples ...")
-    calib = load_c4_calibration(n_samples=args.n_calib,
-                                max_chars=args.max_chars, cache_dir=HF_HOME)
-    print(f"  loaded {len(calib)} samples")
-
-    # 2) load FP base under the pinned recipe + quantize
-    print("\n[2/3] loading FP base + quantizing (Hessian -> GPTQ) ...")
-    quant_config = QuantizeConfig(bits=args.bits, group_size=args.group_size)
+    # 1) load FP base under the pinned STANDARD GPTQ recipe.
+    print("\n[1/3] loading FP base ...")
+    # Pin every setting explicitly -- do NOT inherit library defaults, which
+    # drift between gptqmodel versions AND (as we found) can default to a
+    # NON-standard operating point. These are the community-standard values used
+    # by distributed GPTQ checkpoints (ModelCloud/TheBloke), so our GPTQ cells
+    # reflect how GPTQ is actually deployed, not a handicapped variant:
+    #   desc_act=True   -> activation-order quantization. THE dominant quality
+    #     lever and the mainstream setting (GPTQ paper + auto-gptq/GPTQModel
+    #     recommend it; ~all shipped GPTQ checkpoints use it). Our earlier
+    #     desc_act=False run drifted the refusal direction to cos 0.51 vs the
+    #     act-order ModelCloud checkpoint's 0.98 -- an artifact, now removed.
+    #   sym=True, damp_percent=0.05 -> match what our prior run already used
+    #     (gptqmodel 7.1.0 defaults) so act-order + calibration length are the
+    #     ONLY intentional changes. It's a generic quality recipe, not tuned
+    #     toward (or against) the refusal direction.
+    quant_config = QuantizeConfig(
+        bits=args.bits,
+        group_size=args.group_size,
+        desc_act=True,
+        sym=True,
+        damp_percent=0.05,
+    )
     load_kwargs = {"trust_remote_code": True}
     if revision:
         load_kwargs["revision"] = revision
     model = GPTQModel.load(model_path, quant_config, **load_kwargs)
+
+    # 2) deterministic calibration + quantize. Concatenate a fixed C4 slice into
+    #    n_calib windows of exactly seqlen tokens (same windows every run) -- the
+    #    standard GPTQ calibration, replacing the earlier ~500-token snippets.
+    print(f"\n[2/3] building {args.n_calib} x {args.seqlen}-token calibration + "
+          f"quantizing (Hessian -> GPTQ) ...")
+    raw = load_c4_texts(min_chars=(args.n_calib + 2) * args.seqlen * 6,
+                        cache_dir=HF_HOME)
+    calib = build_calibration(model.tokenizer, raw, args.n_calib, args.seqlen)
+    print(f"  built {len(calib)} calibration windows of {args.seqlen} tokens")
     model.quantize(calib, batch_size=1)
 
     # 3) save checkpoint + tokenizer
