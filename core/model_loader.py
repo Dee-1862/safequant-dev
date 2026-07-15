@@ -373,7 +373,7 @@ def _load_gptq(model_name, device = None, bits = 4):
         device = DEVICE
 
     # Look up a registered pre-quantized checkpoint when bits map to a suffix
-    bit_suffix = {4: "gptq4", 3: "gptq3", 8: "gptq8"}.get(bits)
+    bit_suffix = {4: "gptq4", 3: "gptq3", 2: "gptq2", 8: "gptq8"}.get(bits)
     ckpt_key_alias = (model_name, bit_suffix) if bit_suffix else None
     pre_quantized = None
     if ckpt_key_alias and ckpt_key_alias in QUANTIZED_CHECKPOINTS:
