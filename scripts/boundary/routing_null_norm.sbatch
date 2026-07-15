@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/route_norm_%j.out
 #SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/route_norm_%j.err
-source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
 
 # Appendix — de-confounded routing null with cosine projection.
 

@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/qresafe_sweep_%j.out
 #SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/qresafe_sweep_%j.err
-source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
 
 # Replaces dozens of scripts_old/qresafe_*_r*.sbatch one-offs.
 

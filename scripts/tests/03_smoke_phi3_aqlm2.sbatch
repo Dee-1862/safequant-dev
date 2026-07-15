@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/smoke_phi3_aqlm2_%j.out
 #SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/smoke_phi3_aqlm2_%j.err
-source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
 
 # One-cell GPU smoke: Phi-3-mini + AQLM2 with tiny n_*. Not for paper numbers.
 # Phi-3 uses fused qkv_proj / gate_up_proj — catches architecture-specific loader bugs.

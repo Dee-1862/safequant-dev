@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/probe_geo_sweep_%j.out
 #SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/probe_geo_sweep_%j.err
-source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
 
 # Extended probe-geometry sweep (from scripts_old/probe_geometry_*.sbatch).
 

@@ -48,8 +48,8 @@ def eval_condition(model, tokenizer, name, wj_items, arc_items, xstest_items, ma
     # ASR responses on WildJailbreak
     resp = generate_only(
         model = model,
-        tok = tokenizer,
-        prompts = wj_items,
+        tokenizer = tokenizer,
+        items = wj_items,
         max_new_tokens = max_new_tokens,
         desc = f"{name}/ASR",
     )
@@ -57,15 +57,15 @@ def eval_condition(model, tokenizer, name, wj_items, arc_items, xstest_items, ma
     # ARC coherence
     arc = measure_arc(
         model = model,
-        tok = tokenizer,
-        prompts = arc_items,
+        tokenizer = tokenizer,
+        arc_items = arc_items,
     )
 
     # XSTest false-refusal metrics
     xs = eval_xstest(
         model = model,
-        tok = tokenizer,
-        prompts = xstest_items,
+        tokenizer = tokenizer,
+        xstest_items = xstest_items,
         desc = f"{name}/XSTest",
     )
     return resp, arc, xs

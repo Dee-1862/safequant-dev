@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/qresafe_pairs_%j.out
 #SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/qresafe_pairs_%j.err
-source "$(cd "$(dirname "$0")/.." && pwd)/_env.sh"
+source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
 
 # Tables 6–7 data — build pairs before DPO.
 

@@ -71,10 +71,10 @@ def main():
     q_device = next(q_model.parameters()).device
     layers = list(range(len(get_inner(q_model).layers)))
     h_resid = extract_last_token_residuals(
-        model = q_model, tok = q_tok, prompts = calib_harmful, layers = layers, device = q_device
+        model = q_model, tokenizer = q_tok, prompts = calib_harmful, layers = layers, device = q_device
     )
     s_resid = extract_last_token_residuals(
-        model = q_model, tok = q_tok, prompts = calib_harmless, layers = layers, device = q_device
+        model = q_model, tokenizer = q_tok, prompts = calib_harmless, layers = layers, device = q_device
     )
 
     # Fit directions and pick the highest-accuracy probe layer
@@ -87,8 +87,8 @@ def main():
     # Baseline ASR before ablation
     baseline_responses = generate_only(
         model = q_model,
-        tok = q_tok,
-        prompts = eval_items,
+        tokenizer = q_tok,
+        items = eval_items,
         desc = "baseline",
         max_new_tokens = args.max_new_tokens,
     )
@@ -99,8 +99,8 @@ def main():
     try:
         ablation_responses = generate_only(
             model = q_model,
-            tok = q_tok,
-            prompts = eval_items,
+            tokenizer = q_tok,
+            items = eval_items,
             desc = "multilayer-abl",
             max_new_tokens = args.max_new_tokens,
         )
