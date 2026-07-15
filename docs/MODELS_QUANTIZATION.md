@@ -34,8 +34,21 @@ sbatch scripts/quantize_gptq.sbatch qwen7b
 Each job prints the exact `config.QUANTIZED_CHECKPOINTS` line to paste, pointing at
 `<ocean>/quantized_models/<model>-gptq4bit-g128`.
 
-## Installed version (fill in after install)
+## Installed version
 ```
-gptqmodel==________     # pip show gptqmodel | grep Version
+gptqmodel==7.1.0        # in the isolated sq_gptq env (generation ONLY)
 generated: 2026-07-15
 ```
+
+## Loading self-generated GPTQ in the eval env (sq_clean)
+Checkpoints are produced under gptqmodel/transformers-5 but loaded by the pipeline
+under transformers 4.57. Two one-time requirements make them load cleanly:
+- **`optimum>=1.24.0`** in `sq_clean` (`pip install "optimum>=1.24.0"`, resolves to
+  2.2.0) — else transformers raises "The gptqmodel version should be >= 1.4.3,
+  optimum version should >= 1.24.0". Installs with NO core-stack change.
+- `quantize_gptq.py` strips the transformers-5 `tokenizer_class` ("TokenizersBackend")
+  from `tokenizer_config.json` so tf-4.x loads the checkpoint's own LlamaTokenizerFast.
+  Checkpoints made before that fix were patched once with a small json edit.
+
+Loading uses the Triton GPTQ kernel (CUDA/ExLlama extensions aren't built for this
+torch) — slower but correct.
