@@ -36,7 +36,26 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import MODELS, MODEL_REVISIONS, HF_HOME  # noqa: E402
-from core.datasets import load_c4_calibration  # noqa: E402
+
+
+def load_c4_calibration(n_samples, max_chars, cache_dir=None):
+    """Inlined copy of core.datasets.load_c4_calibration (same deterministic C4
+    slice + revision pin) so this script does NOT import core.datasets -- which
+    pulls in jailbreakbench/pandas and would force them into the isolated
+    quantization env. Only needs the `datasets` package."""
+    from datasets import load_dataset
+    ds = load_dataset("allenai/c4", "en", split="train", streaming=True,
+                      revision="1588ec454efa1a09f29cd18ddd04fe05fc8653a2",
+                      cache_dir=cache_dir)
+    out = []
+    for doc in ds:
+        text = (doc.get("text") or "").strip()
+        if len(text) < 100:
+            continue
+        out.append(text[:max_chars])
+        if len(out) >= n_samples:
+            break
+    return out
 
 
 def set_determinism(seed: int, strict: bool = False):
