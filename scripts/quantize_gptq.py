@@ -163,6 +163,13 @@ def main():
     #     recommend it; ~all shipped GPTQ checkpoints use it). Our earlier
     #     desc_act=False run drifted the refusal direction to cos 0.51 vs the
     #     act-order ModelCloud checkpoint's 0.98 -- an artifact, now removed.
+    #   act_group_aware=False -> gptqmodel has TWO mutually exclusive act-ordering
+    #     mechanisms: classic desc_act (full act-order w/ g_idx) and the newer,
+    #     lightweight act_group_aware approximation (defaults True). They cannot
+    #     both be True -- and act_group_aware alone (our earlier desc_act=False
+    #     run) did NOT preserve the direction (cos 0.51). So force classic
+    #     act-order and disable the approximation, self-consistently (else the
+    #     saved config has both flags set and fails to reload).
     #   sym=True, damp_percent=0.05 -> match what our prior run already used
     #     (gptqmodel 7.1.0 defaults) so act-order + calibration length are the
     #     ONLY intentional changes. It's a generic quality recipe, not tuned
@@ -171,6 +178,7 @@ def main():
         bits=args.bits,
         group_size=args.group_size,
         desc_act=True,
+        act_group_aware=False,
         sym=True,
         damp_percent=0.05,
     )
