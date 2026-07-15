@@ -144,6 +144,21 @@ def main():
     except Exception:
         pass
 
+    # Keep the checkpoint SELF-CONTAINED and loadable under transformers 4.x.
+    # gptqmodel runs under transformers 5, which stamps tokenizer_class
+    # "TokenizersBackend" into tokenizer_config.json -- a class transformers 4.x
+    # cannot import. Strip only that metadata field; the checkpoint's own
+    # tokenizer.json (identical to the base, version-stable) then loads via the
+    # inferred fast tokenizer. The checkpoint keeps ITS OWN tokenizer, not the base's.
+    import json as _json
+    _tcfg = out_dir / "tokenizer_config.json"
+    if _tcfg.exists():
+        _d = _json.loads(_tcfg.read_text())
+        if _d.pop("tokenizer_class", None) is not None:
+            _tcfg.write_text(_json.dumps(_d, indent=2))
+            print("  patched tokenizer_config.json (dropped transformers-5 "
+                  "'tokenizer_class' -> transformers 4.x loads the checkpoint tokenizer)")
+
     print("\nDONE. Register it in config.QUANTIZED_CHECKPOINTS:")
     print(f'    ("{args.model}", "gptq{args.bits}"): "{out_dir}",')
 
