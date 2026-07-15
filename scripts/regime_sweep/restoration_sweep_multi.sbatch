@@ -14,8 +14,8 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 
 echo "=== restoration sweep multi-model | $(date) ==="
-for MODEL in llama7b mistral7b-v02 qwen7b; do
-  for QUANTIZER in aqlm2 awq gptq4 gptq2; do
+for MODEL in ${SWEEP_MODELS:-llama7b mistral7b-v02 qwen7b}; do
+  for QUANTIZER in ${SWEEP_QUANTIZERS:-aqlm2 awq gptq4 gptq3 gptq2}; do
     echo "---- ${MODEL} / ${QUANTIZER} ----"
     python -u -m experiments.regime_sweep.restoration_sweep \
       --model ${MODEL} --quantizer ${QUANTIZER} --n_eval 200 --n_reasoning 50 \
