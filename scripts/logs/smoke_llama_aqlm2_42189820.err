@@ -1,0 +1,2 @@
+/var/spool/slurm/d/job42189820/slurm_script: line 11: /var/spool/slurm/d/_env.sh: No such file or directory
+/var/spool/slurm/d/job42189820/slurm_script: line 23: python: command not found
