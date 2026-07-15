@@ -15,7 +15,7 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== direction drift Llama multi-quant | $(date) ==="
 MODEL=llama7b
-for QUANTIZER in gptq4 awq aqlm2 gptq3 gptq2; do
+for QUANTIZER in ${SWEEP_QUANTIZERS:-gptq4 awq aqlm2 gptq3 gptq2}; do
   echo "---- ${MODEL} / ${QUANTIZER} ----"
   python -u -m experiments.signal_geometry.direction_drift \
     --model ${MODEL} --quantizer ${QUANTIZER} --n_calib 200 || echo "FAILED ${QUANTIZER}"
