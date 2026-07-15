@@ -87,8 +87,13 @@ QUANTIZED_CHECKPOINTS = {
     # Gemma 7B (Gemma-1 generation)
     ("gemma7b", "gptq4"):  "TechxGenus/gemma-7b-it-GPTQ",
     ("gemma7b", "awq"):    "casperhansen/gemma-7b-it-awq",
-    # Llama-3.1-8B-Instruct
-    ("llama7b", "gptq4"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-4bit",
+    # Llama-3.1-8B-Instruct GPTQ: self-generated via scripts/quantize_gptq.py
+    # (uniform recipe: <bits>-bit / group 128, C4 calib n=128, seed 42, gptqmodel
+    # 7.1.0 -- see MODELS_QUANTIZATION.md). Replaces the old ModelCloud gptq-4bit;
+    # gptq2/3 used to be quantized on-the-fly into gptq_cache/.
+    ("llama7b", "gptq4"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128",
+    ("llama7b", "gptq3"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128",
+    ("llama7b", "gptq2"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128",
     ("llama7b", "gptq8"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-8bit",
     # Llama-3.2-1B-Instruct (fits on single V100)
     ("llama1b", "gptq4"):  "ModelCloud/Llama-3.2-1B-Instruct-gptq-4bit",
