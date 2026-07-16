@@ -14,16 +14,22 @@
 # Run on a LOGIN node (needs internet + a HF token for gated repos: `huggingface-cli login`).
 #   bash scripts/fetch_checkpoints.sh
 # Skips anything already fully downloaded (huggingface-cli is resumable/idempotent).
-set -euo pipefail
+set -uo pipefail   # NOT -e: one failed (e.g. gated) repo must not abort the rest
 
 QM_ROOT="${QM_ROOT:-/ocean/projects/cis240116p/bhoomire/quantized_models}"
+FAILED=""
 
 dl() {  # dl <subdir/alias> <repo> [revision]
   local dest="$QM_ROOT/$1" repo="$2" rev="${3:-main}"
   echo "=== $repo @ ${rev} -> $dest ==="
-  huggingface-cli download "$repo" --revision "$rev" \
-    --local-dir "$dest" \
-    --exclude "original/*" "*.gguf" "*.pth" "consolidated*"
+  if huggingface-cli download "$repo" --revision "$rev" \
+       --local-dir "$dest" \
+       --exclude "original/*" "*.gguf" "*.pth" "consolidated*"; then
+    echo "  ok: $1"
+  else
+    echo "  !! FAILED: $1 ($repo) -- check 'huggingface-cli login' / gated access"
+    FAILED="$FAILED $1"
+  fi
 }
 
 echo "consolidating checkpoints under: $QM_ROOT"
@@ -46,8 +52,14 @@ dl aqlm/mistral7b-v02  ISTA-DASLab/Mistral-7B-Instruct-v0.2-AQLM-2Bit-2x8
 dl aqlm/phi3           ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf            90cc18c5d0985a9105b1d551515d38e716dfc274
 
 echo ""
-echo "DONE. Consolidated layout under $QM_ROOT:"
-echo "  base/{llama7b,qwen7b,mistral7b-v02,phi3}"
-echo "  awq/{llama7b,qwen7b,mistral7b-v02,phi3}"
-echo "  aqlm/{llama7b,mistral7b-v02,phi3}"
-echo "  <alias>-gptq{2,3,4}bit-g128  (self-generated separately)"
+if [ -n "$FAILED" ]; then
+  echo "!! SOME DOWNLOADS FAILED:$FAILED"
+  echo "   Run 'huggingface-cli login' (needs Llama/Mistral gated access) and re-run"
+  echo "   this script -- it resumes and only re-fetches what's missing."
+else
+  echo "DONE. Consolidated layout under $QM_ROOT:"
+  echo "  base/{llama7b,qwen7b,mistral7b-v02,phi3}"
+  echo "  awq/{llama7b,qwen7b,mistral7b-v02,phi3}"
+  echo "  aqlm/{llama7b,mistral7b-v02,phi3}"
+  echo "  <alias>-gptq{2,3,4}bit-g128  (self-generated separately)"
+fi
