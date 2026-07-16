@@ -19,6 +19,15 @@ set -uo pipefail   # NOT -e: one failed (e.g. gated) repo must not abort the res
 QM_ROOT="${QM_ROOT:-/ocean/projects/cis240116p/bhoomire/quantized_models}"
 FAILED=""
 
+# Use HF's Rust-accelerated transfer when the package is installed (much faster
+# for big safetensors). Harmless if absent. Install with: pip install --user hf_transfer
+if python -c "import hf_transfer" 2>/dev/null; then
+  export HF_HUB_ENABLE_HF_TRANSFER=1
+  echo "hf_transfer: ENABLED (fast downloads)"
+else
+  echo "hf_transfer: not installed (slower). pip install --user hf_transfer to speed up."
+fi
+
 dl() {  # dl <subdir/alias> <repo> [revision]
   local dest="$QM_ROOT/$1" repo="$2" rev="${3:-main}"
   echo "=== $repo @ ${rev} -> $dest ==="
