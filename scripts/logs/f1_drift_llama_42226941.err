@@ -1,55 +1,0 @@
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-`torch_dtype` is deprecated! Use `dtype` instead!
-Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.9.0+cu128).
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:58<02:55, 58.66s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:10<02:13, 66.59s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:19<01:07, 67.68s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:31<00:00, 45.78s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:31<00:00, 53.00s/it]
-You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:239: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend', 'use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
-  warnings.warn(warning_msg)
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/jet/home/bhoomire/projects/safequant_v2/experiments/signal_geometry/direction_drift.py", line 165, in <module>
-    main()
-  File "/jet/home/bhoomire/projects/safequant_v2/experiments/signal_geometry/direction_drift.py", line 146, in main
-    q_model, _ = load_quantized(args.model, quantizer = q)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 198, in load_quantized
-    return _load_gptq(model_name, device, bits = 4)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/jet/home/bhoomire/projects/safequant_v2/core/model_loader.py", line 409, in _load_gptq
-    model = AutoModelForCausalLM.from_pretrained(
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/models/auto/auto_factory.py", line 604, in from_pretrained
-    return model_class.from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_utils.py", line 277, in _wrapper
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/modeling_utils.py", line 4881, in from_pretrained
-    hf_quantizer, config, dtype, device_map = get_hf_quantizer(
-                                              ^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py", line 311, in get_hf_quantizer
-    hf_quantizer = AutoHfQuantizer.from_config(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py", line 185, in from_config
-    return target_cls(quantization_config, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/quantizer_gptq.py", line 52, in __init__
-    self.optimum_quantizer = GPTQQuantizer.from_dict(self.quantization_config.to_dict_optimum())
-                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/optimum/gptq/quantizer.py", line 251, in from_dict
-    return cls(**config_dict)
-           ^^^^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/optimum/gptq/quantizer.py", line 168, in __init__
-    self.quantizeConfig = QuantizeConfig(
-                          ^^^^^^^^^^^^^^^
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/gptqmodel/quantization/config.py", line 2281, in __call__
-    return type.__call__(target_cls, *args, **target_kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 43, in __init__
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/gptqmodel/quantization/config.py", line 3088, in __post_init__
-    self._resolve_activation_ordering(desc_act_user_value, act_group_aware_user_value)
-  File "/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/gptqmodel/quantization/config.py", line 3103, in _resolve_activation_ordering
-    raise ValueError(
-ValueError: QuantizeConfig:: `act_group_aware` == `True` requires `desc_act` == `False` when both are explicitly set.

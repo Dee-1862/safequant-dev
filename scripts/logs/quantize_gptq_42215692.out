@@ -1,7 +1,0 @@
-=== SafeQuant Bridges-2 | job=42215692 | Wed Jul 15 02:18:17 EDT 2026 ===
-  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
-  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
-  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
-  CUDA_HOME=/opt/packages/cuda/v12.4.0
-NVIDIA H100 80GB HBM3, 81559 MiB
-=== GPTQ quantize llama7b (bits=2, group=128) | Wed Jul 15 02:18:17 EDT 2026 ===

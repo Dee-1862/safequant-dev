@@ -8,3 +8,9 @@ outputs/**/*_raw.json
 .ruff_cache/
 paper_refs/
 
+
+# cluster-side artifacts — never track
+scripts/logs/
+logs/
+outputs_pre_realrun_*/
+refusal_direction
