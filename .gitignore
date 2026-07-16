@@ -9,8 +9,9 @@ outputs/**/*_raw.json
 paper_refs/
 
 
-# cluster-side artifacts — never track
-scripts/logs/
+# cluster-side artifacts — never track (but keep the logs/ dir so SLURM can write)
+scripts/logs/*
+!scripts/logs/.gitkeep
 logs/
 outputs_pre_realrun_*/
 refusal_direction
