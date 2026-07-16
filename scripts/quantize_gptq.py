@@ -117,6 +117,22 @@ def main():
     if revision:
         init_kwargs["revision"] = revision
     model = AutoGPTQForCausalLM.from_pretrained(model_path, quantize_config, **init_kwargs)
+
+    # transformers >=4.43 keeps a single model-level RotaryEmbedding whose inv_freq
+    # buffer can stay on CPU while auto-gptq runs each layer on GPU -> a
+    # "cpu and cuda:0" device mismatch inside apply_rotary_pos_emb. Pin any
+    # RotaryEmbedding module onto the position_ids device on every forward.
+    def _pin_rotary(mod, args):
+        try:
+            dev = args[1].device if len(args) > 1 else args[0].device
+            mod.to(dev)
+        except Exception:
+            pass
+
+    for _name, _mod in model.model.named_modules():
+        if _mod.__class__.__name__.endswith("RotaryEmbedding"):
+            _mod.register_forward_pre_hook(_pin_rotary)
+
     model.quantize(calib)
 
     print(f"\n[3/3] saving to {out_dir} ...")
