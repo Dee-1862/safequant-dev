@@ -87,14 +87,14 @@ QUANTIZED_CHECKPOINTS = {
     # Gemma 7B (Gemma-1 generation)
     ("gemma7b", "gptq4"):  "TechxGenus/gemma-7b-it-GPTQ",
     ("gemma7b", "awq"):    "casperhansen/gemma-7b-it-awq",
-    # Llama-3.1-8B-Instruct GPTQ-4: reputable public checkpoint (AutoGPTQ, INT4,
-    # group 128, desc_act, WikiText-2 calib) that matches the literature
-    # (refusal-direction cos >0.97). Replaces our gptqmodel self-quant, which
-    # produced an anomalous direction (cos ~0.47) -- see docs/MODELS_QUANTIZATION.md.
-    # Pinned revision: f184d2b18e2b7c257af79aa0bc53ef3ee505caa2 (2024-08-07).
-    ("llama7b", "gptq4"):  "hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
-    # Vanilla GPTQ-3 / GPTQ-2 dropped: sub-4-bit GPTQ collapses (10^4-10^6 ppl) and
-    # no reputable provider ships it; the 2-bit regime is covered by AQLM / QuIP#.
+    # Llama-3.1-8B-Instruct GPTQ: self-generated via scripts/quantize_gptq.py using
+    # AutoGPTQ (bits/group 128, desc_act, sym, damp 0.1, WikiText-2 calib n=128,
+    # seed 0 -- the hugging-quants recipe). AutoGPTQ (not gptqmodel) makes gptq4
+    # match the literature (cos >0.97); gptq3/gptq2 give the low-bit degradation
+    # curve under the SAME recipe. See docs/MODELS_QUANTIZATION.md.
+    ("llama7b", "gptq4"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128",
+    ("llama7b", "gptq3"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128",
+    ("llama7b", "gptq2"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128",
     ("llama7b", "gptq8"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-8bit",
     # Llama-3.2-1B-Instruct (fits on single V100)
     ("llama1b", "gptq4"):  "ModelCloud/Llama-3.2-1B-Instruct-gptq-4bit",
