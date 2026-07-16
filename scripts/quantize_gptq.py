@@ -119,6 +119,8 @@ def main():
     )
     init_kwargs = {"cache_dir": HF_HOME, "trust_remote_code": True,
                    "torch_dtype": torch.float16}
+
+    # Set revision if provided
     if revision:
         init_kwargs["revision"] = revision
     model = AutoGPTQForCausalLM.from_pretrained(model_path, quantize_config, **init_kwargs)
