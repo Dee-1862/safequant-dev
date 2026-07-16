@@ -27,6 +27,13 @@ os.environ.setdefault("HF_HOME", HF_HOME)
 os.environ.setdefault("TRANSFORMERS_CACHE", HF_HOME)
 os.environ.setdefault("HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets"))
 
+# Consolidated local checkpoint tree on Ocean (next to the HF cache):
+#   <_QM>/base/<alias>/  <_QM>/awq/<alias>/  <_QM>/aqlm/<alias>/
+#   <_QM>/<alias>-gptq<bits>bit-g128/   (self-generated GPTQ)
+# Populated by scripts/fetch_checkpoints.sh + scripts/quantize_gptq.py.
+_QM = (os.path.join(os.path.dirname(os.path.dirname(HF_HOME)), "quantized_models")
+       if HF_HOME else "/ocean/projects/cis240116p/bhoomire/quantized_models")
+
 # -- Models -------------------------------------------------------------------
 # Short aliases -> HuggingFace model IDs.
 # Any HF model ID can also be passed directly (no alias needed).
@@ -78,9 +85,11 @@ QUANTIZED_CHECKPOINTS = {
     ("qwen1.5b", "gptq8"): "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int8",
     ("qwen1.5b", "awq"):   "Qwen/Qwen2.5-1.5B-Instruct-AWQ",
     # Qwen2.5-7B-Instruct
-    ("qwen7b", "gptq4"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4",
+    ("qwen7b", "gptq4"):   f"{_QM}/qwen7b-gptq4bit-g128",   # self-gen (AutoGPTQ)
+    ("qwen7b", "gptq3"):   f"{_QM}/qwen7b-gptq3bit-g128",
+    ("qwen7b", "gptq2"):   f"{_QM}/qwen7b-gptq2bit-g128",
     ("qwen7b", "gptq8"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int8",
-    ("qwen7b", "awq"):     "Qwen/Qwen2.5-7B-Instruct-AWQ",
+    ("qwen7b", "awq"):     f"{_QM}/awq/qwen7b",             # Qwen/Qwen2.5-7B-Instruct-AWQ
     # Qwen3-8B
     ("qwen3-8b", "gptq4"): "JunHowie/Qwen3-8B-GPTQ-Int4",
     ("qwen3-8b", "awq"):   "Qwen/Qwen3-8B-AWQ",
@@ -102,8 +111,8 @@ QUANTIZED_CHECKPOINTS = {
     ("llama3-8b", "aqlm2"): "ISTA-DASLab/Meta-Llama-3-8B-Instruct-AQLM-2Bit-1x16",
     ("llama3b", "aqlm2"): "ISTA-DASLab/Llama-3.2-3B-Instruct-AQLM-PV-2Bit-2x8",
     # Llama-3.1-8B multi-quantizer comparison (matching arxiv 2502.15799)
-    ("llama7b", "awq"):    "hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4",
-    ("llama7b", "aqlm2"):  "ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf",
+    ("llama7b", "awq"):    f"{_QM}/awq/llama7b",   # hugging-quants/…-AWQ-INT4
+    ("llama7b", "aqlm2"):  f"{_QM}/aqlm/llama7b",  # ISTA-DASLab/…-AQLM-PV-2Bit-1x16-hf
     ("llama7b", "quip4"):  "kharinaev/Llama-3.1-8B-Instruct-quip-sharp-4bit",
     ("llama7b", "quip2"):  "kharinaev/Llama-3.1-8B-Instruct-quip-sharp-2bit",
     # Decoding Compressed Trust -- exact models from the paper
@@ -114,12 +123,18 @@ QUANTIZED_CHECKPOINTS = {
     # Mistral-7B-Instruct-v0.3
     ("mistral7b", "gptq4"): "RedHatAI/Mistral-7B-Instruct-v0.3-GPTQ-4bit",
     # Mistral-7B-Instruct-v0.2 (matches Kharinaev et al. 2025)
-    ("mistral7b-v02", "gptq4"): "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ",
-    ("mistral7b-v02", "awq"):   "TheBloke/Mistral-7B-Instruct-v0.2-AWQ",
-    ("mistral7b-v02", "aqlm2"): "ISTA-DASLab/Mistral-7B-Instruct-v0.2-AQLM-2Bit-2x8",
+    ("mistral7b-v02", "gptq4"): f"{_QM}/mistral7b-v02-gptq4bit-g128",   # self-gen (AutoGPTQ)
+    ("mistral7b-v02", "gptq3"): f"{_QM}/mistral7b-v02-gptq3bit-g128",
+    ("mistral7b-v02", "gptq2"): f"{_QM}/mistral7b-v02-gptq2bit-g128",
+    ("mistral7b-v02", "awq"):   f"{_QM}/awq/mistral7b-v02",   # TheBloke/…-v0.2-AWQ
+    ("mistral7b-v02", "aqlm2"): f"{_QM}/aqlm/mistral7b-v02",  # ISTA-DASLab/…-v0.2-AQLM-2Bit-2x8
     ("mistral-nemo", "aqlm2"): "ISTA-DASLab/Mistral-Nemo-Instruct-2407-AQLM-PV-2Bit-1x16-hf",
     # Phi-3-mini-4k-instruct AQLM-PV 2-bit (fused qkv/gate_up projections)
-    ("phi3", "aqlm2"): "ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf",
+    ("phi3", "gptq4"): f"{_QM}/phi3-gptq4bit-g128",   # self-gen (AutoGPTQ)
+    ("phi3", "gptq3"): f"{_QM}/phi3-gptq3bit-g128",
+    ("phi3", "gptq2"): f"{_QM}/phi3-gptq2bit-g128",
+    ("phi3", "awq"):   f"{_QM}/awq/phi3",             # Sreenington/Phi-3-mini-4k-instruct-AWQ
+    ("phi3", "aqlm2"): f"{_QM}/aqlm/phi3",            # ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
     # Gemma-2-9B-it
     ("gemma9b", "gptq4"): "ModelCloud/gemma-2-9b-it-gptq-4bit",
 }
