@@ -1,0 +1,66 @@
+=== SafeQuant Bridges-2 | job=42213036 | Wed Jul 15 00:38:14 EDT 2026 ===
+  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
+  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  CUDA_HOME=/opt/packages/cuda/v12.4.0
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== smoke phi3/aqlm2 | Wed Jul 15 00:38:15 EDT 2026 ===
+---- direction_drift ----
+Loading FP32 model: phi3
+  Path: microsoft/Phi-3-mini-4k-instruct
+  Device: cuda
+  Revision pin: ff07dc01615f (FP weights matched to the quantizer's source)
+  OK Loaded (3.82B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+[FP32] extracting residuals (token_pos=-3)
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+[aqlm2] extracting residuals (token_pos=-3)
+Saved to outputs/signal_geometry/direction_drift_phi3_aqlm2.json
+---- probe_accuracy ----
+Loading FP32 model: phi3
+  Path: microsoft/Phi-3-mini-4k-instruct
+  Device: cuda
+  Revision pin: ff07dc01615f (FP weights matched to the quantizer's source)
+  OK Loaded (3.82B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+Saved to outputs/signal_geometry/probe_accuracy_phi3_aqlm2.json
+---- headline_eval ----
+Loading FP32 model: phi3
+  Path: microsoft/Phi-3-mini-4k-instruct
+  Device: cuda
+  Revision pin: ff07dc01615f (FP weights matched to the quantizer's source)
+  OK Loaded (3.82B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+  Generating responses (32 prompts)...
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (32 prompts)...
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (32 prompts)...
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (32 prompts)...
+Loading AQLM-2bit model: phi3 -> ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (32 prompts)...
+  Classifying 160 responses with HarmBench judge...
+  Loading HarmBench classifier: cais/HarmBench-Mistral-7b-val-cls
+  OK HarmBench classifier loaded (4-bit, ~4GB VRAM)
+  OK Classifier unloaded
+Saved to outputs/headline/headline_phi3_aqlm2.json
+=== smoke outputs ===
+-rw-r--r-- 1 bhoomire cis250287p 11400 Jul 15 00:38 outputs/signal_geometry/direction_drift_phi3_aqlm2.json
+-rw-r--r-- 1 bhoomire cis250287p 8530 Jul 15 00:39 outputs/signal_geometry/probe_accuracy_phi3_aqlm2.json
+-rw-r--r-- 1 bhoomire cis250287p 27952 Jul 14 01:47 outputs/headline/headline_eval_phi3_aqlm2.json
+=== smoke phi3/aqlm2 OK | Wed Jul 15 00:55:13 EDT 2026 ===

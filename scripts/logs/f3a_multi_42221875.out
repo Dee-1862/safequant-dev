@@ -1,0 +1,217 @@
+=== SafeQuant Bridges-2 | job=42221875 | Wed Jul 15 12:17:22 EDT 2026 ===
+  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
+  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  CUDA_HOME=/opt/packages/cuda/v12.4.0
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== restoration sweep multi-model | Wed Jul 15 12:17:22 EDT 2026 ===
+---- llama7b / aqlm2 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+  Generating responses (200 prompts)...
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (200 prompts)...
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (200 prompts)...
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (200 prompts)...
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+  Generating responses (200 prompts)...
+  Classifying 1000 responses with HarmBench judge...
+  Loading HarmBench classifier: cais/HarmBench-Mistral-7b-val-cls
+  OK HarmBench classifier loaded (4-bit, ~4GB VRAM)
+  OK Classifier unloaded
+Saved to outputs/regime_sweep/restoration_sweep_llama_aqlm2.json
+---- llama7b / awq ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+  Generating responses (200 prompts)...
+Loading AWQ model: llama7b -> hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  OK Loaded AWQ 4-bit model
+
+  Generating responses (200 prompts)...
+Loading AWQ model: llama7b -> hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  OK Loaded AWQ 4-bit model
+
+  Generating responses (200 prompts)...
+Loading AWQ model: llama7b -> hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  OK Loaded AWQ 4-bit model
+
+  Generating responses (200 prompts)...
+Loading AWQ model: llama7b -> hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  OK Loaded AWQ 4-bit model
+
+  Generating responses (200 prompts)...
+  Classifying 1000 responses with HarmBench judge...
+  Loading HarmBench classifier: cais/HarmBench-Mistral-7b-val-cls
+  OK HarmBench classifier loaded (4-bit, ~4GB VRAM)
+  OK Classifier unloaded
+Saved to outputs/regime_sweep/restoration_sweep_llama_awq.json
+---- llama7b / gptq4 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+  Generating responses (200 prompts)...
+Loading GPTQ-4bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+cb28114
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+FAILED llama7b/gptq4
+---- llama7b / gptq3 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+  Generating responses (200 prompts)...
+Loading GPTQ-3bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+cb28114
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+INFO  Kernel: Auto-selection: adding candidate `TorchLinear`                   
+INFO  Kernel: selected -> `TorchLinear`.                                       
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_1eo325ro`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TorchLinear` compilation triggered.                           
+INFO  gc.collect() reclaimed 90 objects in 0.175s                              
+  OK Loaded GPTQ 3-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+Loading GPTQ-3bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TorchLinear`                   
+INFO  Kernel: selected -> `TorchLinear`.                                       
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_fjx4ttzq`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  gc.collect() reclaimed 30 objects in 0.157s                              
+  OK Loaded GPTQ 3-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+Loading GPTQ-3bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TorchLinear`                   
+INFO  Kernel: selected -> `TorchLinear`.                                       
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_b8mi2yhl`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  gc.collect() reclaimed 30 objects in 0.216s                              
+  OK Loaded GPTQ 3-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+Loading GPTQ-3bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TorchLinear`                   
+INFO  Kernel: selected -> `TorchLinear`.                                       
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_b1eo9erq`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  gc.collect() reclaimed 30 objects in 0.144s                              
+  OK Loaded GPTQ 3-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+  Classifying 1000 responses with HarmBench judge...
+  Loading HarmBench classifier: cais/HarmBench-Mistral-7b-val-cls
+  OK HarmBench classifier loaded (4-bit, ~4GB VRAM)
+  OK Classifier unloaded
+Saved to outputs/regime_sweep/restoration_sweep_llama_gptq3.json
+---- llama7b / gptq2 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+  Generating responses (200 prompts)...
+Loading GPTQ-2bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+6852b52
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_yl3gkdt7`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TritonV2Linear` compilation triggered.                        
+INFO  gc.collect() reclaimed 90 objects in 0.171s                              
+  OK Loaded GPTQ 2-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+Loading GPTQ-2bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_nthyqmfk`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  gc.collect() reclaimed 30 objects in 0.175s                              
+  OK Loaded GPTQ 2-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+Loading GPTQ-2bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_avyp7i6b`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  gc.collect() reclaimed 30 objects in 0.131s                              
+  OK Loaded GPTQ 2-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+Loading GPTQ-2bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_2wpwcnxb`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  gc.collect() reclaimed 30 objects in 0.132s                              
+  OK Loaded GPTQ 2-bit (pre-quantized)
+
+  Generating responses (200 prompts)...
+  Classifying 1000 responses with HarmBench judge...
+  Loading HarmBench classifier: cais/HarmBench-Mistral-7b-val-cls
+  OK HarmBench classifier loaded (4-bit, ~4GB VRAM)
+  OK Classifier unloaded
+Saved to outputs/regime_sweep/restoration_sweep_llama_gptq2.json
+=== done | Wed Jul 15 17:45:26 EDT 2026 ===

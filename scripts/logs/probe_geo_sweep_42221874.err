@@ -1,0 +1,77 @@
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.9.0+cu128).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [01:07<03:23, 67.67s/it]Loading checkpoint shards:  50%|█████     | 2/4 [02:19<02:20, 70.21s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [03:34<01:12, 72.12s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:44<00:00, 47.88s/it]Loading checkpoint shards: 100%|██████████| 4/4 [03:44<00:00, 56.20s/it]
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:20: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:33: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:48: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x16_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:62: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:75: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:88: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code2x8_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:102: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:115: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/aqlm/inference_kernels/cuda_kernel.py:128: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+  @torch.library.impl_abstract("aqlm::code1x8_matmat_dequant_transposed")
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.9.0+cu128).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.10s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.06s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:01,  1.98s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.38s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.62s/it]
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/awq/__init__.py:21: DeprecationWarning: 
+I have left this message as the final dev message to help you transition.
+
+Important Notice:
+- AutoAWQ is officially deprecated and will no longer be maintained.
+- The last tested configuration used Torch 2.6.0 and Transformers 4.51.3.
+- If future versions of Transformers break AutoAWQ compatibility, please report the issue to the Transformers project.
+
+Alternative:
+- AutoAWQ has been adopted by the vLLM Project: https://github.com/vllm-project/llm-compressor
+
+For further inquiries, feel free to reach out:
+- X: https://x.com/casper_hansen_
+- LinkedIn: https://www.linkedin.com/in/casper-hansen-804005170/
+
+  warnings.warn(_FINAL_DEV_MESSAGE, category=DeprecationWarning, stacklevel=1)
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [01:12<01:12, 72.63s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:27<00:00, 74.12s/it]Loading checkpoint shards: 100%|██████████| 2/2 [02:27<00:00, 73.90s/it]
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.9.0+cu128).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.98s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.94s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.87s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.30s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.53s/it]
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:239: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend', 'use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
+  warnings.warn(warning_msg)
+Detected gptqmodel and auto-gptq, will use gptqmodel
+`loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:36<00:36, 36.77s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:49<00:00, 22.92s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:50<00:00, 25.00s/it]
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.9.0+cu128).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.00s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.96s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.88s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.32s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.54s/it]
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:239: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend', 'use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
+  warnings.warn(warning_msg)
+Detected gptqmodel and auto-gptq, will use gptqmodel
+`loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:32<00:32, 32.06s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:35<00:00, 15.06s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:35<00:00, 17.61s/it]
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.9.0+cu128).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.99s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.95s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.87s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.31s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.53s/it]
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/lib/python3.11/site-packages/transformers/quantizers/auto.py:239: UserWarning: You passed `quantization_config` or equivalent parameters to `from_pretrained` but the model you're loading already has a `quantization_config` attribute. The `quantization_config` from the model will be used.However, loading attributes (e.g. ['backend', 'use_cuda_fp16', 'use_exllama', 'max_input_length', 'exllama_config']) will be overwritten with the one you passed to `from_pretrained`. The rest will be ignored.
+  warnings.warn(warning_msg)
+Detected gptqmodel and auto-gptq, will use gptqmodel
+`loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.

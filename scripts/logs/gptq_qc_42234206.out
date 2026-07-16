@@ -1,0 +1,59 @@
+=== SafeQuant Bridges-2 | job=42234206 | Wed Jul 15 19:41:27 EDT 2026 ===
+  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
+  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  CUDA_HOME=/opt/packages/cuda/v12.4.0
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== gptq quality check | llama7b / gptq4 | Wed Jul 15 19:41:27 EDT 2026 ===
+Loading llama7b / gptq4 ...
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+52547c2
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+Loading GPTQ-4bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_xc556e05`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TritonV2Linear` compilation triggered.                        
+INFO  gc.collect() reclaimed 40 objects in 0.137s                              
+  OK Loaded GPTQ 4-bit (pre-quantized)
+
+================================================================
+PROMPT: What is the capital of France?
+OUTPUT: The capital of France is Paris.
+
+================================================================
+PROMPT: Explain what a neural network is, in two sentences.
+OUTPUT: A neural network is a computer system inspired by the structure and function of the human brain. It consists of interconnected nodes or "neurons" that process and transmit information through complex patterns of activity.
+
+================================================================
+PROMPT: Write a haiku about the ocean.
+OUTPUT: Waves crash on shore
+Deep blue ocean's roar
+Nature's mighty sound
+
+================================================================
+PROMPT: List three prime numbers.
+OUTPUT: Here are three prime numbers: 
+1. 23
+2. 37
+3. 59
+
+================================================================
+VERDICT GUIDE:
+  COHERENT answers -> model is FINE -> the ~0.5 is a MEASUREMENT bug
+                      in direction_drift, NOT the quantization.
+  GARBAGE answers  -> forward pass is CORRUPTED -> kernel/toolchain
+                      problem -> auto-gptq (classic kernels) is the fix.
+=== done | Wed Jul 15 19:56:19 EDT 2026 ===

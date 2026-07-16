@@ -1,0 +1,34 @@
+=== SafeQuant Bridges-2 | job=42234594 | Wed Jul 15 20:33:24 EDT 2026 ===
+  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
+  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  CUDA_HOME=/opt/packages/cuda/v12.4.0
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== auto-gptq exLlama kernel test | Wed Jul 15 20:33:24 EDT 2026 ===
+checkpoint: /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128
+token_pos:  -5
+
+Loading via auto-gptq (exLlamaV2 kernel) ...
+  loaded. quant-linear module: QuantLinear
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+=== auto-gptq(exLlama) gptq4 vs FP32 raw residuals ===
+  ~0.99 => exLlama kernel is faithful -> switch _load_gptq to auto-gptq
+  (compare to gptqmodel-Triton which read ~0.72 from layer 4 on)
+
+   layer  0: mean cos(fp32, autogptq-gptq) = 0.9976
+   layer  4: mean cos(fp32, autogptq-gptq) = 0.7752
+   layer  8: mean cos(fp32, autogptq-gptq) = 0.7209
+   layer 12: mean cos(fp32, autogptq-gptq) = 0.7346
+   layer 16: mean cos(fp32, autogptq-gptq) = 0.7110
+   layer 20: mean cos(fp32, autogptq-gptq) = 0.7056
+   layer 24: mean cos(fp32, autogptq-gptq) = 0.7353
+   layer 28: mean cos(fp32, autogptq-gptq) = 0.7397
+   layer 31: mean cos(fp32, autogptq-gptq) = 0.6702
+
+  WORST layer: 0.6702   (still degraded)
+=== done | Wed Jul 15 20:48:20 EDT 2026 ===

@@ -1,0 +1,28 @@
+=== SafeQuant Bridges-2 | job=42213034 | Wed Jul 15 00:10:16 EDT 2026 ===
+  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
+  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  CUDA_HOME=/opt/packages/cuda/v12.4.0
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== smoke env check | Wed Jul 15 00:10:16 EDT 2026 ===
+python=3.11.15
+torch=2.9.0+cu128 cuda_available=True
+gpu=NVIDIA H100 80GB HBM3
+seed fingerprint=[8, 77, 65, 43, 43]
+core imports ok
+HF_HOME writable check -> /jet/home/bhoomire/projects/safequant_v2
+--- pytest ---
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean/bin/python
+cachedir: .pytest_cache
+rootdir: /jet/home/bhoomire/projects/safequant_v2
+plugins: anyio-4.13.0, typeguard-4.5.2, jaxtyping-0.3.10
+collecting ... collected 4 items
+
+tests/test_anchors.py::test_direction_drift_cos_sim_median PASSED        [ 25%]
+tests/test_anchors.py::test_probe_accuracy_min_acc PASSED                [ 50%]
+tests/test_anchors.py::test_core_directions_compute_r_hat_stable PASSED  [ 75%]
+tests/test_anchors.py::test_manifest_result_path PASSED                  [100%]
+
+============================== 4 passed in 3.61s ===============================
+=== smoke env OK | Wed Jul 15 00:23:41 EDT 2026 ===

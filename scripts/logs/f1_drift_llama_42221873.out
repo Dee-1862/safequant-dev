@@ -1,0 +1,135 @@
+=== SafeQuant Bridges-2 | job=42221873 | Wed Jul 15 12:13:22 EDT 2026 ===
+  REPO_ROOT=/jet/home/bhoomire/projects/safequant_v2
+  CONDA_ENV=/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+  HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface
+  CUDA_HOME=/opt/packages/cuda/v12.4.0
+NVIDIA H100 80GB HBM3, 81559 MiB
+=== direction drift Llama multi-quant | Wed Jul 15 12:13:22 EDT 2026 ===
+---- llama7b / gptq4 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+[FP32] extracting residuals (token_pos=-5)
+Loading GPTQ-4bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+e3daf23
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+INFO  ExLlamaV2 GPTQ: compiling torch.ops JIT extension in `/jet/home/bhoomire/.cache/gptqmodel/torch_extensions/exllamav2/eb522f752a7bf6c4`.
+[0 of 100] ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░| 0:00:00 / 0:00:00 [0/100] 0.0%Compiling extension: ExLlamaV2 GPTQ... elapsed 0.0s / estimated ~35s | 0:00:00 /Compiling extension: ExLlamaV2 GPTQ... elapsed 1.0s / estimated ~35s | 0:00:01 /Compiling extension: ExLlamaV2 GPTQ... elapsed 2.0s / estimated ~35s | 0:00:02 /Compiling extension: ExLlamaV2 GPTQ... elapsed 3.0s / estimated ~35s | 0:00:03 /Compiling extension: ExLlamaV2 GPTQ... elapsed 4.0s / estimated ~35s | 0:00:04 /Compiling extension: ExLlamaV2 GPTQ... elapsed 5.0s / estimated ~35s | 0:00:05 /Compiling extension: ExLlamaV2 GPTQ... elapsed 6.0s / estimated ~35s | 0:00:06 /Compiling extension: ExLlamaV2 GPTQ... elapsed 7.0s / estimated ~35s | 0:00:07 /Compiling extension: ExLlamaV2 GPTQ... elapsed 8.0s / estimated ~35s | 0:00:08 /Compiling extension: ExLlamaV2 GPTQ... elapsed 9.0s / estimated ~35s | 0:00:09 /Compiling extension: ExLlamaV2 GPTQ... elapsed 10s / estimated ~35s  | 0:00:10 /Compiling extension: ExLlamaV2 GPTQ... elapsed 11s / estimated ~35s  | 0:00:11 /Compiling extension: ExLlamaV2 GPTQ... elapsed 12s / estimated ~35s  | 0:00:12 /Compiling extension: ExLlamaV2 GPTQ... elapsed 13s / estimated ~35s  | 0:00:13 /Compiling extension: ExLlamaV2 GPTQ... elapsed 14s / estimated ~35s  | 0:00:14 /Compiling extension: ExLlamaV2 GPTQ... elapsed 15s / estimated ~35s  | 0:00:15 /Compiling extension: ExLlamaV2 GPTQ... elapsed 16s / estimated ~35s  | 0:00:16 /Compiling extension: ExLlamaV2 GPTQ... elapsed 17s / estimated ~35s  | 0:00:17 /Compiling extension: ExLlamaV2 GPTQ... elapsed 18s / estimated ~35s  | 0:00:18 /Compiling extension: ExLlamaV2 GPTQ... elapsed 19s / estimated ~35s  | 0:00:19 /Compiling extension: ExLlamaV2 GPTQ... elapsed 20s / estimated ~35s  | 0:00:20 /Compiling extension: ExLlamaV2 GPTQ... elapsed 21s / estimated ~35s  | 0:00:21 /Compiling extension: ExLlamaV2 GPTQ... elapsed 22s / estimated ~35s  | 0:00:22 /Compiling extension: ExLlamaV2 GPTQ... elapsed 23s / estimated ~35s  | 0:00:23 /Compiling extension: ExLlamaV2 GPTQ... elapsed 24s / estimated ~35s  | 0:00:24 /Compiling extension: ExLlamaV2 GPTQ... elapsed 25s / estimated ~35s  | 0:00:25 /Compiling extension: ExLlamaV2 GPTQ... elapsed 26s / estimated ~35s  | 0:00:26 /Compiling extension: ExLlamaV2 GPTQ... elapsed 27s / estimated ~35s  | 0:00:27 /Compiling extension: ExLlamaV2 GPTQ... elapsed 28s / estimated ~35s  | 0:00:28 /Compiling extension: ExLlamaV2 GPTQ... elapsed 29s / estimated ~35s  | 0:00:29 /Compiling extension: ExLlamaV2 GPTQ... elapsed 30s / estimated ~35s  | 0:00:30 /Compiling extension: ExLlamaV2 GPTQ... elapsed 31s / estimated ~35s  | 0:00:31 /Compiling extension: ExLlamaV2 GPTQ... elapsed 32s / estimated ~35s  | 0:00:32 /Compiling extension: ExLlamaV2 GPTQ... elapsed 33s / estimated ~35s  | 0:00:33 /Compiling extension: ExLlamaV2 GPTQ... elapsed 34s / estimated ~35s  | 0:00:34 /Compiling extension: ExLlamaV2 GPTQ... elapsed 35s / estimated ~35s (+0.5s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 36s / estimated ~35s (+1.5s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 37s / estimated ~35s (+2.5s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 38s / estimated ~35s (+3.5s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 39s / estimated ~35s (+4.5s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 40s / estimated ~35s (+5.6s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 41s / estimated ~35s (+6.6s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 42s / estimated ~35s (+7.6s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 43s / estimated ~35s (+8.6s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 44s / estimated ~35s (+9.6s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 45s / estimated ~35s (+11s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 46s / estimated ~35s (+12s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 47s / estimated ~35s (+13s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 48s / estimated ~35s (+14s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 49s / estimated ~35s (+15s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 50s / estimated ~35s (+16s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 51s / estimated ~35s (+17s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 52s / estimated ~35s (+18s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 53s / estimated ~35s (+19s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 54s / estimated ~35s (+20s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 55s / estimated ~35s (+21s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 56s / estimated ~35s (+22s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 57s / estimated ~35s (+23s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 58s / estimated ~35s (+24s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 59s / estimated ~35s (+25s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 60s / estimated ~35s (+26s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 61s / estimated ~35s (+27s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 62s / estimated ~35s (+28s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 63s / estimated ~35s (+29s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 64s / estimated ~35s (+30s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 65s / estimated ~35s (+31s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 66s / estimated ~35s (+32s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 67s / estimated ~35s (+33s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 68s / estimated ~35s (+34s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 69s / estimated ~35s (+35s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 70s / estimated ~35s (+36s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 71s / estimated ~35s (+37s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 72s / estimated ~35s (+38s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 73s / estimated ~35s (+39s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 74s / estimated ~35s (+40s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 75s / estimated ~35s (+41s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 76s / estimated ~35s (+42s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 77s / estimated ~35s (+43s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 78s / estimated ~35s (+44s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 79s / estimated ~35s (+45s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 80s / estimated ~35s (+46s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 81s / estimated ~35s (+47s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 82s / estimated ~35s (+48s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 83s / estimated ~35s (+49s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 84s / estimated ~35s (+50s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 85s / estimated ~35s (+51s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 86s / estimated ~35s (+52s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 87s / estimated ~35s (+53s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 88s / estimated ~35s (+54s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 89s / estimated ~35s (+55s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 90s / estimated ~35s (+56s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 91s / estimated ~35s (+57s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 92s / estimated ~35s (+58s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 93s / estimated ~35s (+59s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 94s / estimated ~35s (+60s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 95s / estimated ~35s (+61s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 96s / estimated ~35s (+62s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 97s / estimated ~35s (+63s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 98s / estimated ~35s (+64s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 99s / estimated ~35s (+65s)  | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 100s / estimated ~35s (+66s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 101s / estimated ~35s (+67s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 102s / estimated ~35s (+68s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 103s / estimated ~35s (+69s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 104s / estimated ~35s (+70s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 105s / estimated ~35s (+71s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 106s / estimated ~35s (+72s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 107s / estimated ~35s (+73s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 108s / estimated ~35s (+74s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 109s / estimated ~35s (+75s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 110s / estimated ~35s (+76s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 111s / estimated ~35s (+77s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 112s / estimated ~35s (+78s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 113s / estimated ~35s (+79s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 114s / estimated ~35s (+80s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 115s / estimated ~35s (+81s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 116s / estimated ~35s (+82s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 117s / estimated ~35s (+83s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 118s / estimated ~35s (+84s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 119s / estimated ~35s (+85s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 120s / estimated ~35s (+86s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 121s / estimated ~35s (+87s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 122s / estimated ~35s (+88s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 123s / estimated ~35s (+89s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 124s / estimated ~35s (+90s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 125s / estimated ~35s (+91s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 126s / estimated ~35s (+92s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 127s / estimated ~35s (+93s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 128s / estimated ~35s (+94s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 129s / estimated ~35s (+95s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 130s / estimated ~35s (+96s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 131s / estimated ~35s (+97s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 132s / estimated ~35s (+98s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 133s / estimated ~35s (+99s) | 0:Compiling extension: ExLlamaV2 GPTQ... elapsed 134s / estimated ~35s (+100s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 135s / estimated ~35s (+101s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 136s / estimated ~35s (+102s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 137s / estimated ~35s (+103s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 138s / estimated ~35s (+104s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 139s / estimated ~35s (+105s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 140s / estimated ~35s (+106s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 141s / estimated ~35s (+107s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 142s / estimated ~35s (+108s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 143s / estimated ~35s (+109s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 144s / estimated ~35s (+110s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 145s / estimated ~35s (+111s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 146s / estimated ~35s (+112s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 147s / estimated ~35s (+113s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 148s / estimated ~35s (+114s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 149s / estimated ~35s (+115s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 150s / estimated ~35s (+116s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 151s / estimated ~35s (+117s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 152s / estimated ~35s (+118s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 153s / estimated ~35s (+119s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 154s / estimated ~35s (+120s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 155s / estimated ~35s (+121s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 156s / estimated ~35s (+122s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 157s / estimated ~35s (+123s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 158s / estimated ~35s (+124s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 159s / estimated ~35s (+125s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 160s / estimated ~35s (+126s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 161s / estimated ~35s (+127s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 162s / estimated ~35s (+128s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 163s / estimated ~35s (+129s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 164s / estimated ~35s (+130s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 165s / estimated ~35s (+131s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 166s / estimated ~35s (+132s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 167s / estimated ~35s (+133s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 168s / estimated ~35s (+134s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 169s / estimated ~35s (+135s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 170s / estimated ~35s (+136s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 171s / estimated ~35s (+137s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 172s / estimated ~35s (+138s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 173s / estimated ~35s (+139s) | 0Compiling extension: ExLlamaV2 GPTQ... elapsed 174s / estimated ~35s (+140s) | 0                                                                                INFO  ExLlamaV2 GPTQ: torch.ops JIT extension ready in 174s (estimated ~35s, +140s).
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_dd2n9uhd`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TritonV2Linear` compilation triggered.                        
+INFO  gc.collect() reclaimed 40 objects in 0.179s                              
+  OK Loaded GPTQ 4-bit (pre-quantized)
+
+[gptq4] extracting residuals (token_pos=-5)
+Saved to outputs/signal_geometry/direction_drift_llama_gptq4.json
+---- llama7b / awq ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+[FP32] extracting residuals (token_pos=-5)
+Loading AWQ model: llama7b -> hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4
+  OK Loaded AWQ 4-bit model
+
+[awq] extracting residuals (token_pos=-5)
+Saved to outputs/signal_geometry/direction_drift_llama_awq.json
+---- llama7b / aqlm2 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+[FP32] extracting residuals (token_pos=-5)
+Loading AQLM-2bit model: llama7b -> ISTA-DASLab/Meta-Llama-3.1-8B-Instruct-AQLM-PV-2Bit-1x16-hf
+  OK Loaded AQLM 2-bit model
+
+[aqlm2] extracting residuals (token_pos=-5)
+Saved to outputs/signal_geometry/direction_drift_llama_aqlm2.json
+---- llama7b / gptq3 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+[FP32] extracting residuals (token_pos=-5)
+Loading GPTQ-3bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+e3daf23
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+INFO  Kernel: Auto-selection: adding candidate `TorchLinear`                   
+INFO  Kernel: selected -> `TorchLinear`.                                       
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_m2fhui6b`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TorchLinear` compilation triggered.                           
+INFO  gc.collect() reclaimed 90 objects in 0.156s                              
+  OK Loaded GPTQ 3-bit (pre-quantized)
+
+[gptq3] extracting residuals (token_pos=-5)
+Saved to outputs/signal_geometry/direction_drift_llama_gptq3.json
+---- llama7b / gptq2 ----
+Loading FP32 model: llama7b
+  Path: meta-llama/Llama-3.1-8B-Instruct
+  Device: cuda
+  OK Loaded (8.03B params)
+  Cache: /ocean/projects/cis240116p/bhoomire/.cache/huggingface
+
+[FP32] extracting residuals (token_pos=-5)
+Loading GPTQ-2bit model: llama7b -> /ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128
+
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+INFO  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.1.0+e3daf23
+Transformers : 4.57.6
+Torch        : 2.9.0+cu128
+Triton       : 3.5.0
+INFO  Kernel: Auto-selection: adding candidate `TritonV2Linear`                
+INFO  Kernel: selected -> `TritonV2Linear`.                                    
+INFO  QuantizeConfig: offload_to_disk_path auto set to temporary dir `/var/tmp/gptqmodel_dy093q5f`
+INFO  Format: Converting `format` from `FORMAT.GPTQ` to internal `FORMAT.GPTQ_V2`.
+INFO  Format: Converting GPTQ v1 to v2                                         
+INFO  Optimize: `TritonV2Linear` compilation triggered.                        
+INFO  gc.collect() reclaimed 90 objects in 0.182s                              
+  OK Loaded GPTQ 2-bit (pre-quantized)
+
+[gptq2] extracting residuals (token_pos=-5)
+Saved to outputs/signal_geometry/direction_drift_llama_gptq2.json
+=== done | Wed Jul 15 12:44:09 EDT 2026 ===

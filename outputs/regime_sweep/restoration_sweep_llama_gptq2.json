@@ -1,23 +1,40 @@
 {
-  "model": "llama7b",
-  "quantizer": "gptq2",
-  "n_eval": 200,
-  "n_reasoning": 50,
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "gptq2",
+    "extra": {
+      "n_eval": 200,
+      "n_reasoning": 50,
+      "seed": 42
+    },
+    "n_eval": 200,
+    "n_reasoning": 50,
+    "seed": 42
+  },
+  "git_sha": "6852b5264322418c4117ea7898e7eda55740ce5c",
   "fp32_asr": 41.0,
-  "quantized_asr": 19.5,
-  "damage_pp": -21.5,
-  "write_restored_asr": 5.5,
-  "read_restored_asr": 5.5,
-  "both_restored_asr": 39.0,
-  "write_recovery_pp": 14.0,
-  "read_recovery_pp": 14.0,
-  "write_recovery_pct": -65.11627906976744,
-  "read_recovery_pct": -65.11627906976744,
+  "quantized_asr": 18.0,
+  "damage_pp": -23.0,
+  "write_restored_asr": 9.0,
+  "read_restored_asr": 27.0,
+  "both_restored_asr": 47.0,
+  "write_recovery_pp": 9.0,
+  "read_recovery_pp": -9.0,
+  "swap_valid": true,
+  "swap_delta_pp": 6.0,
+  "swap_tol_pp": 10.0,
   "arc": {
     "fp32": 62.0,
-    "gptq2": 30.0,
+    "gptq2": 18.0,
     "write_restored": 24.0,
-    "read_restored": 20.0,
-    "both_restored": 62.0
+    "read_restored": 30.0,
+    "both_restored": 56.0
+  },
+  "asr_per_condition": {
+    "fp32": 41.0,
+    "gptq2": 18.0,
+    "write_restored": 9.0,
+    "read_restored": 27.0,
+    "both_restored": 47.0
   }
 }
