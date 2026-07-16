@@ -4,7 +4,7 @@ import pandas as pd
 from datasets import load_dataset
 
 
-def load_harmbench_prompts(n_samples=None, cache_dir=None):
+def load_harmbench_prompts(n_samples = None, cache_dir = None):
     """
     Load harmful behaviors from HarmBench (secondary safety benchmark) directly from GitHub.
     Dataset: https://github.com/centerforaisafety/HarmBench/blob/main/data/behavior_datasets/harmbench_behaviors_text_all.csv
@@ -38,7 +38,7 @@ def load_harmbench_prompts(n_samples=None, cache_dir=None):
 
 
 # -- Safety: adversarial jailbreak prompts ------------------------------------
-def load_wildjailbreak_prompts(n_samples=None, config="train", cache_dir=None):
+def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = None):
     """
     Load adversarial jailbreak prompts from WildJailbreak (NeurIPS 2024).
 
@@ -104,7 +104,7 @@ def load_wildjailbreak_prompts(n_samples=None, config="train", cache_dir=None):
 # -- Safety: harmless prompts (for refusal direction) -------------------------
 
 
-def load_harmless_prompts(n_samples=None, cache_dir=None):
+def load_harmless_prompts(n_samples = None, cache_dir = None):
     """
     Load harmless prompts from Alpaca-cleaned.
 
@@ -146,7 +146,7 @@ def load_harmless_prompts(n_samples=None, cache_dir=None):
     return prompts
 
 
-def load_arc_challenge(n_samples=None, split="test", cache_dir=None):
+def load_arc_challenge(n_samples = None, split="test", cache_dir = None):
     """
     ARC-Challenge: 4-way science multiple-choice task.
 
@@ -195,7 +195,7 @@ def load_arc_challenge(n_samples=None, split="test", cache_dir=None):
 # -- XSTest: over-refusal benchmark (Rottger et al. 2024) ---------------------
 
 
-def load_xstest(n_samples=None, cache_dir=None):
+def load_xstest(n_samples = None, cache_dir = None):
     """
     XSTest: 450 prompts (250 'safe' designed-to-trick benign + 200 'unsafe' genuinely
     harmful) used to measure exaggerated safety behavior (over-refusal).
@@ -245,7 +245,7 @@ def load_xstest(n_samples=None, cache_dir=None):
 # -- C4: generic web text for the perplexity-only calibration baseline --------
 
 
-def load_c4_calibration(n_samples=64, max_chars=1000, cache_dir=None):
+def load_c4_calibration(n_samples = 64, max_chars = 1000, cache_dir = None):
     """
     Random C4 (Colossal Clean Crawled Corpus) passages for use as perplexity-style (no harmful/harmless contrast) calibration data.
     Reference: Raffel et al., C4/T5 (JMLR 2020).
