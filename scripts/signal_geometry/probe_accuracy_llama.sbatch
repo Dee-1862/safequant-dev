@@ -11,7 +11,13 @@
 source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
 
 
-echo "=== probe accuracy Llama | $(date) ==="
-python -u -m experiments.signal_geometry.probe_accuracy \
-  --model llama7b --quantizer aqlm2 --n_calib 200 --probe_type linear
+echo "=== probe accuracy multi-model/quant | $(date) ==="
+for MODEL in ${SWEEP_MODELS:-llama7b}; do
+  for QUANTIZER in ${SWEEP_QUANTIZERS:-aqlm2 awq gptq4 gptq3 gptq2}; do
+    echo "---- ${MODEL} / ${QUANTIZER} ----"
+    python -u -m experiments.signal_geometry.probe_accuracy \
+      --model ${MODEL} --quantizer ${QUANTIZER} --n_calib 200 --probe_type linear \
+      || echo "FAILED ${MODEL}/${QUANTIZER}"
+  done
+done
 echo "=== done | $(date) ==="
