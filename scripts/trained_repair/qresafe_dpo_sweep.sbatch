@@ -22,7 +22,7 @@ for MASK in read write full; do
     python -u -m experiments.trained_repair.qresafe_dpo \
       --mask ${MASK} --r ${R} --alpha ${ALPHA} \
       --beta 0.01 --epochs 1 --lr 5e-7 \
-      --n_eval 400 --opt8bit --seed 42 \
+      --n_eval 200 --opt8bit --seed 42 \
       || echo "FAILED ${MASK}/r${R}"
   done
 done

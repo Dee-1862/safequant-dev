@@ -14,5 +14,5 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 echo "=== headline eval Phi-3 | $(date) ==="
 python -u -m experiments.headline.headline_eval \
   --model phi3 --quantizer aqlm2 \
-  --n_eval 400 --n_reasoning 100 --n_boot 2000
+  --n_eval 200 --n_reasoning 100 --n_boot 2000
 echo "=== done | $(date) ==="

@@ -16,5 +16,5 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 MASK="${1:-read}"
 echo "=== Q-Resafe DPO | mask=${MASK} | $(date) ==="
 python -u -m experiments.trained_repair.qresafe_dpo \
-  --mask "${MASK}" --model llama7b --quantizer aqlm2 --n_eval 400
+  --mask "${MASK}" --model llama7b --quantizer aqlm2 --n_eval 200
 echo "=== done | $(date) ==="
