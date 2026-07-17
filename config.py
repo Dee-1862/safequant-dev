@@ -85,9 +85,9 @@ QUANTIZED_CHECKPOINTS = {
     ("qwen1.5b", "gptq8"): "Qwen/Qwen2.5-1.5B-Instruct-GPTQ-Int8",
     ("qwen1.5b", "awq"):   "Qwen/Qwen2.5-1.5B-Instruct-AWQ",
     # Qwen2.5-7B-Instruct
-    ("qwen7b", "gptq4"):   f"{_QM}/qwen7b-gptq4bit-g128",   # self-gen (AutoGPTQ)
-    ("qwen7b", "gptq3"):   f"{_QM}/qwen7b-gptq3bit-g128",
-    ("qwen7b", "gptq2"):   f"{_QM}/qwen7b-gptq2bit-g128",
+    ("qwen7b", "gptq4"):   f"{_QM}/gptq/qwen7b-gptq4bit-g128",   # self-gen (AutoGPTQ)
+    ("qwen7b", "gptq3"):   f"{_QM}/gptq/qwen7b-gptq3bit-g128",
+    ("qwen7b", "gptq2"):   f"{_QM}/gptq/qwen7b-gptq2bit-g128",
     ("qwen7b", "gptq8"):   "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int8",
     ("qwen7b", "awq"):     f"{_QM}/awq/qwen7b",             # Qwen/Qwen2.5-7B-Instruct-AWQ
     # Qwen3-8B
@@ -101,9 +101,9 @@ QUANTIZED_CHECKPOINTS = {
     # seed 0 -- the hugging-quants recipe). AutoGPTQ (not gptqmodel) makes gptq4
     # match the literature (cos >0.97); gptq3/gptq2 give the low-bit degradation
     # curve under the SAME recipe. See docs/MODELS_QUANTIZATION.md.
-    ("llama7b", "gptq4"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq4bit-g128",
-    ("llama7b", "gptq3"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq3bit-g128",
-    ("llama7b", "gptq2"):  "/ocean/projects/cis240116p/bhoomire/quantized_models/llama7b-gptq2bit-g128",
+    ("llama7b", "gptq4"):  f"{_QM}/gptq/llama7b-gptq4bit-g128",
+    ("llama7b", "gptq3"):  f"{_QM}/gptq/llama7b-gptq3bit-g128",
+    ("llama7b", "gptq2"):  f"{_QM}/gptq/llama7b-gptq2bit-g128",
     ("llama7b", "gptq8"):  "ModelCloud/Meta-Llama-3.1-8B-Instruct-gptq-8bit",
     # Llama-3.2-1B-Instruct (fits on single V100)
     ("llama1b", "gptq4"):  "ModelCloud/Llama-3.2-1B-Instruct-gptq-4bit",
@@ -123,16 +123,16 @@ QUANTIZED_CHECKPOINTS = {
     # Mistral-7B-Instruct-v0.3
     ("mistral7b", "gptq4"): "RedHatAI/Mistral-7B-Instruct-v0.3-GPTQ-4bit",
     # Mistral-7B-Instruct-v0.2 (matches Kharinaev et al. 2025)
-    ("mistral7b-v02", "gptq4"): f"{_QM}/mistral7b-v02-gptq4bit-g128",   # self-gen (AutoGPTQ)
-    ("mistral7b-v02", "gptq3"): f"{_QM}/mistral7b-v02-gptq3bit-g128",
-    ("mistral7b-v02", "gptq2"): f"{_QM}/mistral7b-v02-gptq2bit-g128",
+    ("mistral7b-v02", "gptq4"): f"{_QM}/gptq/mistral7b-v02-gptq4bit-g128",   # self-gen (AutoGPTQ)
+    ("mistral7b-v02", "gptq3"): f"{_QM}/gptq/mistral7b-v02-gptq3bit-g128",
+    ("mistral7b-v02", "gptq2"): f"{_QM}/gptq/mistral7b-v02-gptq2bit-g128",
     ("mistral7b-v02", "awq"):   f"{_QM}/awq/mistral7b-v02",   # TheBloke/…-v0.2-AWQ
     ("mistral7b-v02", "aqlm2"): f"{_QM}/aqlm/mistral7b-v02",  # ISTA-DASLab/…-v0.2-AQLM-2Bit-2x8
     ("mistral-nemo", "aqlm2"): "ISTA-DASLab/Mistral-Nemo-Instruct-2407-AQLM-PV-2Bit-1x16-hf",
     # Phi-3-mini-4k-instruct AQLM-PV 2-bit (fused qkv/gate_up projections)
-    ("phi3", "gptq4"): f"{_QM}/phi3-gptq4bit-g128",   # self-gen (AutoGPTQ)
-    ("phi3", "gptq3"): f"{_QM}/phi3-gptq3bit-g128",
-    ("phi3", "gptq2"): f"{_QM}/phi3-gptq2bit-g128",
+    ("phi3", "gptq4"): f"{_QM}/gptq/phi3-gptq4bit-g128",   # self-gen (AutoGPTQ)
+    ("phi3", "gptq3"): f"{_QM}/gptq/phi3-gptq3bit-g128",
+    ("phi3", "gptq2"): f"{_QM}/gptq/phi3-gptq2bit-g128",
     ("phi3", "awq"):   f"{_QM}/awq/phi3",             # Sreenington/Phi-3-mini-4k-instruct-AWQ
     ("phi3", "aqlm2"): f"{_QM}/aqlm/phi3",            # ISTA-DASLab/Phi-3-mini-4k-instruct-AQLM-PV-2Bit-1x16-hf
     # Gemma-2-9B-it

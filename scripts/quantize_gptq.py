@@ -29,7 +29,7 @@ def default_output_dir(model: str, bits: int, group_size: int) -> Path:
         - output_dir (Path): path to the output directory
     """
     base = Path(HF_HOME).parent.parent  # /ocean/.../<user>/.cache/hf -> /ocean/.../<user>
-    out_dir = base / "quantized_models" / f"{model}-gptq{bits}bit-g{group_size}"
+    out_dir = base / "quantized_models" / "gptq" / f"{model}-gptq{bits}bit-g{group_size}"
     return out_dir
 
 
