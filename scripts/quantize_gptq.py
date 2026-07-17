@@ -123,6 +123,30 @@ def main():
     # Set revision if provided
     if revision:
         init_kwargs["revision"] = revision
+
+    # auto-gptq 0.7.1 predates Phi-3 and errors "phi3 isn't supported yet."
+    # Register Phi-3's layer layout (fused qkv_proj / gate_up_proj) so AutoGPTQ
+    # quantizes it with the SAME recipe. No-op for other model types.
+    try:
+        from auto_gptq.modeling._base import BaseGPTQForCausalLM
+        from auto_gptq.modeling import _const as _agc, auto as _aga
+        if "phi3" not in _agc.SUPPORTED_MODELS:
+            class Phi3GPTQForCausalLM(BaseGPTQForCausalLM):
+                layer_type = "Phi3DecoderLayer"
+                layers_block_name = "model.layers"
+                outside_layer_modules = ["model.embed_tokens", "model.norm"]
+                inside_layer_modules = [
+                    ["self_attn.qkv_proj"],
+                    ["self_attn.o_proj"],
+                    ["mlp.gate_up_proj"],
+                    ["mlp.down_proj"],
+                ]
+            _agc.SUPPORTED_MODELS.append("phi3")
+            _aga.GPTQ_CAUSAL_LM_MODEL_MAP["phi3"] = Phi3GPTQForCausalLM
+            print("  registered Phi-3 support in auto-gptq (fused qkv/gate_up)")
+    except Exception as _e:  # noqa: BLE001
+        print(f"  WARN: phi3 auto-gptq registration failed: {_e}")
+
     model = AutoGPTQForCausalLM.from_pretrained(model_path, quantize_config, **init_kwargs)
 
     # Pin RotaryEmbedding module onto the position_ids device on every forward
