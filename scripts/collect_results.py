@@ -6,6 +6,7 @@ so results can be compared against the paper. Pure stdlib -- runs in any env.
 """
 import glob
 import json
+import sys
 from pathlib import Path
 
 # Top-level fields worth surfacing across the different experiment schemas.
@@ -24,13 +25,20 @@ INTERESTING = [
 
 
 def main():
+    # Optional filters: substrings a filename must contain (e.g. model tokens
+    # qwen / mistral / phi3, or an experiment name). No args = dump everything.
+    filters = sys.argv[1:]
     files = sorted(
         f for f in glob.glob("outputs/**/*.json", recursive=True)
         if not f.endswith("_raw.json")
+        and (not filters or any(x in Path(f).name for x in filters))
     )
     if not files:
-        print("no result JSONs under outputs/ (are you at the repo root?)")
+        where = f" matching {filters}" if filters else ""
+        print(f"no result JSONs under outputs/{where} (are you at the repo root?)")
         return
+    if filters:
+        print(f"# filtered to: {filters}\n")
 
     by_dir = {}
     for f in files:
