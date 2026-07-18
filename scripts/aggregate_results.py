@@ -69,11 +69,14 @@ def main():
 
     # -- Reproduction provenance -------------------------------------------
     print("## Reproduction\n")
-    print("- **Models (FP32 base):** Llama-2-7B-chat, Qwen2.5-7B-Instruct, "
-          "Mistral-7B-Instruct-v0.2, Phi-3-mini-4k-instruct.")
-    print("- **Quantizers:** AWQ (4-bit), GPTQ 4/3/2-bit (self-generated via "
-          "AutoGPTQ, group_size=128, desc_act=True, sym=True, damp=0.1, WikiText-2 "
-          "calibration, 128x2048-tok windows), AQLM 2-bit (public ISTA-DASLab).")
+    print("- **Models (FP32 base):** Llama-3.1-8B-Instruct (alias `llama7b`), "
+          "Qwen2.5-7B-Instruct (`qwen7b`), Mistral-7B-Instruct-v0.2 "
+          "(`mistral7b-v02`), Phi-3-mini-4k-instruct (`phi3`).")
+    print("- **Quantizers:** GPTQ 4/3/2-bit are SELF-GENERATED via AutoGPTQ "
+          "(group_size=128, desc_act=True, sym=True, damp=0.1, WikiText-2 "
+          "calibration, 128x2048-tok windows). AWQ 4-bit and AQLM 2-bit are "
+          "PUBLIC downloads: AWQ = hugging-quants (llama) / Qwen-official / "
+          "TheBloke (mistral) / Sreenington (phi3); AQLM = ISTA-DASLab.")
     print("- **Env:** eval in conda `sq_clean` (transformers 4.57); GPTQ "
           "self-quant in `sq_autogptq` (auto-gptq 0.7.1, transformers 4.44.2, "
           "torch 2.2.2, numpy<2).")
