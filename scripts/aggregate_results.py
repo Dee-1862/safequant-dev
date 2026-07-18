@@ -221,9 +221,27 @@ def main():
     print("\n## Trained repair (Q-Resafe DPO / LR-QAT)\n")
     for f in sorted(glob.glob(f"{OUT}/trained_repair/*.json")):
         d = load(f)
-        keep = {k: d[k] for k in ("mean_codes_changed", "fp_lora", "folded", "role")
-                if isinstance(d, dict) and k in d}
-        print(f"- **{Path(f).stem}**: {json.dumps(keep, default=str)}")
+        if not isinstance(d, dict):
+            print(f"- **{Path(f).stem}**: UNREADABLE")
+            continue
+        if "asr_lrqat_trained" in d:  # LR-QAT schema
+            print(f"- **{Path(f).stem}**: "
+                  f"asr fp16={num(g(d,'asr_fp16'),1)} aqlm2={num(g(d,'asr_aqlm2'),1)} "
+                  f"ptq={num(g(d,'asr_ptq_untrained'),1)} "
+                  f"lrqat={num(g(d,'asr_lrqat_trained'),1)}; "
+                  f"arc ptq={num(g(d,'arc_ptq_untrained'),1)} "
+                  f"lrqat={num(g(d,'arc_lrqat_trained'),1)}; "
+                  f"rho={num(g(d,'rho_lrqat_trained'),2)}; "
+                  f"eff_bits={num(g(d,'repaired_effective_bits'),2)}; "
+                  f"collapse={g(d,'coherence_collapse_lrqat_trained')}; "
+                  f"role={g(d,'role')} n_bits={g(d,'n_bits')}")
+        elif any(k in d for k in ("fp_lora", "folded")):  # Q-Resafe schema
+            keep = {k: d[k] for k in ("mean_codes_changed", "fp_lora", "folded",
+                                      "role") if k in d}
+            print(f"- **{Path(f).stem}**: {json.dumps(keep, default=str)}")
+        else:  # incomplete stub (job still running / died before persist)
+            print(f"- **{Path(f).stem}**: INCOMPLETE stub "
+                  f"(keys={sorted(d.keys())}) — job unfinished or crashed")
 
     # -- Headline (rich XSTest/ARC/mcnemar) --------------------------------
     print("\n## Headline eval (full XSTest / ARC / McNemar)\n")
