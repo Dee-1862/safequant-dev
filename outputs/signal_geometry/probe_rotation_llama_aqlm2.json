@@ -9,7 +9,7 @@
     "n_calib": 200,
     "seed": 42
   },
-  "git_sha": "e3daf23af9baaf3c94d3e8ed3c99aac4af3e9711",
+  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
   "n_layers": 32,
   "cos_probe_weight_per_layer": {
     "0": 0.8673107028007507,

@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "gptq4",
+    "extra": {
+      "n_eval": 200,
+      "n_reasoning": 50,
+      "seed": 42
+    },
+    "n_eval": 200,
+    "n_reasoning": 50,
+    "seed": 42
+  },
+  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
+  "fp32_asr": 41.0,
+  "quantized_asr": 33.5,
+  "damage_pp": -7.5,
+  "write_restored_asr": 34.5,
+  "read_restored_asr": 36.0,
+  "both_restored_asr": 39.0,
+  "write_recovery_pp": -1.0,
+  "read_recovery_pp": -2.5,
+  "swap_valid": true,
+  "swap_delta_pp": -2.0,
+  "swap_tol_pp": 10.0,
+  "arc": {
+    "fp32": 62.0,
+    "gptq4": 46.0,
+    "write_restored": 54.0,
+    "read_restored": 60.0,
+    "both_restored": 62.0
+  },
+  "asr_per_condition": {
+    "fp32": 41.0,
+    "gptq4": 33.5,
+    "write_restored": 34.5,
+    "read_restored": 36.0,
+    "both_restored": 39.0
+  }
+}

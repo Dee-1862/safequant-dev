@@ -11,15 +11,15 @@
     "n_reasoning": 50,
     "seed": 42
   },
-  "git_sha": "cb281145529fd4fa01ba3b42e43694cda03818d9",
+  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
   "fp32_asr": 41.0,
-  "quantized_asr": 35.5,
-  "damage_pp": -5.5,
-  "write_restored_asr": 11.0,
-  "read_restored_asr": 11.0,
+  "quantized_asr": 36.0,
+  "damage_pp": -5.0,
+  "write_restored_asr": 10.5,
+  "read_restored_asr": 10.5,
   "both_restored_asr": 28.0,
-  "write_recovery_pp": 24.5,
-  "read_recovery_pp": 24.5,
+  "write_recovery_pp": 25.5,
+  "read_recovery_pp": 25.5,
   "swap_valid": false,
   "swap_delta_pp": -13.0,
   "swap_tol_pp": 10.0,
@@ -32,9 +32,9 @@
   },
   "asr_per_condition": {
     "fp32": 41.0,
-    "awq": 35.5,
-    "write_restored": 11.0,
-    "read_restored": 11.0,
+    "awq": 36.0,
+    "write_restored": 10.5,
+    "read_restored": 10.5,
     "both_restored": 28.0
   }
 }

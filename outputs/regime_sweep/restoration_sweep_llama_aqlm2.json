@@ -11,7 +11,7 @@
     "n_reasoning": 50,
     "seed": 42
   },
-  "git_sha": "cb281145529fd4fa01ba3b42e43694cda03818d9",
+  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
   "fp32_asr": 41.0,
   "quantized_asr": 62.5,
   "damage_pp": 21.5,

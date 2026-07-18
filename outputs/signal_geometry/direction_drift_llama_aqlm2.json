@@ -11,7 +11,7 @@
     "token_pos": -5,
     "dataset": "wildjailbreak"
   },
-  "git_sha": "e3daf23af9baaf3c94d3e8ed3c99aac4af3e9711",
+  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
   "model": "llama7b",
   "quantizer": "aqlm2",
   "n_calib": 200,

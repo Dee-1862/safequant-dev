@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "model": "qwen7b",
+    "quantizer": "gptq2",
+    "extra": {
+      "n_eval": 200,
+      "n_reasoning": 50,
+      "seed": 42
+    },
+    "n_eval": 200,
+    "n_reasoning": 50,
+    "seed": 42
+  },
+  "git_sha": "dd35359635396d10d83158512824a6b56f347468",
+  "fp32_asr": 59.0,
+  "quantized_asr": 7.5,
+  "damage_pp": -51.5,
+  "write_restored_asr": 13.0,
+  "read_restored_asr": 45.0,
+  "both_restored_asr": 58.5,
+  "write_recovery_pp": -5.5,
+  "read_recovery_pp": -37.5,
+  "swap_valid": false,
+  "swap_delta_pp": -0.5,
+  "swap_tol_pp": 10.0,
+  "arc": {
+    "fp32": 56.0,
+    "gptq2": 30.0,
+    "write_restored": 18.0,
+    "read_restored": 42.0,
+    "both_restored": 56.0
+  },
+  "asr_per_condition": {
+    "fp32": 59.0,
+    "gptq2": 7.5,
+    "write_restored": 13.0,
+    "read_restored": 45.0,
+    "both_restored": 58.5
+  }
+}

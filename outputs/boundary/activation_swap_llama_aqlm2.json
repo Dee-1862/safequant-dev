@@ -1,0 +1,36 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "extra": {
+      "n_eval": 200,
+      "swap_layers": [
+        4,
+        11,
+        16,
+        22,
+        29
+      ],
+      "seed": 42
+    },
+    "n_eval": 200,
+    "swap_layers": [
+      4,
+      11,
+      16,
+      22,
+      29
+    ],
+    "seed": 42
+  },
+  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
+  "fp32_baseline_asr": 41.0,
+  "quant_baseline_asr": 62.0,
+  "swap_asr": {
+    "L4": 32.5,
+    "L11": 45.5,
+    "L16": 48.5,
+    "L22": 50.0,
+    "L29": 50.0
+  }
+}
