@@ -284,10 +284,15 @@ def eval_xstest(model, tokenizer, xstest_items, max_new_tokens = 128, desc = "XS
 
 
 def _generate_responses(
-    model, tokenizer, items, max_new_tokens = 256, desc = "Generating", verbose = False
+    model, tokenizer, items, max_new_tokens = 256, desc = "Generating",
+    verbose = False, batch_size = 16,
 ):
     """
-    Generate model responses for all prompts (ASR phase A).
+    Generate model responses for all prompts (ASR phase A), BATCHED.
+
+    Greedy decoding (do_sample=False) is padding-invariant, so left-padded
+    batching yields byte-identical outputs to one-at-a-time generation -- just
+    ~4-8x faster. Override the batch with EVAL_BATCH_SIZE if a model OOMs.
 
     Inputs:
         - model (torch.nn.Module): Causal LM
@@ -295,47 +300,53 @@ def _generate_responses(
         - items (list): Prompt dicts or plain strings
         - max_new_tokens (int): Generation length
         - desc (str): Progress-bar description
-        - verbose (bool): If True, print short prompt/response previews
+        - verbose (bool): If True, print a short sample preview
+        - batch_size (int): Prompts per generate() call
 
     Outputs:
         - responses (list): Decoded response strings
     """
+    import os
     device = next(model.parameters()).device
+    batch_size = int(os.environ.get("EVAL_BATCH_SIZE", batch_size))
+
+    # Decoder-only generation needs LEFT padding; make robust + restore after.
+    orig_side = tokenizer.padding_side
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # Chat-template every prompt up front.
+    prompts = []
+    for item in items:
+        p = (item.get("prompt") or item.get("goal") or "") if isinstance(item, dict) else item
+        prompts.append(tokenizer.apply_chat_template(
+            [{"role": "user", "content": p}], tokenize = False, add_generation_prompt = True
+        ))
+
     responses = []
+    try:
+        for s in tqdm(range(0, len(prompts), batch_size), desc = desc):
+            batch = prompts[s:s + batch_size]
+            inputs = tokenizer(
+                batch, return_tensors = "pt", padding = True,
+                truncation = True, max_length = 2048,
+            ).to(device)
+            with torch.no_grad():
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens = max_new_tokens,
+                    do_sample = False,
+                    pad_token_id = tokenizer.pad_token_id or tokenizer.eos_token_id,
+                )
+            gen = outputs[:, inputs.input_ids.shape[1]:]
+            for row in gen:
+                responses.append(tokenizer.decode(row, skip_special_tokens = True))
+    finally:
+        tokenizer.padding_side = orig_side
 
-    for i, item in enumerate(tqdm(items, desc = desc)):
-        # Normalize dict vs string prompts
-        if isinstance(item, dict):
-            prompt = item.get("prompt") or item.get("goal") or ""
-        else:
-            prompt = item
-        messages = [{"role": "user", "content": prompt}]
-        text = tokenizer.apply_chat_template(
-            messages, tokenize = False, add_generation_prompt = True
-        )
-        inputs = tokenizer(
-            text, return_tensors = "pt", truncation = True, max_length = 2048
-        ).to(device)
-
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens = max_new_tokens,
-                do_sample = False,
-                pad_token_id = tokenizer.pad_token_id or tokenizer.eos_token_id,
-            )
-        response = tokenizer.decode(
-            outputs[0][inputs.input_ids.shape[1] :], skip_special_tokens = True
-        )
-        responses.append(response)
-
-        if verbose:
-            print(f"\n[{i + 1}/{len(items)}]")
-            if isinstance(item, dict):
-                label = item.get("behavior") or item.get("data_type", "")
-                print(f"  Label:    {label[:80]}")
-            print(f"  Prompt:   {prompt[:120]}")
-            print(f"  Response: {response[:200]}")
+    if verbose and responses:
+        print(f"  [sample] {prompts[0][:100]} -> {responses[0][:200]}")
 
     return responses
 
