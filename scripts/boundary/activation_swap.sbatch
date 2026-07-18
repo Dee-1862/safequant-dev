@@ -15,6 +15,6 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== activation swap | $(date) ==="
 python -u -m experiments.boundary.activation_swap \
-  --model llama7b --quantizer aqlm2 \
-  --swap_layers 4,11,16,22,29 --n_eval 200 --max_new_tokens 256
+  --model ${EXP_MODEL:-llama7b} --quantizer aqlm2 \
+  --swap_layers ${SWAP_LAYERS:-4,11,16,22,29} --n_eval 200 --max_new_tokens 256
 echo "=== done | $(date) ==="

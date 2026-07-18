@@ -15,5 +15,5 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== per-projection restore Llama | $(date) ==="
 python -u -m experiments.localization.per_projection \
-  --model llama7b --quantizer aqlm2 --n_eval 200 --n_reasoning 50
+  --model ${EXP_MODEL:-llama7b} --quantizer aqlm2 --n_eval 200 --n_reasoning 50
 echo "=== done | $(date) ==="

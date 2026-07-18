@@ -15,6 +15,6 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== depth bands read | $(date) ==="
 python -u -m experiments.localization.depth_bands \
-  --model llama7b --quantizer aqlm2 --projections read \
+  --model ${EXP_MODEL:-llama7b} --quantizer aqlm2 --projections read \
   --n_eval 200 --n_reasoning 50
 echo "=== done | $(date) ==="

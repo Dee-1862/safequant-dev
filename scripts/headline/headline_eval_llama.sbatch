@@ -15,6 +15,6 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== headline eval Llama | $(date) ==="
 python -u -m experiments.headline.headline_eval \
-  --model llama7b --quantizer aqlm2 \
+  --model ${EXP_MODEL:-llama7b} --quantizer aqlm2 \
   --n_eval 200 --n_reasoning 100 --n_boot 2000
 echo "=== done | $(date) ==="

@@ -15,7 +15,7 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== Arditi logit-selection repro | $(date) ==="
 python -u -m experiments.behavioral_direction.arditi_repro \
-  --model llama7b --quantizer aqlm2
+  --model ${EXP_MODEL:-llama7b} --quantizer aqlm2
 python -u -m experiments.behavioral_direction.arditi_repro \
-  --model llama7b --quantizer fp32
+  --model ${EXP_MODEL:-llama7b} --quantizer fp32
 echo "=== done | $(date) ==="

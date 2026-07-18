@@ -15,6 +15,6 @@ source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_e
 
 echo "=== per-projection middle band Llama | $(date) ==="
 python -u -m experiments.localization.per_projection \
-  --model llama7b --quantizer aqlm2 --n_eval 200 --n_reasoning 50 \
-  --layer_lo 11 --layer_hi 22
+  --model ${EXP_MODEL:-llama7b} --quantizer aqlm2 --n_eval 200 --n_reasoning 50 \
+  --layer_lo ${MID_LO:-11} --layer_hi ${MID_HI:-22}
 echo "=== done | $(date) ==="
