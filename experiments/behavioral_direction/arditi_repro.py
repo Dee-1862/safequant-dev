@@ -306,7 +306,8 @@ def score_candidate(model, tok, r_layer, rhat_layer, layer, harmful_val, harmles
     bypass = refusal_score_logit(model, tok, harmful_val, refusal_toks)
     clear_hooks(model)
 
-    # Induce: add at this layer; log-odds > 0 <=> P(refuse) > 0.5
+    # Induce: add at this layer; higher refusal log-odds = more induced refusal
+    # (feasibility compares this against the no-direction harmless baseline).
     install_direction_hook(model, r_layer, layer = layer, mode = "add")
     induce = refusal_score_logit(model, tok, harmless_val, refusal_toks)
     clear_hooks(model)
@@ -340,6 +341,17 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
     max_layer = int(LAYER_FRAC * n_layers)
     rows = []
 
+    # Under the logit metric `induce` is a refusal LOG-ODDS, so the feasibility
+    # test is "adding the direction RAISES refusal above the harmless baseline"
+    # (a floor). The old `induce > 0.0` meant log-odds>0 <=> P(refuse)>0.5 -- a
+    # ceiling nothing clears, so every cell wrongly reported operative=False
+    # (incl. FP32, where Arditi's method demonstrably works). Baseline = harmless
+    # refusal score with NO direction added.
+    induce_baseline = float(
+        refusal_score_logit(model, tok, harmless_val, refusal_toks)
+    )
+    print(f"induce baseline (harmless, no direction) = {induce_baseline:.3f}")
+
     for l in range(max_layer):
         for pos_idx in range(K_POSITIONS):
             print(f"\nEvaluating Layer {l}, Position {pos_idx - K_POSITIONS}:")
@@ -355,11 +367,13 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
             rows.append((l, pos_idx, b, i, k))
             print(f"  bypass={b:.3f}  induce={i:.3f}  kl={k:.3f}")
 
-    # Feasible: induce > 0 and KL under threshold; pick min bypass
-    feasible = [row for row in rows if row[3] > 0.0 and row[4] < KL_MAX]
+    # Feasible: direction INDUCES refusal (score above the harmless baseline)
+    # and KL under threshold; pick min bypass.
+    feasible = [row for row in rows
+                if row[3] > induce_baseline and row[4] < KL_MAX]
     if not feasible:
-        print("\n!! no candidate satisfies induce>0 and kl<KL_MAX. "
-              "Tune KL_MAX or inspect; do NOT relax to decodability.")
+        print(f"\n!! no candidate satisfies induce>{induce_baseline:.3f} (baseline) "
+              f"and kl<{KL_MAX}. Tune KL_MAX or inspect; do NOT relax to decodability.")
         return None, None, rows
     winner = min(feasible, key = lambda row: row[2])     # argmin bypass
     print(f"\nselected layer {winner[0]}, position {winner[1] - K_POSITIONS} "
