@@ -102,6 +102,26 @@ def main():
          lambda m, q: num(g(sig("probe_rotation", m, q), "summary",
                             "cos_median")))
 
+    def dmed(m, q):
+        # Median per-layer separation (separation_sigma) of the QUANTIZED model
+        # -- a positive decodability magnitude. Recovered from the per-layer
+        # arrays direction_drift stores (not the summary block). FP32 ref ~5.1.
+        d = sig("direction_drift", m, q)
+        if not d:
+            return "--"
+        qk = [k for k in d if k.endswith("_separation_per_layer")
+              and not k.startswith("fp32")]
+        if not qk:
+            return "--"
+        vals = [v.get("separation_sigma") for v in d[qk[0]].values()
+                if isinstance(v, dict) and v.get("separation_sigma") is not None]
+        return f"{float(np.median(vals)):.2f}" if vals else "--"
+
+    grid("1d. δmed — median per-layer separation (quantized; decodability)",
+         "Positive separation magnitude; FP32 reference ~5.1. Low = concept "
+         "less separable. `direction_drift_*` per-layer separation_sigma.",
+         dmed)
+
     # -- Table 2: probe accuracy -------------------------------------------
     print("\n## Table 2 — Linear separability of the safety concept\n")
     grid("2a. Probe accuracy (quant mean over layers)",
