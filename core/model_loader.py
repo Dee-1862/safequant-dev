@@ -239,12 +239,13 @@ def _load_awq(model_name, device = None):
         print(f"Loading AWQ model: {model_path}")
 
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path, cache_dir = HF_HOME, trust_remote_code = True
+        model_path, cache_dir = HF_HOME,
+        trust_remote_code = _use_remote_code(model_path)
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map = device,
-        trust_remote_code = True,
+        trust_remote_code = _use_remote_code(model_path),
         cache_dir = HF_HOME,
         torch_dtype = torch.float16,
     )
@@ -421,7 +422,7 @@ def _load_gptq(model_name, device = None, bits = 4):
             tokenizer = AutoTokenizer.from_pretrained(
                 pre_quantized,
                 cache_dir = HF_HOME,
-                trust_remote_code = True,
+                trust_remote_code = _use_remote_code(pre_quantized),
                 revision = revision,
             )
 
@@ -430,7 +431,7 @@ def _load_gptq(model_name, device = None, bits = 4):
             pre_quantized,
             quantization_config = gptq_cfg,
             device_map = device,
-            trust_remote_code = True,
+            trust_remote_code = _use_remote_code(pre_quantized),
             cache_dir = HF_HOME,
             torch_dtype = torch.float16,
             revision = revision,
