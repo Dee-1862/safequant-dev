@@ -83,7 +83,9 @@ def main():
     print("- **Eval sets:** n_eval=200 harmful (ASR), ARC-easy (utility), "
           "XSTest-250 (false-refusal). Greedy, left-padded batched generation "
           "(byte-identical to unbatched).")
-    print("- **Qwen has no AQLM-2 cell by design; Phi-3 GPTQ pending (see gaps).**")
+    print("- **Qwen has no AQLM-2 cell by design (blank = --). Phi-3 AWQ "
+          "restoration is N/A (Sreenington ships an unfused Mistral-arch "
+          "checkpoint); its geometry cells are valid.**")
 
     # -- Table 1: refusal-direction drift ----------------------------------
     print("\n## Table 1 — Refusal-direction geometry\n")
@@ -124,15 +126,26 @@ def main():
     grid("3b. Quantized ASR (% harmful complied)",
          "`restoration_sweep_*` quantized_asr.",
          lambda m, q: num(g(restore(m, q), "quantized_asr"), 1))
+    def restore_cell(m, q, cond):
+        # Distinguish "no file" (--) from a documented structural N/A so a
+        # blank never reads as a silent failure.
+        d = restore(m, q)
+        if d is None:
+            return "--"
+        if d.get("restore_status") == "arch_mismatch_na":
+            return "N/A"
+        return num(g(d, "asr_per_condition", cond), 1)
+
     grid("3c. ASR after READ-projection restoration",
-         "`restoration_sweep_*` asr_per_condition.read_restored.",
-         lambda m, q: num(g(restore(m, q), "asr_per_condition", "read_restored"), 1))
+         "`restoration_sweep_*` asr_per_condition.read_restored. "
+         "N/A = arch-mismatch (restoration undefined); -- = not run.",
+         lambda m, q: restore_cell(m, q, "read_restored"))
     grid("3d. ASR after WRITE-projection restoration",
          "`restoration_sweep_*` asr_per_condition.write_restored.",
-         lambda m, q: num(g(restore(m, q), "asr_per_condition", "write_restored"), 1))
+         lambda m, q: restore_cell(m, q, "write_restored"))
     grid("3e. ASR after BOTH restored",
          "`restoration_sweep_*` asr_per_condition.both_restored.",
-         lambda m, q: num(g(restore(m, q), "asr_per_condition", "both_restored"), 1))
+         lambda m, q: restore_cell(m, q, "both_restored"))
     grid("3f. swap_valid (activation-swap sanity gate)",
          "False = swap didn't localize; exclude that cell from restore claims.",
          lambda m, q: (lambda d: "--" if d is None else
@@ -261,21 +274,46 @@ def main():
                 {k: g(v, "p_value") for k, v in mc.items()}, default=str))
         print("```")
 
-    # -- Gaps --------------------------------------------------------------
+    # -- Gaps (computed from disk, not hardcoded) --------------------------
     print("\n## Gaps / caveats (do NOT invent values for these)\n")
-    missing = []
-    for m in MODELS:
-        for q in QUANTS:
-            if q == "aqlm2" and m == "qwen":
-                continue  # by design
-            if not sig("direction_drift", m, q):
-                missing.append(f"{m}/{q} (direction_drift)")
-    for item in missing:
-        print(f"- MISSING: {item}")
-    print("- Phi-3 GPTQ 4/3/2 cells pending (rerun sweep with SWEEP_MODELS=phi3).")
-    print("- Cross-model mechanistic suite (arditi/swap/localization/headline) "
-          "currently llama-only; mistral/phi3 not yet launched.")
-    print("- LR-QAT cells still running at snapshot time — treat as provisional.")
+
+    # Genuinely-missing geometry cells (qwen/aqlm2 is by-design absent).
+    missing = [f"{m}/{q}" for m in MODELS for q in QUANTS
+               if not (m == "qwen" and q == "aqlm2")
+               and not sig("direction_drift", m, q)]
+    if missing:
+        for item in missing:
+            print(f"- MISSING geometry cell: {item}")
+    else:
+        print("- Geometry grid COMPLETE (every model x quantizer present; "
+              "qwen/aqlm2 absent by design).")
+
+    # Structurally-N/A restoration cells (blank in Table 3 is expected here).
+    na = [f"{m}/{q}" for m in MODELS for q in QUANTS
+          if (restore(m, q) or {}).get("restore_status") == "arch_mismatch_na"]
+    if na:
+        print(f"- Restoration N/A (documented arch mismatch, NOT a failure): "
+              f"{', '.join(na)}. Their geometry cells are valid; blank restore "
+              f"columns are expected.")
+
+    # Incomplete trained-repair stubs.
+    stubs = [Path(f).stem for f in glob.glob(f"{OUT}/trained_repair/*.json")
+             if isinstance(load(f), dict)
+             and "asr_lrqat_trained" not in load(f)
+             and not any(k in load(f) for k in ("fp_lora", "folded"))]
+    if stubs:
+        print(f"- Incomplete trained-repair file(s): {', '.join(sorted(stubs))}.")
+
+    # LR-QAT coherence collapses (low ASR there is incoherence, not repair).
+    collapsed = [Path(f).stem for f in glob.glob(f"{OUT}/trained_repair/lrqat_*.json")
+                 if (load(f) or {}).get("coherence_collapse_lrqat_trained")]
+    if collapsed:
+        print(f"- LR-QAT COLLAPSE (do not report low ASR as repair): "
+              f"{', '.join(sorted(collapsed))}.")
+
+    print("- Cross-model mechanistic suite (Arditi ablation / activation-swap / "
+          "localization / headline XSTest) is llama-only; not launched for "
+          "qwen/mistral/phi3.")
 
 
 if __name__ == "__main__":
