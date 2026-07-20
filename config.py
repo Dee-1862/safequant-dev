@@ -1,4 +1,6 @@
+# SafeQuant model aliases, HF cache paths, and quantized checkpoint registry.
 import os
+
 import torch
 
 # project root is wherever this file lives

@@ -1,20 +1,4 @@
-# Probe leakage control: does the FP32 refusal probe track semantic HARM, or
-# surface features (length, tokens, template)? Train on WildJailbreak
-# harmful-vs-harmless (FP32 residuals), then:
-#   (1) evaluate on XSTest -- specificity on the 250 "safe" prompts
-#       (surface-harmful but BENIGN: homonyms, figurative language) is the
-#       leakage-sensitive number; recall on the 200 genuinely "unsafe" prompts;
-#   (2) compare to a STRONG surface baseline (TF-IDF 1-2gram logistic regression)
-#       trained on the same labels -- if the surface model fails on XSTest-safe
-#       where the residual probe succeeds, the residual probe is not riding
-#       surface features (a weak BoW baseline failing would prove nothing);
-#   (3) cross-dataset transfer: WJ-trained residual probe -> HarmBench harmful.
-#
-# SCOPE (do not overclaim): this is an FP32 control. It shows the FP32 probe
-# tracks harm, not surface features -- it resists the TESTED confounds (surface
-# form, source dataset). It does NOT by itself show the *quantized* probe is
-# clean; pair it with the refit-noise control (rotation exceeds fitting noise).
-# Two controls, two claims -- keep them separate. Never write "leakage-free".
+# Probe leakage control: FP32 refusal probe vs surface-feature baseline (XSTest + HarmBench).
 import argparse
 import gc
 from pathlib import Path
@@ -38,6 +22,15 @@ _SCRIPT = Path(__file__)
 
 
 def _as_text(x):
+    """
+    Normalize a prompt item to plain text for TF-IDF or logging.
+
+    Inputs:
+        - x (str | dict | other): Prompt field or item dict
+
+    Outputs:
+        - text (str): User-facing prompt string
+    """
     if isinstance(x, str):
         return x
     if isinstance(x, dict):
@@ -46,17 +39,28 @@ def _as_text(x):
 
 
 def _fit(X, y):
-    clf = LogisticRegression(C=1.0, max_iter=2000, random_state=SEED)
+    """
+    Fit a logistic regression classifier on feature matrix X.
+
+    Inputs:
+        - X: Feature matrix
+        - y: Binary labels
+
+    Outputs:
+        - clf: Fitted LogisticRegression
+    """
+    clf = LogisticRegression(C = 1.0, max_iter = 2000, random_state = SEED)
     clf.fit(X, y)
     return clf
 
 
 def main():
+    # Parse CLI arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--n_calib", type=int, default=200)
-    ap.add_argument("--n_transfer", type=int, default=200)
-    ap.add_argument("--token_pos", type=int, default=-1)
+    ap.add_argument("--model", required = True)
+    ap.add_argument("--n_calib", type = int, default = 200)
+    ap.add_argument("--n_transfer", type = int, default = 200)
+    ap.add_argument("--token_pos", type = int, default = -1)
     args = ap.parse_args()
 
     # -- prompt sets --

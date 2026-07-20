@@ -1,12 +1,4 @@
-# cosmed-after-restoration: does restoring the projections that recover SAFETY
-# also pull the diff-in-means refusal direction back toward FP32?
-#
-# Mediation test. For a studiable/damaged cell we recompute the per-layer
-# refusal direction under {quant, read-restored, write-restored, both-restored}
-# and report its cosine (cosmed) vs FP32. If read-restoration (which recovers
-# safety, Table 3c) ALSO raises cosmed toward 1.0, recovery is mediated by the
-# mean-difference direction. If it recovers safety but leaves cosmed ~unchanged,
-# recovery runs through the readable/probe axis, not the diff-in-means direction.
+# Mediation test: cosmed after read/write/both restoration vs FP32 direction.
 import argparse
 import gc
 from pathlib import Path
@@ -27,7 +19,21 @@ _SCRIPT = Path(__file__)
 
 
 def directions(model, tokenizer, harmful, harmless, layers, device, token_pos):
-    """Per-layer unit diff-in-means refusal direction for one model."""
+    """
+    Per-layer unit diff-in-means refusal direction for one model state.
+
+    Inputs:
+        - model (nn.Module): Model under test
+        - tokenizer: HuggingFace tokenizer
+        - harmful (list): Harmful calibration prompts
+        - harmless (list): Harmless calibration prompts
+        - layers (list[int]): Layer indices to extract
+        - device (str): Torch device
+        - token_pos (int): Residual token position
+
+    Outputs:
+        - vecs (dict): Layer index -> unit direction tensor
+    """
     h = extract_last_token_residuals(
         model, tokenizer, harmful, layers, device, token_pos=token_pos
     )

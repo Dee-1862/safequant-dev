@@ -1,14 +1,4 @@
-# Section 8: targeted mixed-precision repair -- restore read-side projections of
-# the 2-bit (AQLM) cell from a 4-bit (AWQ) source instead of FP32, and test
-# whether cheap 4-bit restoration recovers safety as well as FP32 restoration.
-#
-# Two comparable conditions are produced by running with/without a layer band:
-#   --role read                    -> read-side, ALL layers   (variant read_awq4_all)
-#   --role read --layer_lo 11 --layer_hi 22 -> read-side, MIDDLE band (variant read_awq4_L11-22)
-#
-# For each run we measure ASR/ARC across: fp32 ref, 2-bit baseline,
-# +4-bit(AWQ) restore (the tested repair), +FP32 restore (the upper bound), and
-# report what fraction of the FP32-restore recovery the 4-bit restore captures.
+# Targeted mixed-precision repair: restore AQLM read-side from AWQ-4 source.
 import argparse
 import gc
 from pathlib import Path

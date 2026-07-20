@@ -1,13 +1,4 @@
-# Parameter-matched restoration control. Read projections (q,k,v,gate,up) hold
-# ~2x the parameters of write projections (o,down), so read might recover more
-# safety by sheer volume. This restores a read subset MATCHED to the write param
-# budget, two ways, and compares ASR recovery to full write restoration:
-#   (a) whole-projection: restore whole read projections whose total params ~=
-#       the write budget (coarse but easy to describe);
-#   (b) random-rows x N seeds: restore a random `frac` of each read projection's
-#       output rows (frac = write_budget / read_total), rest stay quantized.
-# If read-matched-to-write-budget still recovers >= full write, read's advantage
-# is its ROLE, not its parameter count.
+# Parameter-matched read restoration control (volume vs role).
 import argparse
 import gc
 from pathlib import Path
