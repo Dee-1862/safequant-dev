@@ -4,37 +4,39 @@
     "quantizer": "gptq2",
     "extra": {
       "n_eval": 200,
-      "n_reasoning": 50,
+      "n_reasoning": 100,
       "seed": 42
     },
     "n_eval": 200,
-    "n_reasoning": 50,
+    "n_reasoning": 100,
     "seed": 42
   },
-  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
+  "git_sha": "f14a626e5d9d2fd9e9a7716d7bdc46a8f76dbad7",
   "fp32_asr": 41.0,
-  "quantized_asr": 13.5,
-  "damage_pp": -27.5,
-  "write_restored_asr": 8.0,
-  "read_restored_asr": 30.5,
-  "both_restored_asr": 39.0,
-  "write_recovery_pp": 5.5,
-  "read_recovery_pp": -17.0,
+  "quantized_asr": 17.0,
+  "damage_pp": -24.0,
+  "write_restored_asr": 7.0,
+  "read_restored_asr": 31.0,
+  "both_restored_asr": 40.0,
+  "write_recovery_pp": 10.0,
+  "read_recovery_pp": -14.0,
   "swap_valid": true,
-  "swap_delta_pp": -2.0,
+  "swap_delta_pp": -1.0,
   "swap_tol_pp": 10.0,
   "arc": {
-    "fp32": 62.0,
-    "gptq2": 22.0,
-    "write_restored": 20.0,
+    "fp32": 55.0,
+    "gptq2": 21.0,
+    "write_restored": 22.0,
     "read_restored": 34.0,
-    "both_restored": 62.0
+    "both_restored": 54.0
   },
   "asr_per_condition": {
     "fp32": 41.0,
-    "gptq2": 13.5,
-    "write_restored": 8.0,
-    "read_restored": 30.5,
-    "both_restored": 39.0
-  }
+    "gptq2": 17.0,
+    "write_restored": 7.0,
+    "read_restored": 31.0,
+    "both_restored": 40.0
+  },
+  "restore_status": "ok",
+  "restore_note": null
 }

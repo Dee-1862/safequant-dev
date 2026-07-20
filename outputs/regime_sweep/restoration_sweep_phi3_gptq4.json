@@ -1,0 +1,40 @@
+{
+  "manifest": {
+    "model": "phi3",
+    "quantizer": "gptq4",
+    "extra": {
+      "n_eval": 200,
+      "n_reasoning": 50,
+      "seed": 42
+    },
+    "n_eval": 200,
+    "n_reasoning": 50,
+    "seed": 42
+  },
+  "git_sha": "31de738847a1a3c2a3e5b772a4e19c6bd6b6f0ea",
+  "fp32_asr": 39.5,
+  "quantized_asr": 42.5,
+  "damage_pp": 3.0,
+  "write_restored_asr": 42.5,
+  "read_restored_asr": 40.0,
+  "both_restored_asr": 39.5,
+  "write_recovery_pp": 0.0,
+  "read_recovery_pp": 2.5,
+  "swap_valid": false,
+  "swap_delta_pp": 0.0,
+  "swap_tol_pp": 10.0,
+  "arc": {
+    "fp32": 62.0,
+    "gptq4": 66.0,
+    "write_restored": 58.0,
+    "read_restored": 60.0,
+    "both_restored": 62.0
+  },
+  "asr_per_condition": {
+    "fp32": 39.5,
+    "gptq4": 42.5,
+    "write_restored": 42.5,
+    "read_restored": 40.0,
+    "both_restored": 39.5
+  }
+}
