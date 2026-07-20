@@ -18,7 +18,8 @@ for MODEL in ${SWEEP_MODELS:-llama7b mistral7b-v02 qwen7b}; do
   for QUANTIZER in ${SWEEP_QUANTIZERS:-aqlm2 awq gptq4 gptq3 gptq2}; do
     echo "---- ${MODEL} / ${QUANTIZER} ----"
     python -u -m experiments.regime_sweep.restoration_sweep \
-      --model ${MODEL} --quantizer ${QUANTIZER} --n_eval 200 --n_reasoning 50 \
+      --model ${MODEL} --quantizer ${QUANTIZER} --n_eval 200 \
+      --n_reasoning ${N_REASONING:-100} \
       || echo "FAILED ${MODEL}/${QUANTIZER}"
   done
 done
