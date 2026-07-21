@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-"""Dump the key numbers from every completed experiment JSON, grouped by folder,
-so results can be compared against the paper. Pure stdlib -- runs in any env.
-
-  python scripts/collect_results.py | tee ~/results_summary.txt
-"""
+# Dump key numbers from every completed experiment JSON, grouped by folder.
 import glob
 import json
 import sys

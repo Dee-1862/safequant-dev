@@ -1,14 +1,4 @@
-#!/usr/bin/env python
-"""Which displacement measure tracks safety damage -- diff-in-means drift or
-probe rotation? This is the Phi-3 question: Phi-3 is damaged (+20pp) with a high
-diff-in-means cosmed (0.935, "no drift") but a low probe-rotation cos (0.696,
-"big rotation"). If probe rotation tracks damage across cells where diff-in-means
-doesn't, the mechanism should be framed on the readable/separating axis.
-
-Reads existing outputs; reports a per-cell table + damage-vs-displacement
-correlations. Pure stdlib + numpy.
-  python scripts/drift_vs_damage.py
-"""
+# Correlate direction drift vs safety damage across swap-valid cells.
 import glob
 import json
 from pathlib import Path

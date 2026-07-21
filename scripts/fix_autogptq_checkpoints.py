@@ -1,19 +1,4 @@
-#!/usr/bin/env python
-"""Make AutoGPTQ-format GPTQ checkpoints loadable by transformers/gptqmodel.
-
-AutoGPTQ writes weights as gptq_model-<bits>bit-<group>g.safetensors and the
-quant settings in quantize_config.json. transformers' AutoModelForCausalLM
-instead looks for model.safetensors + a `quantization_config` block inside
-config.json, so it fails with "no model.safetensors found in directory". This
-patch, per checkpoint dir:
-  1) symlinks gptq_model-*.safetensors -> model.safetensors (weights findable),
-  2) injects quantization_config into config.json from quantize_config.json
-     (so transformers routes the load through the GPTQ/optimum path).
-Idempotent -- safe to re-run; skips anything already correct.
-
-  python scripts/fix_autogptq_checkpoints.py                # all gptq/ dirs
-  python scripts/fix_autogptq_checkpoints.py <dir> [<dir>]  # specific dirs
-"""
+# Patch AutoGPTQ checkpoint dirs so transformers/gptqmodel can load them.
 import glob
 import json
 import os

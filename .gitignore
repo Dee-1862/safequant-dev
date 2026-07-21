@@ -1,5 +1,6 @@
 repos/
 _trash/
+.trash/
 __pycache__/
 scripts/outputs/*.pt
 outputs/**/*_raw.json

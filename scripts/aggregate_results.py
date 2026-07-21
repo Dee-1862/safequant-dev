@@ -1,18 +1,7 @@
-#!/usr/bin/env python
-"""Aggregate every completed experiment JSON into ONE paper-ready markdown file.
-
-Unlike collect_results.py (which dumps raw JSON per file), this emits organized
-grids (model x quantizer) for each experiment plus a reproduction header, so the
-output can be handed to a model/collaborator to fill paper values -- and anyone
-can regenerate it byte-for-byte from the repo:
-
-  python scripts/aggregate_results.py > ~/PAPER_RESULTS.md
-
-Missing cells are printed as "--" (not silently dropped) so gaps are visible.
-Pure stdlib. Run from the repo root (where outputs/ lives).
-"""
+# Aggregate experiment JSONs into paper-ready markdown grids.
 import glob
 import json
+import statistics
 from pathlib import Path
 
 MODELS = ["llama", "qwen", "mistral", "phi3"]
@@ -115,7 +104,7 @@ def main():
             return "--"
         vals = [v.get("separation_sigma") for v in d[qk[0]].values()
                 if isinstance(v, dict) and v.get("separation_sigma") is not None]
-        return f"{float(np.median(vals)):.2f}" if vals else "--"
+        return f"{float(statistics.median(vals)):.2f}" if vals else "--"
 
     grid("1d. δmed — median per-layer separation (quantized; decodability)",
          "Positive separation magnitude; FP32 reference ~5.1. Low = concept "

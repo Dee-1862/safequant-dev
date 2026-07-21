@@ -33,6 +33,19 @@ scripts/
 bash scripts/setup_env.sh
 ```
 
+## Paper values (LaTeX tables)
+
+Pull numbers keyed to each paper table label:
+
+```bash
+python scripts/paper_values.py > paper_values.json
+python scripts/paper_values.py --md > PAPER_TABLES.md
+```
+
+Tables: `tab:geometry`, `tab:regime`, `tab:f3a_proj`, `tab:f3a_range`, `tab:f3a`, `tab:controls`, `tab:trained_repair`, `tab:lrqat`.
+
+Incomplete Q-Resafe read/write r128 jobs show as `missing or running` until JSON lands.
+
 ## Smoke before scaling
 
 Do **not** mass-submit multi-model jobs until the smoke chain is green. Details: [`scripts/tests/README.md`](tests/README.md).
