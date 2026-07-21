@@ -261,6 +261,15 @@ def build_geometry():
     }
 
 
+# AQLM inference is nondeterministic at +-1-2pp on 200 prompts, so the
+# restoration re-run's ASR for AQLM cells can differ from the headline run.
+# For the two studiable AQLM cells (which also appear in tab:f3a and carry the
+# significance stats), source ASR/ARC/damage from the single headline run so
+# every table agrees by construction. gptq/awq cells are deterministic -> use
+# restoration directly.
+STUDIABLE_HEADLINE = {("llama", "aqlm2"), ("phi3", "aqlm2")}
+
+
 def build_regime():
     """
     Build tab:regime — ASR/ARC per condition + screen verdict.
@@ -277,19 +286,30 @@ def build_regime():
             rs = restore(m, q)
             if not rs:
                 continue
+            hl = (load(f"{OUT}/headline/headline_{m}_{q}.json")
+                  if (m, q) in STUDIABLE_HEADLINE else None)
+            if hl:  # headline-canonical (consistent single run + stats)
+                asr, arc = cond_map(hl, "asr"), cond_map(hl, "arc")
+                damage, src = rnd(g(hl, "damage_pp"), 1), "headline"
+            else:   # deterministic cells: restoration re-run (ARC n=100)
+                asr, arc = cond_map(rs, "asr_per_condition"), cond_map(rs, "arc")
+                damage, src = rnd(g(rs, "damage_pp"), 1), "restoration_sweep"
             cells[f"{m}/{q}"] = {
                 "model_label": MODEL_LABEL[m],
                 "quant_label": QUANT_LABEL[q],
-                "asr": cond_map(rs, "asr_per_condition"),
-                "arc": cond_map(rs, "arc"),
-                "damage_pp": rnd(g(rs, "damage_pp"), 1),
+                "asr": asr,
+                "arc": arc,
+                "damage_pp": damage,
                 "swap_valid": g(rs, "swap_valid"),
                 "restore_status": g(rs, "restore_status", default = "ok"),
                 "screen_verdict": screen_verdict(rs),
+                "source": src,
             }
     return {
         "conditions": CONDS,
-        "source": "restoration_sweep_* asr_per_condition + arc",
+        "source": ("restoration_sweep_* (ARC n=100); AQLM studiable cells "
+                   "llama/aqlm2 + phi3/aqlm2 sourced from headline_* for "
+                   "ASR/ARC consistency with tab:f3a"),
         "cells": cells,
     }
 
