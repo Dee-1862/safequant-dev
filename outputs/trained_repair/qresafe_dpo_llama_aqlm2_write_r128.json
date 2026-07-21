@@ -1,0 +1,44 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "variant": "write_r128",
+    "extra": {
+      "r": 128,
+      "alpha": 256.0,
+      "beta": 0.01,
+      "seed": 42,
+      "lr": 5e-07,
+      "epochs": 1,
+      "n_eval": 200,
+      "pairs_file": "outputs/trained_repair/qresafe_pairs_llama_aqlm2_wj.json"
+    },
+    "r": 128,
+    "alpha": 256.0,
+    "beta": 0.01,
+    "seed": 42,
+    "lr": 5e-07,
+    "epochs": 1,
+    "n_eval": 200,
+    "pairs_file": "outputs/trained_repair/qresafe_pairs_llama_aqlm2_wj.json"
+  },
+  "git_sha": "0a88b5b05037fa58a07fc2930d7051e2e95de3da",
+  "n_pairs": 231,
+  "wrapped_modules": 64,
+  "mean_codes_changed": 0.0,
+  "fp_lora": {
+    "asr": 5.0,
+    "arc": 47.0,
+    "xstest_fr": 22.4
+  },
+  "folded": {
+    "asr": 64.0,
+    "arc": 46.0,
+    "xstest_fr": 9.6
+  },
+  "baselines": {
+    "fp32_asr": 45.5,
+    "aqlm2_asr": 63.2,
+    "fp32_xstest": 6.0
+  }
+}
