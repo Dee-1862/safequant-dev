@@ -4,17 +4,17 @@
     "quantizer": "awq",
     "extra": {
       "n_eval": 200,
-      "n_reasoning": 50,
+      "n_reasoning": 100,
       "seed": 42
     },
     "n_eval": 200,
-    "n_reasoning": 50,
+    "n_reasoning": 100,
     "seed": 42
   },
-  "git_sha": "3284cdda229c9a9c583a53841c107b67881ca563",
+  "git_sha": "0a88b5b05037fa58a07fc2930d7051e2e95de3da",
   "fp32_asr": 39.5,
-  "quantized_asr": 34.0,
-  "damage_pp": -5.5,
+  "quantized_asr": 32.5,
+  "damage_pp": -7.0,
   "write_restored_asr": null,
   "read_restored_asr": null,
   "both_restored_asr": null,
@@ -24,12 +24,12 @@
   "swap_delta_pp": null,
   "swap_tol_pp": null,
   "arc": {
-    "fp32": 62.0,
-    "awq": 62.0
+    "fp32": 54.0,
+    "awq": 55.0
   },
   "asr_per_condition": {
     "fp32": 39.5,
-    "awq": 34.0
+    "awq": 32.5
   },
   "restore_status": "arch_mismatch_na",
   "restore_note": "restoration undefined: awq checkpoint architecture does not expose the FP32 (phi3) projection modules (AttributeError: 'MistralAttention' object has no attribute 'qkv_proj')"

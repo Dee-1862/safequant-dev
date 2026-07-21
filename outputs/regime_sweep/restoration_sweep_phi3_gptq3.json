@@ -4,14 +4,14 @@
     "quantizer": "gptq3",
     "extra": {
       "n_eval": 200,
-      "n_reasoning": 50,
+      "n_reasoning": 100,
       "seed": 42
     },
     "n_eval": 200,
-    "n_reasoning": 50,
+    "n_reasoning": 100,
     "seed": 42
   },
-  "git_sha": "31de738847a1a3c2a3e5b772a4e19c6bd6b6f0ea",
+  "git_sha": "0a88b5b05037fa58a07fc2930d7051e2e95de3da",
   "fp32_asr": 39.5,
   "quantized_asr": 35.0,
   "damage_pp": -4.5,
@@ -24,11 +24,11 @@
   "swap_delta_pp": 0.0,
   "swap_tol_pp": 10.0,
   "arc": {
-    "fp32": 62.0,
-    "gptq3": 46.0,
-    "write_restored": 58.0,
-    "read_restored": 62.0,
-    "both_restored": 62.0
+    "fp32": 54.0,
+    "gptq3": 43.0,
+    "write_restored": 49.0,
+    "read_restored": 51.0,
+    "both_restored": 54.0
   },
   "asr_per_condition": {
     "fp32": 39.5,
@@ -36,5 +36,7 @@
     "write_restored": 32.0,
     "read_restored": 39.0,
     "both_restored": 39.5
-  }
+  },
+  "restore_status": "ok",
+  "restore_note": null
 }
