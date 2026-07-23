@@ -5,8 +5,8 @@ from pathlib import Path
 
 import torch
 
-from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
-from core.evaluation import _extract_behavior, classify_batch, generate_only
+from core.datasets import load_arc_challenge, load_wildjailbreak_prompts, load_xstest
+from core.evaluation import _extract_behavior, classify_batch, eval_xstest, generate_only
 from core.manifest import RunConfig, save_result
 from core.model_loader import load_fp32, load_quantized
 from core.restoration import (
@@ -31,6 +31,41 @@ def _role_projs(model, role):
     return read + write
 
 
+# Nominal weight bit-width per quantizer, for the effective-bits accounting.
+QUANT_BITS = {"aqlm2": 2, "aqlm3": 3, "gptq2": 2, "gptq3": 3, "gptq4": 4,
+              "awq": 4, "fp32": 16}
+
+
+def _param_count(layer, proj_path):
+    """#params of one projection under a decoder layer (out x in)."""
+    m = layer
+    for part in proj_path.split("."):
+        m = getattr(m, part)
+    return int(m.weight.shape[0] * m.weight.shape[1])
+
+
+def effective_bits(model, role_projs, layer_range, base_q, src_q):
+    """Effective weight bit-width of the repaired model: base quantizer
+    everywhere, source quantizer on the restored (role x band) projections."""
+    read, write = get_proj_sets(model)
+    all_projs = read + write
+    n_layers = model.config.num_hidden_layers
+    layer0 = model.model.layers[0]
+    per_all = sum(_param_count(layer0, p) for p in all_projs)
+    per_role = sum(_param_count(layer0, p) for p in role_projs)
+    lo, hi = layer_range if layer_range else (0, n_layers)
+    total = per_all * n_layers
+    restored = per_role * (hi - lo)
+    frac = restored / total if total else 0.0
+    b_base, b_src = QUANT_BITS.get(base_q, 2), QUANT_BITS.get(src_q, 4)
+    return {
+        "base_bits": b_base, "source_bits": b_src,
+        "restored_params": restored, "total_quant_params": total,
+        "restored_fraction": round(frac, 4),
+        "effective_bits": round(b_base * (1 - frac) + b_src * frac, 3),
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Targeted 4-bit (AWQ) restoration into the 2-bit (AQLM) cell.")
@@ -51,20 +86,26 @@ def main():
     if args.layer_lo is not None and args.layer_hi is not None:
         layer_range = (args.layer_lo, args.layer_hi)
         band = f"L{args.layer_lo}-{args.layer_hi}"
-    variant = f"{args.role}_{src}4_{band}"   # e.g. read_awq4_all / read_awq4_L11-22
+    variant = f"{args.role}_{src}_{band}"   # e.g. read_awq_L11-22 / read_gptq4_all
 
     items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
     behaviors = [_extract_behavior(it) for it in items]
     arc_items = load_arc_challenge(n_samples=args.n_reasoning)
+    xstest_items = load_xstest()
 
-    all_responses, all_arc = {}, {}
+    all_responses, all_arc, all_xstest = {}, {}, {}
 
     # FP32 reference + upper-bound source weights
     fp32_model, tokenizer = load_fp32(args.model)
     projs = _role_projs(fp32_model, args.role)
     fp32_weights = extract_fp32_weights(fp32_model, projs)
+    eff = effective_bits(fp32_model, projs, layer_range, qtz, src)
+    print(f"  effective_bits={eff['effective_bits']} "
+          f"(base {eff['base_bits']}b -> {eff['source_bits']}b on "
+          f"{eff['restored_fraction']*100:.1f}% of quant params)")
     all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
+    all_xstest["fp32"] = eval_xstest(fp32_model, tokenizer, xstest_items)["false_refusal_rate"]
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
@@ -80,6 +121,7 @@ def main():
     q_model, _ = load_quantized(args.model, quantizer=qtz)
     all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
     all_arc[qtz] = measure_arc(q_model, tokenizer, arc_items)
+    all_xstest[qtz] = eval_xstest(q_model, tokenizer, xstest_items)["false_refusal_rate"]
     del q_model
     gc.collect()
     torch.cuda.empty_cache()
@@ -90,6 +132,7 @@ def main():
         restore_projections(q_model, weights, projs, layer_range=layer_range)
         all_responses[tag] = generate_only(q_model, tokenizer, items, desc=tag)
         all_arc[tag] = measure_arc(q_model, tokenizer, arc_items)
+        all_xstest[tag] = eval_xstest(q_model, tokenizer, xstest_items)["false_refusal_rate"]
         del q_model
         gc.collect()
         torch.cuda.empty_cache()
@@ -119,8 +162,10 @@ def main():
         "damage_pp": q_asr - asr["fp32"],
         "role": args.role, "layer_range": list(layer_range) if layer_range else None,
         "asr_per_condition": asr, "arc_per_condition": all_arc,
+        "xstest_false_refusal": all_xstest,
         "recovery_pp_4bit": rec_4bit, "recovery_pp_fp32": rec_fp32,
         "frac_of_fp32_recovery": frac,
+        "effective_bits": eff,
     }
     path = save_result(_SCRIPT, cfg, data)
     print(f"Saved to {path}")
