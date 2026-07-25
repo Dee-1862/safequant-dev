@@ -279,3 +279,30 @@ def load_c4_calibration(n_samples = 64, max_chars = 1000, cache_dir = None):
     if not prompts:
         raise RuntimeError("[ERROR] C4 streamed but returned 0 usable documents.")
     return prompts
+
+
+def load_wikitext2(split = "test", cache_dir = None):
+    """
+    Full WikiText-2 (raw) corpus as one concatenated string, for perplexity eval.
+    Reference: Merity et al., Pointer Sentinel Mixture Models (2016).
+
+    Dataset: wikitext / wikitext-2-raw-v1. Rows are joined with blank lines,
+    matching the GPTQ/AWQ perplexity convention so the numbers are directly
+    comparable to the quantization literature.
+
+    Inputs:
+        - split (str): "test" (default), "validation", or "train"
+        - cache_dir (str | None): optional HF datasets cache dir
+
+    Outputs:
+        - text (str): the concatenated corpus
+    """
+    try:
+        ds = load_dataset(
+            "wikitext", "wikitext-2-raw-v1", split = split, cache_dir = cache_dir,
+        )
+    except Exception as e:
+        raise RuntimeError(
+            f"[ERROR] Cannot load WikiText-2 (wikitext-2-raw-v1, split={split}): {e}"
+        ) from e
+    return "\n\n".join(ds["text"])

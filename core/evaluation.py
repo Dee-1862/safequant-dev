@@ -409,6 +409,42 @@ def classify_batch(all_behaviors, all_responses, device = "cuda"):
 # -- Utility: log-prob scoring (used by core/restoration.measure_arc) ---------
 
 
+@torch.no_grad()
+def measure_perplexity(model, tokenizer, text, seq_len = 2048, desc = "WikiText-2 PPL"):
+    """
+    Token perplexity over a long corpus using contiguous, non-overlapping windows
+    (the GPTQ/AWQ convention), returning exp(mean NLL). A continuous coherence /
+    language-modeling-quality metric that complements the discrete ARC accuracy.
+
+    Inputs:
+        - model (torch.nn.Module): Causal LM
+        - tokenizer (Tokenizer): Matching tokenizer
+        - text (str): Concatenated evaluation corpus (e.g. WikiText-2 test)
+        - seq_len (int): Window length in tokens (2048 is the literature default)
+        - desc (str): Progress-bar label
+
+    Outputs:
+        - ppl (float): Perplexity over all scored tokens
+    """
+    device = next(model.parameters()).device
+    enc = tokenizer(text, return_tensors = "pt").input_ids.to(device)
+    n_tokens = enc.shape[1]
+    n_chunks = n_tokens // seq_len
+    if n_chunks == 0:
+        raise RuntimeError(f"corpus has {n_tokens} tokens < seq_len={seq_len}")
+
+    total_nll, total_tok = 0.0, 0
+    for i in tqdm(range(n_chunks), desc = desc):
+        chunk = enc[:, i * seq_len:(i + 1) * seq_len]
+        logits = model(input_ids = chunk).logits[0]          # [seq_len, vocab]
+        # Shifted next-token NLL; float() for numerically stable log-softmax.
+        log_probs = torch.log_softmax(logits[:-1].float(), dim = -1)
+        targets = chunk[0, 1:]
+        total_nll += -log_probs.gather(1, targets.unsqueeze(1)).sum().item()
+        total_tok += targets.numel()
+    return float(torch.exp(torch.tensor(total_nll / total_tok)))
+
+
 def _logprob_score(model, tokenizer, prompt, choices, device):
     """
     Score each choice by summing log-probs of its tokens given the prompt.
