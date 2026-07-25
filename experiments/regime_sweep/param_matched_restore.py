@@ -99,6 +99,25 @@ def main():
     print(f"write_budget={write_budget:,}  read_total={read_total:,}  "
           f"frac={frac:.3f}  whole_subset={whole_subset} ({whole_total:,})")
 
+    # Scope audit: how many matrices and params each restore condition TOUCHES.
+    # Full write must be len(write_projs) x n_layers matrices (Llama: 2 x 32 = 64);
+    # a middle-band scope bug would show ~22. Persisted so the JSON is self-auditing.
+    n_layers = len(read_w)
+    scope = {
+        "n_layers": n_layers,
+        "write_full": {"projs": list(write_projs),
+                       "matrices": len(write_projs) * n_layers, "params": write_budget},
+        "read_matched_whole": {"projs": list(whole_subset),
+                               "matrices": len(whole_subset) * n_layers, "params": whole_total},
+        "read_full": {"projs": list(read_projs),
+                      "matrices": len(read_projs) * n_layers, "params": read_total},
+    }
+    print("  SCOPE (matrices touched x params restored):")
+    for k in ("write_full", "read_matched_whole", "read_full"):
+        s = scope[k]
+        print(f"    {k:20s} {len(s['projs'])} projs x {n_layers} layers = "
+              f"{s['matrices']:>3} matrices  {s['params'] / 1e9:.3f}B  {s['projs']}")
+
     all_resp, all_arc = {}, {}
     all_resp["fp32"] = generate_only(fp32_model, tokenizer, items, desc="fp32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
@@ -144,6 +163,7 @@ def main():
             "match_fraction": frac, "whole_subset": whole_subset,
             "whole_subset_params": whole_total,
         },
+        "scope": scope,
         "asr_per_condition": asr,
         "arc_per_condition": all_arc,
         "read_matched_random_asr_mean": float(np.mean(rand)),

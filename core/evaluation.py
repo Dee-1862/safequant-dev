@@ -410,7 +410,8 @@ def classify_batch(all_behaviors, all_responses, device = "cuda"):
 
 
 @torch.no_grad()
-def measure_perplexity(model, tokenizer, text, seq_len = 2048, desc = "WikiText-2 PPL"):
+def measure_perplexity(model, tokenizer, text, seq_len = 2048, max_chunks = None,
+                       desc = "WikiText-2 PPL"):
     """
     Token perplexity over a long corpus using contiguous, non-overlapping windows
     (the GPTQ/AWQ convention), returning exp(mean NLL). A continuous coherence /
@@ -432,6 +433,8 @@ def measure_perplexity(model, tokenizer, text, seq_len = 2048, desc = "WikiText-
     n_chunks = n_tokens // seq_len
     if n_chunks == 0:
         raise RuntimeError(f"corpus has {n_tokens} tokens < seq_len={seq_len}")
+    if max_chunks:                       # smoke / quick-eval cap (not for paper numbers)
+        n_chunks = min(n_chunks, max_chunks)
 
     total_nll, total_tok = 0.0, 0
     for i in tqdm(range(n_chunks), desc = desc):

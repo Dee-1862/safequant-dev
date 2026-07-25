@@ -109,9 +109,13 @@ def main():
     flat_flags = classify_batch(flat_behaviors, flat_responses, device = device)
     n = args.n_eval
     asr_results = {}
+    flags_by_cond = {}
     for i, cond in enumerate(conditions):
         flags = flat_flags[i * n : (i + 1) * n]
         asr_results[cond] = 100.0 * sum(flags) / n
+        # Persist per-prompt labels so the paired ΔASR / McNemar screen can
+        # recover discordant counts (b, c) without re-running (see paired_screen).
+        flags_by_cond[cond] = [int(bool(x)) for x in flags]
 
     # Swap-validity gate against FP32 with ARC floor
     fp32_asr = asr_results["fp32"]
@@ -153,6 +157,7 @@ def main():
         "swap_tol_pp": swap_tol,
         "arc": all_arc,
         "asr_per_condition": asr_results,
+        "flags_by_cond": flags_by_cond,
         "restore_status": restore_status,
         "restore_note": restore_note,
     }
