@@ -21,7 +21,10 @@ from core.stats import paired_delta_asr, holm_bonferroni
 
 MODELS = ["llama", "qwen", "mistral", "phi3"]
 QUANTS = ["awq", "gptq4", "aqlm2", "gptq3", "gptq2"]
-NA_CELLS = {("phi3", "awq")}   # unfused Mistral-layout AWQ checkpoint; restoration N/A
+# No cell is structurally excluded from the PAIRED BASELINE screen: it needs only
+# fp32 + quant flags. phi3/awq loads fine (only its RESTORATION is arch-NA), and
+# qwen/aqlm2 (no AQLM checkpoint) drops out automatically via missing labels.
+NA_CELLS = set()
 
 RESTORE_SCRIPT = Path("experiments/regime_sweep/restoration_sweep.py")
 HEADLINE_SCRIPT = Path("experiments/headline/headline_eval.py")
