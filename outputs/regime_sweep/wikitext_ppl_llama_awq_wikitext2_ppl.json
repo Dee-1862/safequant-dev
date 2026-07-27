@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "awq",
+    "variant": "wikitext2_ppl",
+    "extra": {}
+  },
+  "git_sha": "REDACTED",
+  "model": "llama7b",
+  "quantizer": "awq",
+  "seq_len": 2048,
+  "wikitext2_ppl": 7.54721736907959,
+  "wikitext2_ppl_fp32": 7.214110851287842,
+  "ppl_ratio": 1.0461742998767871,
+  "status": "ok",
+  "seed": 42,
+  "dataset": "wikitext-2-raw-v1/test"
+}

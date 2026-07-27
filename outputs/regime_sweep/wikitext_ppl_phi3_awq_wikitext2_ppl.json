@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "model": "phi3",
+    "quantizer": "awq",
+    "variant": "wikitext2_ppl",
+    "extra": {}
+  },
+  "git_sha": "REDACTED",
+  "model": "phi3",
+  "quantizer": "awq",
+  "seq_len": 2048,
+  "wikitext2_ppl": 6.768984794616699,
+  "wikitext2_ppl_fp32": 6.350447654724121,
+  "ppl_ratio": 1.0659067144000827,
+  "status": "ok",
+  "seed": 42,
+  "dataset": "wikitext-2-raw-v1/test"
+}
