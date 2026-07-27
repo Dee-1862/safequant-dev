@@ -12,6 +12,7 @@ logs/
 .vscode/
 .trash/
 .ruff_cache/
+paper_refs/
 __pycache__/
 *.pyc
 
@@ -20,3 +21,4 @@ paper_values.json
 
 # Local docs scratch (optional)
 docs/
+.gitignore
