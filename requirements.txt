@@ -7,11 +7,17 @@ datasets>=2.19.0
 huggingface_hub
 numpy>=1.26.4
 scipy>=1.11.0
-matplotlib
+scikit-learn>=1.4.0
 tqdm
 pytest>=8.0
 
-# AQLM specific requirements
+# AQLM (required for AQLM-2/3 checkpoints and Q-Resafe fold)
 safetensors==0.4.3
 sentencepiece==0.2.0
-lm-eval==0.4.0
+aqlm>=1.0.0
+
+# Optional: self-service GPTQ quantization (scripts/quantize_gptq.py)
+auto-gptq>=0.7.1
+
+# Optional: plotting / legacy eval helpers
+matplotlib

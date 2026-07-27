@@ -1,6 +1,5 @@
 # Reproducible GPTQ quantization via AutoGPTQ (Bridges-2 helper).
 
-# Front Matter
 import argparse
 import random
 import sys
@@ -102,15 +101,6 @@ def build_calibration(tokenizer, n_samples, seqlen, seed):
 
 
 def main():
-    """
-    CLI entry point: quantize a model with AutoGPTQ and save to Ocean storage.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes quantized checkpoint to disk)
-    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser(description = "Reproducible GPTQ quantization via AutoGPTQ.")
     ap.add_argument("--model", required = True,

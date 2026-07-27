@@ -1,6 +1,5 @@
 # Q-Resafe DPO train + fold: masked LoRA on a quantized model.
 
-# Front Matter
 import argparse
 import json
 from pathlib import Path
@@ -215,15 +214,6 @@ def eval_model(model, tok, n_eval, n_arc, label):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI arguments (defaults match official Q-Resafe llama7b recipe)
     ap = argparse.ArgumentParser()
     ap.add_argument("--mask", required = True, choices = ["read", "write", "full"])

@@ -5,12 +5,18 @@
 # Slurm logs
 scripts/logs/*
 logs/
+
+# Python / tooling caches
 .gyst/
 .pytest_cache/
 .vscode/
 .trash/
 .ruff_cache/
 __pycache__/
+*.pyc
 
-.pyc
+# Generated paper tables (regenerate with: python run_pipeline.py --results)
+paper_values.json
+
+# Local docs scratch (optional)
 docs/

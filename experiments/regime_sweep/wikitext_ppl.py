@@ -33,15 +33,6 @@ def _save(model, quantizer, seq_len, ppl, ppl_fp32, status):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     ap = argparse.ArgumentParser(description = "WikiText-2 perplexity per regime cell.")
     ap.add_argument("--model", default = "llama7b")
     ap.add_argument("--quantizers", nargs = "+",

@@ -336,15 +336,6 @@ def corr(xs, ys):
 
 
 def main():
-    """
-    Print aggregated markdown grids from experiment JSONs.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - None (prints markdown tables to stdout)
-    """
     print("# SafeQuant Aggregated Results (paper values)\n")
 
     # -- Table 1: refusal-direction drift ----------------------------------

@@ -137,15 +137,6 @@ def _print_table(results):
 
 
 def main():
-    """
-    CLI entry point for paired_screen.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (prints paired ΔASR table)
-    """
     ap = argparse.ArgumentParser(description = "Paired ΔASR significance screen (McNemar).")
     ap.add_argument("--alpha", type = float, default = 0.05)
     args = ap.parse_args()

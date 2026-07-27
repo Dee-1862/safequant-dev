@@ -1,6 +1,9 @@
 # Scripts (optional cluster + utilities)
 
-**Primary entry point:** [`run_pipeline.py`](../run_pipeline.py) at the repo root. Use `python run_pipeline.py --run table1` (or `full`) or `--results --md`.
+**Primary entry point:** [`run_pipeline.py`](../run_pipeline.py) at the repo root.
+
+- `python run_pipeline.py --results --md` - rebuild tables from committed `outputs/` (no GPU)
+- `python run_pipeline.py --run table1` (or `full`) - re-run experiments (GPU + checkpoints)
 
 This folder holds result aggregators, checkpoint helpers, and optional Bridges-2 Slurm launchers.
 

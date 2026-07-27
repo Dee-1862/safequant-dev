@@ -1,6 +1,5 @@
 # SafeQuant reproduction CLI: run paper tables or rebuild results from outputs/.
 
-# Front Matter
 import argparse
 import os
 import subprocess
@@ -433,15 +432,6 @@ def rebuild_results(md = False):
 
 
 def main():
-    """
-    CLI entry point for run_pipeline.py.
-
-    Inputs:
-        - None (reads argparse: --run, --results, --force, --md)
-
-    Outputs:
-        - None (runs experiments or rebuilds paper tables)
-    """
     target_help = "\n".join(f"  {k:12} {v}" for k, v in RUN_TARGETS.items())
     ap = argparse.ArgumentParser(
         description = "SafeQuant: run paper tables or rebuild result files from outputs/.",

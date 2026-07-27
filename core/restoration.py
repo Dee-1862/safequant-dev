@@ -1,7 +1,5 @@
 # FP32 weight extraction and projection restoration (read/write split).
 
-from __future__ import annotations
-
 import torch
 import torch.nn as nn
 

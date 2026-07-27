@@ -7,7 +7,6 @@ os.environ["GPTQMODEL_FORCE_BACKEND"] = "torch"
 # Disable torch.compile which causes PY_SSIZE_T_CLEAN errors on older torch
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 
-# Front Matter
 import torch
 import torch.nn as nn
 from datasets import load_dataset as _load_ds

@@ -1,6 +1,5 @@
 # HarmBench ASR judging, Arditi refusal scores, XSTest, and ARC log-prob scoring.
 
-# Front Matter
 import gc
 import os
 

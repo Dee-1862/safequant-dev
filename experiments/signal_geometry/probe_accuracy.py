@@ -18,15 +18,6 @@ _SCRIPT = Path(__file__)
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")

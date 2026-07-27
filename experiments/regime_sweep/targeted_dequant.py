@@ -78,15 +78,6 @@ def effective_bits(model, role_projs, layer_range, base_q, src_q):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     ap = argparse.ArgumentParser(
         description = "Targeted 4-bit (AWQ) restoration into the 2-bit (AQLM) cell.")
     ap.add_argument("--model", default = "llama7b")

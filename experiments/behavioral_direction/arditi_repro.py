@@ -1,6 +1,5 @@
 # Exact reproduction of Arditi et al. behavioral-direction selection.
 
-# Front Matter
 import argparse
 from pathlib import Path
 
@@ -449,15 +448,6 @@ def run_cell(name, quantizer):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI and run the cell
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")

@@ -104,15 +104,6 @@ def restore_read_rows(model, fp32_read_weights, read_projs, frac, rng):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")
     ap.add_argument("--quantizer", default = "aqlm2")

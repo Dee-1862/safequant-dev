@@ -59,15 +59,6 @@ def _fit_w(h_list, s_list):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required = True)

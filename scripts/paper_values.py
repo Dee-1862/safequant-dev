@@ -1178,15 +1178,6 @@ def as_markdown(pv):
 
 
 def main():
-    """
-    CLI entry point: write paper_values.json and optional markdown.
-
-    Inputs:
-        - None (pass --md for markdown instead of JSON)
-
-    Outputs:
-        - None (prints JSON or markdown to stdout)
-    """
     pv = build()
     if "--md" in sys.argv[1:]:
         print(as_markdown(pv))

@@ -1,6 +1,5 @@
 # Reader-side (vs writer-side) low-bit REPAIR via quant-domain LR-QAT.
 
-# Front Matter
 import argparse
 import gc
 import json
@@ -323,15 +322,6 @@ def _whole_model_effective_bits(model, role_projs, layer_range, base_eff, inj_ef
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")

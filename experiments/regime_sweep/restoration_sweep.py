@@ -24,15 +24,6 @@ _SCRIPT = Path(__file__)
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required = True)

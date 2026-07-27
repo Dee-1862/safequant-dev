@@ -65,15 +65,6 @@ def cosmed_vs(fp32_dirs, cond_dirs, layers):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")
     ap.add_argument("--quantizer", default = "aqlm2")

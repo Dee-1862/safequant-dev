@@ -1,7 +1,5 @@
 # Experiment manifest and self-enforcing output mirror paths.
 
-from __future__ import annotations
-
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path

@@ -1,6 +1,5 @@
 # Fold trained LoRA delta back into AQLM quantized weights.
 
-# Front Matter
 import os
 import sys
 

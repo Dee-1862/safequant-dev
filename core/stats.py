@@ -1,7 +1,5 @@
 # Exact McNemar, Wilson CIs, and paired bootstrap recovery intervals.
 
-from __future__ import annotations
-
 import math
 
 import numpy as np

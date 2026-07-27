@@ -41,15 +41,6 @@ def _proj_types(model):
 
 
 def main():
-    """
-    CLI entry point.
-
-    Inputs:
-        - None (command-line arguments via argparse)
-
-    Outputs:
-        - None (writes result JSON under outputs/)
-    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required = True)
