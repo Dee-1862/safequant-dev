@@ -38,6 +38,92 @@ def mcnemar_exact(flags_a, flags_b):
     return {"b": b, "c": c, "n_discordant": nbc, "p_value": p}
 
 
+def paired_delta_asr(fp_flags, quant_flags, n_boot = 5000, seed = 0):
+    """
+    Paired ΔASR estimator with the correct (McNemar-style) standard error.
+
+    Flags are per-prompt compliance labels on the SAME prompts (1 = complied with
+    the harmful request = attack success, 0 = refused). Because the two variants
+    see identical prompts, only discordant pairs carry information:
+
+        b = #(fp refused, quant complied)   -- quantization-induced compliance
+        c = #(fp complied, quant refused)
+        ΔASR = 100 (b - c) / n              == quant_asr - fp_asr
+
+    The paired SE uses the multinomial variance of that difference, not the
+    p(1-p)/n form (which assumes independent samples and is conservative here):
+
+        SE = 100/n * sqrt( (b + c) - (b - c)^2 / n )
+
+    Inputs:
+        - fp_flags (list[int]): full-precision per-prompt compliance flags
+        - quant_flags (list[int]): quantized per-prompt flags, SAME prompt order
+        - n_boot (int): paired bootstrap resamples for the CI
+        - seed (int): bootstrap RNG seed
+
+    Outputs:
+        - res (dict): b, c, n, delta_asr, se_paired, se_null, se_unpaired,
+          p_mcnemar, ci95 (paired bootstrap), fp_asr, quant_asr
+    """
+    a = np.asarray(fp_flags, dtype = int)
+    q = np.asarray(quant_flags, dtype = int)
+    if a.shape != q.shape:
+        raise ValueError(f"flag length mismatch: fp {a.shape} vs quant {q.shape}")
+    n = int(a.size)
+    if n == 0:
+        raise ValueError("empty flag arrays")
+
+    b = int(np.sum((a == 0) & (q == 1)))   # fp refused, quant complied (damage)
+    c = int(np.sum((a == 1) & (q == 0)))   # fp complied, quant refused
+    bc = b + c
+    delta = 100.0 * (b - c) / n
+
+    se_paired = 100.0 / n * math.sqrt(max(0.0, bc - (b - c) ** 2 / n))
+    se_null = 100.0 * math.sqrt(bc) / n
+    p_fp, p_q = float(a.mean()), float(q.mean())
+    se_unpaired = 100.0 * math.sqrt(p_fp * (1 - p_fp) / n + p_q * (1 - p_q) / n)
+
+    p_mc = mcnemar_exact(a.tolist(), q.tolist())["p_value"]
+
+    # Paired bootstrap over prompt pairs (resample the +1/-1/0 per-prompt diffs).
+    rng = np.random.default_rng(seed)
+    diffs = q - a
+    boot = np.empty(n_boot)
+    for i in range(n_boot):
+        boot[i] = 100.0 * diffs[rng.integers(0, n, n)].mean()
+    ci = [float(np.percentile(boot, 2.5)), float(np.percentile(boot, 97.5))]
+
+    return {
+        "b": b, "c": c, "n": n, "delta_asr": delta,
+        "se_paired": se_paired, "se_null": se_null, "se_unpaired": se_unpaired,
+        "p_mcnemar": p_mc, "ci95": ci,
+        "fp_asr": 100.0 * p_fp, "quant_asr": 100.0 * p_q,
+    }
+
+
+def holm_bonferroni(pvalues):
+    """
+    Holm step-down adjusted p-values (strong family-wise error control).
+
+    Inputs:
+        - pvalues (list[float]): raw p-values, in any order
+
+    Outputs:
+        - adj (list[float]): Holm-adjusted p-values, in the ORIGINAL order
+    """
+    m = len(pvalues)
+    if m == 0:
+        return []
+    order = sorted(range(m), key = lambda i: pvalues[i])
+    adj = [0.0] * m
+    running = 0.0
+    for rank, i in enumerate(order):
+        # (m - rank) multiplier, enforced monotonic non-decreasing down the ladder
+        running = max(running, (m - rank) * pvalues[i])
+        adj[i] = min(1.0, running)
+    return adj
+
+
 def wilson_ci(k, n, z = 1.96):
     """
     Wilson score 95% CI for a proportion k/n.

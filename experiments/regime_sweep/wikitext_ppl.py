@@ -38,6 +38,8 @@ def main():
     ap.add_argument("--quantizers", nargs="+",
                     default=["awq", "gptq4", "aqlm2", "gptq3", "gptq2"])
     ap.add_argument("--seq_len", type=int, default=2048)
+    ap.add_argument("--max_chunks", type=int, default=None,
+                    help="cap number of PPL windows (smoke/quick-eval only)")
     args = ap.parse_args()
 
     text = load_wikitext2("test")
@@ -46,7 +48,7 @@ def main():
     # FP32 reference (per model)
     fp32_model, tokenizer = load_fp32(args.model)
     ppl_fp32 = measure_perplexity(fp32_model, tokenizer, text, seq_len=args.seq_len,
-                                  desc=f"{args.model}/fp32")
+                                  max_chunks=args.max_chunks, desc=f"{args.model}/fp32")
     print(f"  fp32 PPL = {ppl_fp32:.3f}")
     del fp32_model
     gc.collect()
@@ -59,7 +61,7 @@ def main():
         try:
             qm, tok = load_quantized(args.model, quantizer=q)
             ppl_q = measure_perplexity(qm, tok, text, seq_len=args.seq_len,
-                                       desc=f"{args.model}/{q}")
+                                       max_chunks=args.max_chunks, desc=f"{args.model}/{q}")
             status = "ok"
             print(f"  {q} PPL = {ppl_q:.3f}  (x{ppl_q / ppl_fp32:.3f} vs fp32)")
             del qm

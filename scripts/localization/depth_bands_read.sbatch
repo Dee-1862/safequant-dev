@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --output=scripts/logs/depth_read_%j.out
 #SBATCH --error=scripts/logs/depth_read_%j.err
-source "$(dirname "$0")/../_env.sh"
+source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 
 # Table 4 : early/middle/late depth bands (read projections).
 

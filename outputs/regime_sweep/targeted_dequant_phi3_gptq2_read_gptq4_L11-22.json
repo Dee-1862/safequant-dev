@@ -1,0 +1,53 @@
+{
+  "manifest": {
+    "model": "phi3",
+    "quantizer": "gptq2",
+    "variant": "read_gptq4_L11-22",
+    "extra": {
+      "source_quant": "gptq4",
+      "role": "read",
+      "band": "L11-22",
+      "n_eval": 200,
+      "n_reasoning": 100,
+      "seed": 42
+    },
+    "source_quant": "gptq4",
+    "role": "read",
+    "band": "L11-22",
+    "n_eval": 200,
+    "n_reasoning": 100,
+    "seed": 42
+  },
+  "git_sha": "8bde8b3c16f16187809fa80fe8156cbffe1087af",
+  "fp32_asr": 39.5,
+  "quantized_asr": 11.5,
+  "damage_pp": -28.0,
+  "role": "read",
+  "layer_range": [
+    11,
+    22
+  ],
+  "asr_per_condition": {
+    "fp32": 39.5,
+    "gptq2": 11.5,
+    "gptq44_restore": 8.5,
+    "fp32_restore": 10.0
+  },
+  "arc_per_condition": {
+    "fp32": 54.0,
+    "gptq2": 22.0,
+    "gptq44_restore": 26.0,
+    "fp32_restore": 23.0
+  },
+  "recovery_pp_4bit": 3.0,
+  "recovery_pp_fp32": 1.5,
+  "frac_of_fp32_recovery": 2.0,
+  "effective_bits": {
+    "base_bits": 2,
+    "source_bits": 4,
+    "restored_params": 865075200,
+    "total_quant_params": 3623878656,
+    "restored_fraction": 0.2387,
+    "effective_bits": 2.477
+  }
+}

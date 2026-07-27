@@ -40,28 +40,28 @@
     },
     "seed": 42
   },
-  "git_sha": "fe7780c2890038bb9c1250061becd5d3f04913b8",
+  "git_sha": "8bde8b3c16f16187809fa80fe8156cbffe1087af",
   "n_layers": 32,
   "fp32_asr": 41.0,
-  "quantized_asr": 62.5,
-  "damage_pp": 21.5,
+  "quantized_asr": 64.0,
+  "damage_pp": 23.0,
   "asr_per_condition": {
     "fp32": 41.0,
-    "aqlm2": 62.5,
-    "layers_early": 53.5,
+    "aqlm2": 64.0,
+    "layers_early": 52.0,
     "layers_middle": 47.5,
     "layers_late": 55.5
   },
   "arc_per_condition": {
-    "fp32": 62.0,
-    "aqlm2": 56.0,
-    "layers_early": 62.0,
-    "layers_middle": 50.0,
-    "layers_late": 58.0
+    "fp32": 55.0,
+    "aqlm2": 46.0,
+    "layers_early": 52.0,
+    "layers_middle": 46.0,
+    "layers_late": 47.0
   },
   "recovery_pp_per_range": {
-    "early": 9.0,
-    "middle": 15.0,
-    "late": 7.0
+    "early": 12.0,
+    "middle": 16.5,
+    "late": 8.5
   }
 }

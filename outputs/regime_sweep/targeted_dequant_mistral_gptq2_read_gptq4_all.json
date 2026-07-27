@@ -1,0 +1,50 @@
+{
+  "manifest": {
+    "model": "mistral7b-v02",
+    "quantizer": "gptq2",
+    "variant": "read_gptq4_all",
+    "extra": {
+      "source_quant": "gptq4",
+      "role": "read",
+      "band": "all",
+      "n_eval": 200,
+      "n_reasoning": 100,
+      "seed": 42
+    },
+    "source_quant": "gptq4",
+    "role": "read",
+    "band": "all",
+    "n_eval": 200,
+    "n_reasoning": 100,
+    "seed": 42
+  },
+  "git_sha": "8bde8b3c16f16187809fa80fe8156cbffe1087af",
+  "fp32_asr": 74.5,
+  "quantized_asr": 10.5,
+  "damage_pp": -64.0,
+  "role": "read",
+  "layer_range": null,
+  "asr_per_condition": {
+    "fp32": 74.5,
+    "gptq2": 10.5,
+    "gptq44_restore": 6.0,
+    "fp32_restore": 16.5
+  },
+  "arc_per_condition": {
+    "fp32": 51.0,
+    "gptq2": 14.0,
+    "gptq44_restore": 16.0,
+    "fp32_restore": 19.0
+  },
+  "recovery_pp_4bit": 4.5,
+  "recovery_pp_fp32": -6.0,
+  "frac_of_fp32_recovery": -0.75,
+  "effective_bits": {
+    "base_bits": 2,
+    "source_bits": 4,
+    "restored_params": 4563402752,
+    "total_quant_params": 6979321856,
+    "restored_fraction": 0.6538,
+    "effective_bits": 3.308
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "model": "qwen7b",
+    "quantizer": "aqlm2",
+    "variant": "wikitext2_ppl",
+    "extra": {}
+  },
+  "git_sha": "f95fe3bef4e3f752bb590e330ccf2b32dc100fba",
+  "model": "qwen7b",
+  "quantizer": "aqlm2",
+  "seq_len": 2048,
+  "wikitext2_ppl": null,
+  "wikitext2_ppl_fp32": 7.4573445320129395,
+  "ppl_ratio": null,
+  "status": "load_failed:ValueError",
+  "seed": 42,
+  "dataset": "wikitext-2-raw-v1/test"
+}

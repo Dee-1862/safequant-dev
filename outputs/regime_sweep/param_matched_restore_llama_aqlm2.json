@@ -13,7 +13,7 @@
     "seeds": 3,
     "seed": 42
   },
-  "git_sha": "f888ac70a123311b827934c3d599839bcb401bdc",
+  "git_sha": "f95fe3bef4e3f752bb590e330ccf2b32dc100fba",
   "param_budget": {
     "write_params": 2415919104,
     "read_params_total": 4563402752,

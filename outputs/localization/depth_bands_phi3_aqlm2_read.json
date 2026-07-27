@@ -40,7 +40,7 @@
     },
     "seed": 42
   },
-  "git_sha": "d687fbf16662541d6dbc6140131129a51b9d6609",
+  "git_sha": "8bde8b3c16f16187809fa80fe8156cbffe1087af",
   "n_layers": 32,
   "fp32_asr": 39.5,
   "quantized_asr": 59.5,
@@ -53,11 +53,11 @@
     "layers_late": 56.0
   },
   "arc_per_condition": {
-    "fp32": 62.0,
-    "aqlm2": 58.0,
-    "layers_early": 58.0,
-    "layers_middle": 60.0,
-    "layers_late": 58.0
+    "fp32": 54.0,
+    "aqlm2": 53.0,
+    "layers_early": 54.0,
+    "layers_middle": 56.0,
+    "layers_late": 52.0
   },
   "recovery_pp_per_range": {
     "early": 7.0,
