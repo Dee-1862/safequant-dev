@@ -14,7 +14,7 @@
 # prints the config.QUANTIZED_CHECKPOINTS line to register.
 set -euo pipefail
 
-AGENV="${AGENV:-/ocean/projects/cis240116p/bhoomire/conda_envs/sq_autogptq}"
+AGENV="${AGENV:-${OCEAN_BASE:-${HOME}/safequant_ocean}/conda_envs/sq_autogptq}"
 
 # NOTE on Qwen: this uses Qwen2.5-7B (qwen7b), NOT Qwen3-8B. auto-gptq 0.7.1 is
 # pinned to transformers 4.44, which predates the Qwen3 architecture and cannot

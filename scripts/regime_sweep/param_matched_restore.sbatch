@@ -6,9 +6,9 @@
 #SBATCH -N 1
 #SBATCH --time=8:00:00
 #SBATCH --mem=128G
-#SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/parammatch_%j.out
-#SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/parammatch_%j.err
-source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
+#SBATCH --output=scripts/logs/parammatch_%j.out
+#SBATCH --error=scripts/logs/parammatch_%j.err
+source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 
 # RQ3 control: read subset matched to the WRITE param budget vs full write.
 echo "=== param-matched restore | ${EXP_MODEL:-llama7b}/aqlm2 | $(date) ==="

@@ -1,21 +1,16 @@
 #!/bin/bash
-# One-time Bridges-2 env bootstrap (login node). Installs missing packages into sq_clean.
+# One-time HPC env bootstrap (login node). Installs missing packages into sq_clean.
 # Usage: bash scripts/setup_env.sh
+# Set OCEAN_BASE and CONDA_ENV before running if not using defaults from _env.sh.
 
 set -euo pipefail
+source "$(dirname "$0")/_env.sh"
 
-CONDA_BASE=/opt/packages/anaconda3-2024.10-1
-OCEAN_BASE=/ocean/projects/cis240116p/bhoomire
-CONDA_ENV="${OCEAN_BASE}/conda_envs/sq_clean"
-
-source "${CONDA_BASE}/etc/profile.d/conda.sh"
-conda activate "${CONDA_ENV}"
 echo "Activated: ${CONDA_ENV}"
 echo "Python: $(python --version)"
 echo "Torch:  $(python -c 'import torch; print(torch.__version__)')"
 
-mkdir -p "${OCEAN_BASE}/.cache/huggingface"
-mkdir -p "${OCEAN_BASE}/.cache/huggingface/datasets"
+mkdir -p "${HF_HOME}" "${HF_DATASETS_CACHE}" "${QUANTIZED_MODELS}"
 
 pip install -q "bitsandbytes>=0.43.0" "accelerate>=0.26.0" "scipy>=1.11.0" "pytest>=8.0"
 

@@ -1,10 +1,11 @@
 # Fold trained LoRA delta back into AQLM quantized weights.
+import os
 import sys
 
 import torch
 
-AQLM_REPO = "/jet/home/bhoomire/projects/AQLM"
-if AQLM_REPO not in sys.path:
+AQLM_REPO = os.environ.get("AQLM_REPO", "")
+if AQLM_REPO and AQLM_REPO not in sys.path:
     sys.path.insert(0, AQLM_REPO)
 
 from aqlm.utils import _dequantize_weight, pack_int_data, unpack_int_data  # noqa: E402

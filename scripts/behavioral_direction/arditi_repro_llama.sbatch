@@ -6,9 +6,9 @@
 #SBATCH -N 1
 #SBATCH --time=12:00:00
 #SBATCH --mem=128G
-#SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/arditi_llama_%j.out
-#SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/arditi_llama_%j.err
-source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
+#SBATCH --output=scripts/logs/arditi_llama_%j.out
+#SBATCH --error=scripts/logs/arditi_llama_%j.err
+source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 
 # Sec. 5 — behavioral direction (logit refusal-score selection).
 

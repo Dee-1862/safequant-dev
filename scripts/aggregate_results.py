@@ -218,12 +218,6 @@ def main():
               f"| {num(g(d,'delta_asr_pp'),1)} | {g(d,'selected_layer')} "
               f"| {g(d,'selected_pos')} | {g(d,'operative')} |")
 
-    print("\n## Boundary — activation swap (llama/aqlm2)\n")
-    for f in sorted(glob.glob(f"{OUT}/boundary/activation_swap_*.json")):
-        d = load(f)
-        print(f"- {Path(f).stem.replace('activation_swap_','')}: "
-              f"{json.dumps(g(d,'swap_asr', default={}))}")
-
     print("\n## Localization (per-projection / depth-band recovery)\n")
     for f in sorted(glob.glob(f"{OUT}/localization/*.json")):
         d = load(f)

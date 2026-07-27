@@ -5,6 +5,10 @@ import statistics
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 MODELS = ["llama", "qwen", "mistral", "phi3"]
 QUANTS = ["awq", "gptq4", "aqlm2", "gptq3", "gptq2"]
 CONDS = ["fp32", "quant", "write_restored", "read_restored", "both_restored"]
@@ -41,6 +45,21 @@ DEPTH_RANGES = [
     ("late", "Late", "[22,32)"),
 ]
 
+PHI3_PROJ_ORDER = [
+    ("self_attn.qkv_proj", "W_qkv", "Attention q,k,v (fused)", 1),
+    ("self_attn.o_proj", "W_o", "Attention output", 1),
+    ("mlp.gate_up_proj", "W_gate_up", "MLP gate+lift (fused)", 1),
+    ("mlp.down_proj", "W_down", "MLP output", 1),
+]
+
+QRESAFE_RANKS = (128, 256, 512, 1024, 2048)
+QRESAFE_PATCHES = (("Read", "read"), ("Write", "write"), ("Both", "full"))
+DEQUANT_CELLS = (
+    ("llama", "all"),
+    ("llama", "L11-22"),
+    ("phi3", "all"),
+    ("phi3", "L11-22"),
+)
 
 def load(p):
     """
@@ -270,6 +289,33 @@ def build_geometry():
 STUDIABLE_HEADLINE = {("llama", "aqlm2"), ("phi3", "aqlm2")}
 
 
+def _paired_screen_map():
+    """
+    Holm-adjusted paired Delta ASR screen for all 19 regime cells.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - out (dict): cell key -> McNemar stats
+    """
+    from experiments.regime_sweep.paired_screen import MODELS as PM, QUANTS as PQ, sweep
+
+    out = {}
+    for r in sweep([(m, q) for m in PM for q in PQ]):
+        if r.get("status") != "ok":
+            continue
+        out[f"{r['model']}/{r['quant']}"] = {
+            "delta_asr": rnd(r["delta_asr"], 1),
+            "ci95": [rnd(r["ci95"][0], 1), rnd(r["ci95"][1], 1)],
+            "p_mcnemar": r["p_mcnemar"],
+            "p_holm": r["p_holm"],
+            "b": r["b"],
+            "c": r["c"],
+        }
+    return out
+
+
 def build_regime():
     """
     Build tab:regime — ASR/ARC per condition + screen verdict.
@@ -280,6 +326,7 @@ def build_regime():
     Outputs:
         - block (dict): Table payload for damaged-coherent screen
     """
+    paired_map = _paired_screen_map()
     cells = {}
     for m in MODELS:
         for q in QUANTS:
@@ -288,13 +335,13 @@ def build_regime():
                 continue
             hl = (load(f"{OUT}/headline/headline_{m}_{q}.json")
                   if (m, q) in STUDIABLE_HEADLINE else None)
-            if hl:  # headline-canonical (consistent single run + stats)
+            if hl:
                 asr, arc = cond_map(hl, "asr"), cond_map(hl, "arc")
                 damage, src = rnd(g(hl, "damage_pp"), 1), "headline"
-            else:   # deterministic cells: restoration re-run (ARC n=100)
+            else:
                 asr, arc = cond_map(rs, "asr_per_condition"), cond_map(rs, "arc")
                 damage, src = rnd(g(rs, "damage_pp"), 1), "restoration_sweep"
-            cells[f"{m}/{q}"] = {
+            cell = {
                 "model_label": MODEL_LABEL[m],
                 "quant_label": QUANT_LABEL[q],
                 "asr": asr,
@@ -305,6 +352,9 @@ def build_regime():
                 "screen_verdict": screen_verdict(rs),
                 "source": src,
             }
+            if f"{m}/{q}" in paired_map:
+                cell["paired"] = paired_map[f"{m}/{q}"]
+            cells[f"{m}/{q}"] = cell
     return {
         "conditions": CONDS,
         "source": ("restoration_sweep_* (ARC n=100); AQLM studiable cells "
@@ -314,21 +364,23 @@ def build_regime():
     }
 
 
-def build_f3a_proj():
+def _f3a_proj_block(model, proj_order, fname):
     """
-    Build tab:f3a_proj — per-projection recovery rho on Llama AQLM-2 middle band.
+    Build per-projection rho rows for one model middle-band JSON.
 
     Inputs:
-        - None
+        - model (str): Filename model token
+        - proj_order (list): Projection metadata tuples
+        - fname (str): JSON filename under localization/
 
     Outputs:
-        - block (dict): Projection rows with rho percent
+        - block (dict): Table payload
     """
-    pp = load(f"{OUT}/localization/per_projection_llama_aqlm2_L11-22.json")
+    pp = load(f"{OUT}/localization/{fname}")
     damage = g(pp, "damage_pp")
     rec = g(pp, "recovery_pp_per_projection", default = {}) or {}
     rows = []
-    for path, sym, func, n_mat in PROJ_ORDER:
+    for path, sym, func, n_mat in proj_order:
         rec_pp = rec.get(path)
         rows.append({
             "projection": sym,
@@ -338,25 +390,43 @@ def build_f3a_proj():
             "rho_pct": recovery_rho(rec_pp, damage),
         })
     return {
-        "source": "per_projection_llama_aqlm2_L11-22.json",
+        "source": fname,
         "layer_range": g(pp, "layer_range"),
         "damage_pp": rnd(damage, 1),
         "rows": rows,
     }
 
 
-def build_f3a_range():
+def build_f3a_proj():
     """
-    Build tab:f3a_range — depth-band read/write recovery.
+    Build tab:f3a_proj — per-projection recovery rho (Llama + Phi-3, middle band).
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): Early/middle/late bands for read and write sides
+        - block (dict): Per-model projection tables
     """
-    dbr = load(f"{OUT}/localization/depth_bands_llama_aqlm2_read.json")
-    dbw = load(f"{OUT}/localization/depth_bands_llama_aqlm2_write.json")
+    return {
+        "llama": _f3a_proj_block(
+            "llama", PROJ_ORDER, "per_projection_llama_aqlm2_L11-22.json"),
+        "phi3": _f3a_proj_block(
+            "phi3", PHI3_PROJ_ORDER, "per_projection_phi3_aqlm2_L11-22.json"),
+    }
+
+
+def _f3a_range_block(model):
+    """
+    Build depth-band read/write recovery for one model.
+
+    Inputs:
+        - model (str): Filename model token
+
+    Outputs:
+        - block (dict): Read and write side rows
+    """
+    dbr = load(f"{OUT}/localization/depth_bands_{model}_aqlm2_read.json")
+    dbw = load(f"{OUT}/localization/depth_bands_{model}_aqlm2_write.json")
     damage = g(dbr, "damage_pp") or g(dbw, "damage_pp")
 
     def side_rows(db, side):
@@ -378,24 +448,43 @@ def build_f3a_range():
         return out
 
     return {
-        "source": "depth_bands_llama_aqlm2_read/write.json",
+        "source": f"depth_bands_{model}_aqlm2_read/write.json",
         "damage_pp": rnd(damage, 1),
         "read": side_rows(dbr, "Read"),
         "write": side_rows(dbw, "Write"),
     }
 
 
-def build_f3a():
+def build_f3a_range():
     """
-    Build tab:f3a — static restoration headline (Llama AQLM-2).
+    Build tab:f3a_range — depth-band read/write recovery (Llama + Phi-3).
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): FP / quant / +W / +R / +Both with rho and XSTest
+        - block (dict): Per-model depth tables
     """
-    hl = load(f"{OUT}/headline/headline_llama_aqlm2.json")
+    return {
+        "llama": _f3a_range_block("llama"),
+        "phi3": _f3a_range_block("phi3"),
+    }
+
+
+def _f3a_block(model, quant_key="aqlm2"):
+    """
+    Build static restoration headline rows for one studiable cell.
+
+    Inputs:
+        - model (str): Filename model token
+        - quant_key (str): Quantizer id in headline JSON
+
+    Outputs:
+        - block (dict): FP / quant / restoration rows
+    """
+    hl = load(f"{OUT}/headline/headline_{model}_{quant_key}.json")
+    if not hl:
+        return {"source": f"headline_{model}_{quant_key}.json", "status": "missing"}
     damage = g(hl, "damage_pp")
     rec = g(hl, "recovery_pp", default = {}) or {}
     xs = g(hl, "xstest", default = {}) or {}
@@ -404,10 +493,10 @@ def build_f3a():
          "delta_quant": None, "rho_pct": None,
          "arc": rnd(g(hl, "arc", "fp32"), 0),
          "xstest_fr": rnd(g(xs.get("fp32", {}), "false_refusal_rate"), 1)},
-        {"restoration": "quant", "asr": rnd(g(hl, "asr", "aqlm2"), 1),
+        {"restoration": "quant", "asr": rnd(g(hl, "asr", quant_key), 1),
          "delta_quant": None, "rho_pct": None,
-         "arc": rnd(g(hl, "arc", "aqlm2"), 0),
-         "xstest_fr": rnd(g(xs.get("aqlm2", {}), "false_refusal_rate"), 1)},
+         "arc": rnd(g(hl, "arc", quant_key), 0),
+         "xstest_fr": rnd(g(xs.get(quant_key, {}), "false_refusal_rate"), 1)},
         {"restoration": "+ Write-side", "asr": rnd(g(hl, "asr", "write_restored"), 1),
          "delta_quant": rnd(-g(rec, "write"), 1) if rec.get("write") else None,
          "rho_pct": recovery_rho(rec.get("write"), damage),
@@ -425,10 +514,26 @@ def build_f3a():
          "xstest_fr": rnd(g(xs.get("both_restored", {}), "false_refusal_rate"), 1)},
     ]
     return {
-        "source": "headline_llama_aqlm2.json",
+        "source": f"headline_{model}_{quant_key}.json",
         "damage_pp": rnd(damage, 1),
         "rows": rows,
         "mcnemar_p": {k: g(v, "p_value") for k, v in (g(hl, "mcnemar", default = {}) or {}).items()},
+    }
+
+
+def build_f3a():
+    """
+    Build tab:f3a — static restoration headline (Llama + Phi-3 AQLM-2).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - block (dict): Per-model headline tables
+    """
+    return {
+        "llama": _f3a_block("llama"),
+        "phi3": _f3a_block("phi3"),
     }
 
 
@@ -474,7 +579,7 @@ def build_controls():
                 g(cosmed, "summary", "both_restored_cos_median"), 3)
         else:
             cell["direction_cosine"]["note"] = (
-                "cosmed_after_restore missing or empty — run "
+                "cosmed_after_restore missing or empty. Run "
                 f"experiments.signal_geometry.cosmed_after_restore --model {m}")
         out[m] = cell
     return {"source": "param_matched_restore, probe_refit_control, cosmed_after_restore", "cells": out}
@@ -482,57 +587,41 @@ def build_controls():
 
 def build_trained_repair():
     """
-    Build tab:trained_repair — Q-Resafe folded patches (rank 128 target).
+    Build tab:trained_repair — Q-Resafe folded ASR at ranks 128 through 2048.
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): Reader / Writer / Both rows when JSON exists
+        - block (dict): Patch x rank grid
     """
-    role_files = {
-        "Reader": "qresafe_dpo_llama_aqlm2_read_r128.json",
-        "Writer": "qresafe_dpo_llama_aqlm2_write_r128.json",
-        "Both": "qresafe_dpo_llama_aqlm2_full_r128.json",
-    }
-    rows = []
-    for patch, fname in role_files.items():
-        d = load(f"{OUT}/trained_repair/{fname}")
-        if not d:
-            rows.append({"patch": patch, "rank": 128, "status": "missing or running"})
-            continue
-        rank = g(d, "manifest", "r") or g(d, "manifest", "extra", "r") or 128
-        rows.append({
-            "patch": patch,
-            "rank": rank,
-            "asr": rnd(g(d, "folded", "asr"), 1),
-            "arc": rnd(g(d, "folded", "arc"), 0),
-            "xstest_fr": rnd(g(d, "folded", "xstest_fr"), 1),
-            "mean_codes_changed": g(d, "mean_codes_changed"),
-            "status": "complete",
-        })
-    # Also surface any other qresafe_dpo variants for in-progress sweeps
-    extras = {}
-    for f in sorted(glob.glob(f"{OUT}/trained_repair/qresafe_dpo_*.json")):
-        stem = Path(f).stem.replace("qresafe_dpo_", "")
-        if stem in ("llama_aqlm2_read", "llama_aqlm2_write", "llama_aqlm2_full"):
-            d = load(f)
-            extras[stem] = {
-                "r": g(d, "manifest", "r") or g(d, "manifest", "extra", "r"),
-                "folded_asr": rnd(g(d, "folded", "asr"), 1),
-                "folded_arc": rnd(g(d, "folded", "arc"), 0),
+    grid = {}
+    for patch, stem in QRESAFE_PATCHES:
+        grid[patch] = {}
+        for rank in QRESAFE_RANKS:
+            fname = f"qresafe_dpo_llama_aqlm2_{stem}_r{rank}.json"
+            d = load(f"{OUT}/trained_repair/{fname}")
+            if not d:
+                grid[patch][str(rank)] = {"status": "missing"}
+                continue
+            grid[patch][str(rank)] = {
+                "asr": rnd(g(d, "folded", "asr"), 1),
+                "arc": rnd(g(d, "folded", "arc"), 0),
+                "xstest_fr": rnd(g(d, "folded", "xstest_fr"), 1),
+                "mean_codes_changed": g(d, "mean_codes_changed"),
+                "status": "complete",
             }
     return {
-        "source": "qresafe_dpo_* (folded metrics)",
+        "source": "qresafe_dpo_llama_aqlm2_{read,write,full}_r{128..2048}.json",
         "reference": {"fp_asr": 41.0, "aqlm2_asr": 62.5, "fp_xstest": 6.0, "aqlm2_arc": 46},
-        "rows": rows,
-        "other_variants": extras,
+        "ranks": list(QRESAFE_RANKS),
+        "grid": grid,
     }
 
 
 def build_lrqat():
     """
-    Build tab:lrqat — LR-QAT cells for Llama AQLM-2 read/write x int2/int4.
+    Build tab:lrqat — LR-QAT cells for Llama AQLM-2 read/write x int2/int3/int4.
 
     Inputs:
         - None
@@ -547,6 +636,9 @@ def build_lrqat():
     rows.append({"role": "AQLM-2", "bits": 2.0, **refs["aqlm2"]})
 
     for f in sorted(glob.glob(f"{OUT}/trained_repair/lrqat_llama_aqlm2_*.json")):
+        stem = Path(f).stem
+        if "L11-22" in stem or "_both_" in stem:
+            continue
         d = load(f)
         if not d or "asr_lrqat_trained" not in d:
             continue
@@ -569,7 +661,153 @@ def build_lrqat():
             "coherent": "no" if train_coll else "yes",
             "effective_bits": rnd(g(d, "repaired_effective_bits"), 2),
         })
-    return {"source": "lrqat_llama_aqlm2_*.json", "rows": rows}
+    return {"source": "lrqat_llama_aqlm2_read/write_int{2,3,4}.json", "rows": rows}
+
+
+def build_ppl():
+    """
+    Build tab:ppl — WikiText-2 perplexity per model/quant cell.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - block (dict): PPL absolute and ratio to FP32
+    """
+    by_model = {}
+    for m in MODELS:
+        rows = []
+        fp = load(f"{OUT}/regime_sweep/wikitext_ppl_{m}_fp32_wikitext2_ppl.json")
+        if fp and g(fp, "wikitext2_ppl") is not None:
+            rows.append({
+                "quant": "fp32",
+                "quant_label": "FP",
+                "ppl": rnd(g(fp, "wikitext2_ppl"), 2),
+                "ratio_fp": 1.0,
+                "status": g(fp, "status", default = "ok"),
+            })
+        for q in QUANTS:
+            if m == "qwen" and q == "aqlm2":
+                continue
+            d = load(f"{OUT}/regime_sweep/wikitext_ppl_{m}_{q}_wikitext2_ppl.json")
+            if not d:
+                continue
+            rows.append({
+                "quant": q,
+                "quant_label": QUANT_LABEL[q],
+                "ppl": rnd(g(d, "wikitext2_ppl"), 2),
+                "ratio_fp": rnd(g(d, "ppl_ratio"), 2),
+                "status": g(d, "status", default = "ok"),
+            })
+        if rows:
+            by_model[m] = {"model_label": MODEL_LABEL[m], "rows": rows}
+    return {"source": "wikitext_ppl_*_wikitext2_ppl.json", "by_model": by_model}
+
+
+def build_dequant():
+    """
+    Build tab:dequant — GPTQ-4 read-side replacement on AQLM-2 cells.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - block (dict): Per-model all/middle band rows
+    """
+    out = {}
+    for model, band in DEQUANT_CELLS:
+        suffix = "all" if band == "all" else band
+        fname = f"targeted_dequant_{model}_aqlm2_read_gptq4_{suffix}.json"
+        d = load(f"{OUT}/regime_sweep/{fname}")
+        if not d:
+            out[f"{model}/{band}"] = {"status": "missing", "source": fname}
+            continue
+        eb = g(d, "effective_bits", default = {}) or {}
+        out[f"{model}/{band}"] = {
+            "source": fname,
+            "model_label": MODEL_LABEL[model],
+            "band": band,
+            "asr": rnd(g(d, "asr_per_condition", "gptq44_restore"), 1),
+            "arc": rnd(g(d, "arc_per_condition", "gptq44_restore"), 0),
+            "xstest_fr": rnd(g(d, "xstest_false_refusal", "gptq44_restore"), 1),
+            "effective_bits": rnd(g(eb, "effective_bits"), 2),
+            "aqlm2_asr": rnd(g(d, "asr_per_condition", "aqlm2"), 1),
+        }
+    awq = load(f"{OUT}/regime_sweep/targeted_dequant_llama_aqlm2_read_awq_all.json")
+    if awq:
+        out["llama/awq_collapse"] = {
+            "source": "targeted_dequant_llama_aqlm2_read_awq_all.json",
+            "asr": rnd(g(awq, "asr_per_condition", "awq4_restore"), 1),
+            "arc": rnd(g(awq, "arc_per_condition", "awq4_restore"), 0),
+            "note": "AWQ substitution collapse (swap-invalid control)",
+        }
+    return out
+
+
+def build_leakage():
+    """
+    Build probe leakage control summary (surface vs residual probe).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - block (dict): Per-model XSTest specificity/recall
+    """
+    cells = {}
+    for m in ("llama", "phi3"):
+        d = load(f"{OUT}/boundary/probe_leakage_control_{m}.json")
+        if not d:
+            continue
+        s = g(d, "summary", default = {}) or {}
+        cells[m] = {
+            "label": MODEL_LABEL[m],
+            "residual_xstest_safe_specificity": rnd(g(s, "residual_xstest_safe_specificity"), 3),
+            "residual_xstest_unsafe_recall": rnd(g(s, "residual_xstest_unsafe_recall"), 3),
+            "residual_harmbench_transfer_recall": rnd(g(s, "residual_harmbench_transfer_recall"), 3),
+            "surface_xstest_unsafe_recall": rnd(g(s, "surface_xstest_unsafe_recall"), 3),
+        }
+    return {"source": "probe_leakage_control_{llama,phi3}.json", "cells": cells}
+
+
+def build_stats():
+    """
+    Build table:stats — paired McNemar on Llama AQLM-2 headline run.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - block (dict): quant vs read/write and read vs write
+    """
+    hl = load(f"{OUT}/headline/headline_llama_aqlm2.json")
+    if not hl:
+        return {"status": "missing headline_llama_aqlm2.json"}
+    rec = g(hl, "recovery_pp", default = {}) or {}
+    rows = [
+        {"comparison": "quant vs. read", "b": g(hl, "mcnemar", "aqlm2_vs_read", "b"),
+         "c": g(hl, "mcnemar", "aqlm2_vs_read", "c"),
+         "p": g(hl, "mcnemar", "aqlm2_vs_read", "p_value"),
+         "delta_asr_pp": rnd(g(rec, "read"), 1)},
+        {"comparison": "quant vs. write", "b": g(hl, "mcnemar", "aqlm2_vs_write", "b"),
+         "c": g(hl, "mcnemar", "aqlm2_vs_write", "c"),
+         "p": g(hl, "mcnemar", "aqlm2_vs_write", "p_value"),
+         "delta_asr_pp": rnd(g(rec, "write"), 1)},
+        {"comparison": "read vs. write", "b": g(hl, "mcnemar", "read_vs_write", "b"),
+         "c": g(hl, "mcnemar", "read_vs_write", "c"),
+         "p": g(hl, "mcnemar", "read_vs_write", "p_value"),
+         "delta_asr_pp": rnd((rec.get("read") or 0) - (rec.get("write") or 0), 1)},
+    ]
+    boot = g(hl, "recovery_ci_95", default = {}) or {}
+    return {
+        "source": "headline_llama_aqlm2.json",
+        "rows": rows,
+        "recovery_ci_95_pp": {
+            "read": boot.get("read"),
+            "write": boot.get("write"),
+            "read_minus_write": boot.get("read_minus_write"),
+        },
+    }
 
 
 def build():
@@ -600,6 +838,10 @@ def build():
         "tab:controls": build_controls(),
         "tab:trained_repair": build_trained_repair(),
         "tab:lrqat": build_lrqat(),
+        "tab:ppl": build_ppl(),
+        "tab:dequant": build_dequant(),
+        "tab:leakage": build_leakage(),
+        "table:stats": build_stats(),
     }
 
 
@@ -648,32 +890,56 @@ def as_markdown(pv):
             f"| {v['model_label']} | {v['quant_label']} | {cells} | "
             f"{fmt_cell(v['screen_verdict'])} |")
 
-    lines.append("\n## tab:f3a_proj\n")
-    lines.append("| Projection | Function | Matrices | rho % |")
-    lines.append("|---|---|---:|---:|")
-    for row in pv["tab:f3a_proj"]["rows"]:
+    lines.append("\n## tab:regime (paired Delta ASR)\n")
+    lines.append("| Model | Quant | dASR | 95% CI | p Holm |")
+    lines.append("|---|---|---:|---|---:|")
+    for key, v in pv["tab:regime"]["cells"].items():
+        p = v.get("paired")
+        if not p:
+            continue
+        ci = p.get("ci95") or [None, None]
         lines.append(
-            f"| {row['projection']} | {row['function']} | {row['matrices']} | "
-            f"{fmt_cell(row['rho_pct'])} |")
+            f"| {v['model_label']} | {v['quant_label']} | {fmt_cell(p.get('delta_asr'))} | "
+            f"[{fmt_cell(ci[0])}, {fmt_cell(ci[1])}] | {fmt_cell(p.get('p_holm'))} |")
 
-    lines.append("\n## tab:f3a_range\n")
-    lines.append("| Side | Range | Layers | ASR | rho % | ARC |")
-    lines.append("|---|---|---|---:|---:|---:|")
-    for side_key in ("read", "write"):
-        for row in pv["tab:f3a_range"][side_key]:
+    for model_key, label in (("llama", "Llama-3.1-8B"), ("phi3", "Phi-3-mini")):
+        proj = pv["tab:f3a_proj"].get(model_key, {})
+        if not proj.get("rows"):
+            continue
+        lines.append(f"\n## tab:f3a_proj ({label})\n")
+        lines.append("| Projection | Function | Matrices | rho % |")
+        lines.append("|---|---|---:|---:|")
+        for row in proj["rows"]:
             lines.append(
-                f"| {row['side']} | {row['range']} | {row['layers']} | "
-                f"{fmt_cell(row['asr'])} | {fmt_cell(row['rho_pct'])} | "
-                f"{fmt_cell(row['arc'])} |")
+                f"| {row['projection']} | {row['function']} | {row['matrices']} | "
+                f"{fmt_cell(row['rho_pct'])} |")
 
-    lines.append("\n## tab:f3a\n")
-    lines.append("| Restoration | ASR | delta quant | rho % | ARC | XSTest |")
-    lines.append("|---|---|---:|---:|---:|---:|")
-    for row in pv["tab:f3a"]["rows"]:
-        lines.append(
-            f"| {row['restoration']} | {fmt_cell(row['asr'])} | "
-            f"{fmt_cell(row['delta_quant'])} | {fmt_cell(row['rho_pct'])} | "
-            f"{fmt_cell(row['arc'])} | {fmt_cell(row['xstest_fr'])} |")
+    for model_key, label in (("llama", "Llama-3.1-8B"), ("phi3", "Phi-3-mini")):
+        depth = pv["tab:f3a_range"].get(model_key, {})
+        if not depth.get("read"):
+            continue
+        lines.append(f"\n## tab:f3a_range ({label})\n")
+        lines.append("| Side | Range | Layers | ASR | rho % | ARC |")
+        lines.append("|---|---|---|---:|---:|---:|")
+        for side_key in ("read", "write"):
+            for row in depth[side_key]:
+                lines.append(
+                    f"| {row['side']} | {row['range']} | {row['layers']} | "
+                    f"{fmt_cell(row['asr'])} | {fmt_cell(row['rho_pct'])} | "
+                    f"{fmt_cell(row['arc'])} |")
+
+    for model_key, label in (("llama", "Llama-3.1-8B"), ("phi3", "Phi-3-mini")):
+        f3 = pv["tab:f3a"].get(model_key, {})
+        if not f3.get("rows"):
+            continue
+        lines.append(f"\n## tab:f3a ({label})\n")
+        lines.append("| Restoration | ASR | delta quant | rho % | ARC | XSTest |")
+        lines.append("|---|---|---:|---:|---:|---:|")
+        for row in f3["rows"]:
+            lines.append(
+                f"| {row['restoration']} | {fmt_cell(row['asr'])} | "
+                f"{fmt_cell(row['delta_quant'])} | {fmt_cell(row['rho_pct'])} | "
+                f"{fmt_cell(row['arc'])} | {fmt_cell(row['xstest_fr'])} |")
 
     lines.append("\n## tab:controls\n")
     for m, cell in pv["tab:controls"]["cells"].items():
@@ -693,13 +959,56 @@ def as_markdown(pv):
                 lines.append(f"| Direction cos {k} | {fmt_cell(dc[k])} |")
 
     lines.append("\n## tab:trained_repair\n")
-    lines.append("| Patch | Rank | ASR | ARC | XSTest | Status |")
-    lines.append("|---|---:|---:|---:|---:|---|")
-    for row in pv["tab:trained_repair"]["rows"]:
+    tr = pv["tab:trained_repair"]
+    header = "| Patch | " + " | ".join(str(r) for r in tr["ranks"]) + " |"
+    lines.append(header)
+    lines.append("|" + "---|" * (len(tr["ranks"]) + 1))
+    for patch, ranks in tr["grid"].items():
+        cells = []
+        for rank in tr["ranks"]:
+            cell = ranks.get(str(rank), {})
+            if cell.get("status") == "missing":
+                cells.append("--")
+            else:
+                cells.append(fmt_cell(cell.get("asr")))
+        lines.append(f"| {patch} | " + " | ".join(cells) + " |")
+
+    lines.append("\n## tab:ppl\n")
+    lines.append("| Model | Quant | PPL | x FP |")
+    lines.append("|---|---|---:|---:|")
+    for m, block in pv["tab:ppl"]["by_model"].items():
+        for row in block["rows"]:
+            lines.append(
+                f"| {block['model_label']} | {row['quant_label']} | "
+                f"{fmt_cell(row['ppl'])} | {fmt_cell(row['ratio_fp'])} |")
+
+    lines.append("\n## tab:dequant\n")
+    lines.append("| Cell | ASR | ARC | XSTest | Bits |")
+    lines.append("|---|---:|---:|---:|---:|")
+    for key, row in pv["tab:dequant"].items():
+        if row.get("status") == "missing":
+            continue
         lines.append(
-            f"| {row['patch']} | {row['rank']} | {fmt_cell(row.get('asr'))} | "
-            f"{fmt_cell(row.get('arc'))} | {fmt_cell(row.get('xstest_fr'))} | "
-            f"{row.get('status', '--')} |")
+            f"| {key} | {fmt_cell(row.get('asr'))} | {fmt_cell(row.get('arc'))} | "
+            f"{fmt_cell(row.get('xstest_fr'))} | {fmt_cell(row.get('effective_bits'))} |")
+
+    lines.append("\n## tab:leakage\n")
+    lines.append("| Model | Residual spec | Residual unsafe rec | HarmBench transfer | Surface unsafe rec |")
+    lines.append("|---|---:|---:|---:|---:|")
+    for m, cell in pv["tab:leakage"]["cells"].items():
+        lines.append(
+            f"| {cell['label']} | {fmt_cell(cell['residual_xstest_safe_specificity'])} | "
+            f"{fmt_cell(cell['residual_xstest_unsafe_recall'])} | "
+            f"{fmt_cell(cell['residual_harmbench_transfer_recall'])} | "
+            f"{fmt_cell(cell['surface_xstest_unsafe_recall'])} |")
+
+    lines.append("\n## table:stats\n")
+    lines.append("| Comparison | b | c | p | delta ASR pp |")
+    lines.append("|---|---:|---:|---:|---:|")
+    for row in pv["table:stats"].get("rows", []):
+        lines.append(
+            f"| {row['comparison']} | {fmt_cell(row['b'])} | {fmt_cell(row['c'])} | "
+            f"{fmt_cell(row['p'])} | {fmt_cell(row['delta_asr_pp'])} |")
 
     lines.append("\n## tab:lrqat\n")
     lines.append("| Role | Bits | ASR | ARC | Coherent |")

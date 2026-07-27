@@ -6,9 +6,9 @@
 #SBATCH -N 1
 #SBATCH --time=0:30:00
 #SBATCH --mem=64G
-#SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/smoke_env_%j.out
-#SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/smoke_env_%j.err
-source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
+#SBATCH --output=scripts/logs/smoke_env_%j.out
+#SBATCH --error=scripts/logs/smoke_env_%j.err
+source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 
 # Fast plumbing check: env + CUDA + pytest + seed. No full model experiments.
 

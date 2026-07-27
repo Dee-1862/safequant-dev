@@ -31,7 +31,7 @@ safequant/
 ## Bridges-2 quick start
 
 ```bash
-cd /jet/home/bhoomire/projects/safequant_v2
+cd "${REPO_ROOT:-$PWD}"
 bash scripts/setup_env.sh
 
 sbatch scripts/headline/headline_eval_llama.sbatch
@@ -39,7 +39,7 @@ sbatch scripts/trained_repair/qresafe_pairs.sbatch
 sbatch scripts/trained_repair/qresafe_dpo.sbatch read
 ```
 
-Model aliases (e.g. `phi3`) and HuggingFace IDs are in [`config.py`](config.py). Caches go to Ocean via `HF_HOME` in `scripts/_env.sh`.
+Model aliases (e.g. `phi3`) and HuggingFace IDs are in [`config.py`](config.py). Set `HF_HOME` and `QUANTIZED_MODELS` via `scripts/_env.sh` or `.env` (see `.env.example`).
 
 ## Smoke test locally
 

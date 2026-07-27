@@ -207,6 +207,26 @@ def eval_model(model, tok, n_eval, n_arc, label):
     return {"asr": asr, "arc": arc, "xstest_fr": xs["false_refusal_rate"]}
 
 
+def _load_pairs(pairs_path):
+    """
+    Load displacement pairs; reject anonymized artifacts unsuitable for DPO.
+
+    Inputs:
+        - pairs_path (Path): JSON from qresafe_pairs
+
+    Outputs:
+        - pairs (list[dict]): Full instruction/yw/yl records
+    """
+    blob = json.loads(pairs_path.read_text())
+    pairs = blob["pairs"]
+    if pairs and "instruction" not in pairs[0]:
+        raise SystemExit(
+            f"{pairs_path}: anonymized pairs (hashes only). "
+            "Re-run experiments.trained_repair.qresafe_pairs with --store_text "
+            "before DPO training.")
+    return pairs
+
+
 def main():
     # Parse CLI arguments (defaults match official Q-Resafe llama7b recipe)
     ap = argparse.ArgumentParser()
@@ -254,7 +274,7 @@ def main():
         )
         or result_path(Path("experiments/trained_repair/qresafe_pairs.py"), pairs_cfg)
     )
-    pairs = json.loads(pairs_path.read_text())["pairs"]
+    pairs = _load_pairs(pairs_path)
     print(f"[data] {len(pairs)} displacement pairs from {pairs_path} | mask={args.mask}")
 
     # Attach masked LoRA and train

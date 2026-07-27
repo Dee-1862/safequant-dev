@@ -1,6 +1,7 @@
 # Build FP-refused / quant-complied displacement pairs for Q-Resafe DPO.
 import argparse
 import gc
+import hashlib
 import json
 from pathlib import Path
 
@@ -60,6 +61,42 @@ def get_items(source, n_prompts, wj_config):
     raise ValueError(f"unknown prompt_source: {source}")
 
 
+def _sha256(text):
+    """
+    Return hex digest of UTF-8 text for anonymized pair records.
+
+    Inputs:
+        - text (str): Raw string
+
+    Outputs:
+        - digest (str): SHA-256 hex
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _anonymize_pairs(pairs):
+    """
+    Strip harmful prompt/completion text; keep indices and content hashes only.
+
+    Inputs:
+        - pairs (list[dict]): Full displacement pairs
+
+    Outputs:
+        - redacted (list[dict]): Safe-to-share metadata per pair
+    """
+    redacted = []
+    for i, pr in enumerate(pairs):
+        redacted.append({
+            "prompt_index": pr.get("prompt_index", i),
+            "instruction_sha256": _sha256(pr["instruction"]),
+            "yw_sha256": _sha256(pr["yw"]),
+            "yl_sha256": _sha256(pr["yl"]),
+            "yw_len": len(pr["yw"]),
+            "yl_len": len(pr["yl"]),
+        })
+    return redacted
+
+
 def _send_prompt(item):
     """
     Extract the user-facing prompt string from a heterogeneous item dict.
@@ -86,6 +123,8 @@ def main():
     ap.add_argument("--max_new_tokens", type = int, default = 256)
     ap.add_argument("--output", default = None,
                     help = "override output path (default: outputs/trained_repair/qresafe_pairs_<model>_<quant>[_<tag>].json)")
+    ap.add_argument("--store_text", action = "store_true",
+                    help = "persist full instruction/completions (local DPO only; default saves anonymized hashes)")
     args = ap.parse_args()
 
     set_global_seed(DEFAULT_SEED)
@@ -127,15 +166,20 @@ def main():
 
     # Displacement set: FP refused, quantized complied
     pairs = []
-    for sp, fw, fh, qr, qh in zip(sends, fp_resp, fp_harmful, q_resp, q_harmful):
+    for idx, (sp, fw, fh, qr, qh) in enumerate(zip(sends, fp_resp, fp_harmful, q_resp, q_harmful)):
         if (not fh) and qh:
-            pairs.append({"instruction": sp, "yw": fw.strip(), "yl": qr.strip()})
+            pairs.append({
+                "prompt_index": idx,
+                "instruction": sp,
+                "yw": fw.strip(),
+                "yl": qr.strip(),
+            })
     print(f"[pairs] {len(pairs)} displacement pairs (FP refused & {args.quantizer} complied)")
     if len(pairs) < 20:
         print(f"  WARNING: only {len(pairs)} displacement pairs -- saliency may be noisy. "
               f"Consider widening n_prompts or relaxing the filter.")
 
-    # Persist pairs JSON
+    # Persist pairs JSON (anonymized by default; pass --store_text for DPO training)
     cfg = RunConfig(
         model = args.model,
         quantizer = args.quantizer,
@@ -148,9 +192,14 @@ def main():
             "q_asr": q_asr,
             "max_new_tokens": args.max_new_tokens,
             "filter": "fp_refused AND quant_complied",
+            "anonymized": not args.store_text,
         },
     )
-    data = {"n_pairs": len(pairs), "pairs": pairs}
+    if args.store_text:
+        payload_pairs = pairs
+    else:
+        payload_pairs = _anonymize_pairs(pairs)
+    data = {"n_pairs": len(pairs), "pairs": payload_pairs}
     if args.output:
         out_path = Path(args.output)
         out_path.parent.mkdir(parents = True, exist_ok = True)

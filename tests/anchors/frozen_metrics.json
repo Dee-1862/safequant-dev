@@ -4,7 +4,7 @@
     "quantizer": "aqlm2",
     "n_calib": 50,
     "source": "outputs/signal_geometry/direction_drift_llama_aqlm2.json",
-    "cos_sim_median": 0.7861571311950684,
+    "cos_sim_median": 0.7829168438911438,
     "token_pos": -5
   },
   "probe_accuracy": {

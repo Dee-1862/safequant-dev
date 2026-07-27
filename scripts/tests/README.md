@@ -26,9 +26,8 @@ SKIP_PHI=1 bash scripts/tests/submit_smoke.sh     # llama only
 ## 1. Login node (no GPU)
 
 ```bash
-cd /jet/home/bhoomire/projects/safequant_v2   # or your REPO_ROOT
-source /opt/packages/anaconda3-2024.10-1/etc/profile.d/conda.sh
-conda activate /ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean
+cd "${REPO_ROOT:-$PWD}"
+source scripts/_env.sh
 
 # Unit tests (seed + anchors). Must be 14 passed.
 # If pytest is missing:  pip install pytest
@@ -101,5 +100,5 @@ ls -lt outputs/signal_geometry/ outputs/headline/ | head
 ## Overrides
 
 ```bash
-REPO_ROOT=/jet/home/bhoomire/projects/safequant sbatch scripts/tests/03_smoke_phi3_aqlm2.sbatch
+REPO_ROOT=/path/to/safequant sbatch scripts/tests/03_smoke_phi3_aqlm2.sbatch
 ```

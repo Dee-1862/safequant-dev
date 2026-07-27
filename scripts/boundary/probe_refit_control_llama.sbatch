@@ -6,9 +6,9 @@
 #SBATCH -N 1
 #SBATCH --time=2:00:00
 #SBATCH --mem=128G
-#SBATCH --output=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/refit_llama_%j.out
-#SBATCH --error=/jet/home/bhoomire/projects/safequant_v2/scripts/logs/refit_llama_%j.err
-source "${SLURM_SUBMIT_DIR:-/jet/home/bhoomire/projects/safequant_v2}/scripts/_env.sh"
+#SBATCH --output=scripts/logs/refit_llama_%j.out
+#SBATCH --error=scripts/logs/refit_llama_%j.err
+source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 
 
 echo "=== probe refit control Llama | $(date) ==="

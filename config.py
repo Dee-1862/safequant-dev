@@ -9,19 +9,12 @@ PHASE1_DIR = os.path.join(PROJECT_ROOT, "phase1_problem")
 DATA_DIR = os.path.join(PHASE1_DIR, "data", "prompts")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
-# -- Bridges-2 / HuggingFace cache --------------------------------------------
-# Models are 1-10 GB each. $HOME has a 25 GB quota on Bridges-2 so we must
-# redirect the HF cache to Ocean ($PROJECT).
-# Priority order (first one that is set wins):
-#   1. HF_HOME env var  (set in sbatch scripts)
-#   2. OCEAN_CACHE env var  (legacy override)
-#   3. Detected Ocean path for this user
-#   4. ~/.cache/huggingface (default, fine on non-Bridges machines)
-_OCEAN_DEFAULT = "/ocean/projects/cis240116p/bhoomire/.cache/huggingface"
+# -- HuggingFace cache ---------------------------------------------------------
+# Set HF_HOME / QUANTIZED_MODELS in the environment (see .env.example and
+# scripts/_env.sh). Defaults suit a single-machine checkout.
 HF_HOME = (
     os.environ.get("HF_HOME")
     or os.environ.get("OCEAN_CACHE")
-    or (_OCEAN_DEFAULT if os.path.isdir("/ocean/projects/cis240116p") else None)
     or os.path.expanduser("~/.cache/huggingface")
 )
 # Tell HuggingFace libraries where to cache -- must be set before any import
@@ -33,8 +26,8 @@ os.environ.setdefault("HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets"))
 #   <_QM>/base/<alias>/  <_QM>/awq/<alias>/  <_QM>/aqlm/<alias>/
 #   <_QM>/<alias>-gptq<bits>bit-g128/   (self-generated GPTQ)
 # Populated by scripts/fetch_checkpoints.sh + scripts/quantize_gptq.py.
-_QM = (os.path.join(os.path.dirname(os.path.dirname(HF_HOME)), "quantized_models")
-       if HF_HOME else "/ocean/projects/cis240116p/bhoomire/quantized_models")
+_QM = os.environ.get("QUANTIZED_MODELS") or os.path.join(
+    os.path.dirname(HF_HOME.rstrip(os.sep)), "quantized_models")
 
 # -- Models -------------------------------------------------------------------
 # Short aliases -> HuggingFace model IDs.
