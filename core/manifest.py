@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -77,29 +76,6 @@ class RunConfig:
             if not d.get(k):
                 d.pop(k, None)
         return d
-
-
-def _git_sha():
-    """
-    Resolve the current repository HEAD SHA, or None if unavailable.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - git_sha (str | None): Current HEAD, or None
-    """
-    # Ask git for HEAD; tolerate missing git or non-repo checkouts
-    try:
-        return (
-            subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], stderr = subprocess.DEVNULL
-            )
-            .decode()
-            .strip()
-        )
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
 
 
 def _build_stem(calling_file, cfg):
@@ -218,7 +194,6 @@ def save_result(calling_file, cfg, data, raw = False):
     path.parent.mkdir(parents = True, exist_ok = True)
     payload = {
         "manifest": {**cfg.to_dict(), **cfg.extra},
-        "git_sha": _git_sha(),
         **data,
     }
     path.write_text(json.dumps(payload, indent = 2, default = str))
