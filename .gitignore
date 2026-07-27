@@ -1,0 +1,16 @@
+# Secrets and local env
+.env
+.env.local
+
+# Slurm logs
+scripts/logs/*
+logs/
+.gyst/
+.pytest_cache/
+.vscode/
+.trash/
+.ruff_cache/
+__pycache__/
+
+.pyc
+docs/

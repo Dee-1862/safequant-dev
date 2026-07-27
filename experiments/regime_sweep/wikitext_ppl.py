@@ -23,7 +23,7 @@ _SCRIPT = Path(__file__)
 
 def _save(model, quantizer, seq_len, ppl, ppl_fp32, status):
     ratio = (ppl / ppl_fp32) if (ppl is not None and ppl_fp32) else None
-    cfg = RunConfig(model=model, quantizer=quantizer, variant="wikitext2_ppl")
+    cfg = RunConfig(model = model, quantizer = quantizer, variant = "wikitext2_ppl")
     return save_result(_SCRIPT, cfg, {
         "model": model, "quantizer": quantizer, "seq_len": seq_len,
         "wikitext2_ppl": ppl, "wikitext2_ppl_fp32": ppl_fp32,
@@ -33,22 +33,31 @@ def _save(model, quantizer, seq_len, ppl, ppl_fp32, status):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="WikiText-2 perplexity per regime cell.")
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizers", nargs="+",
-                    default=["awq", "gptq4", "aqlm2", "gptq3", "gptq2"])
-    ap.add_argument("--seq_len", type=int, default=2048)
-    ap.add_argument("--max_chunks", type=int, default=None,
-                    help="cap number of PPL windows (smoke/quick-eval only)")
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
+    ap = argparse.ArgumentParser(description = "WikiText-2 perplexity per regime cell.")
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizers", nargs = "+",
+                    default = ["awq", "gptq4", "aqlm2", "gptq3", "gptq2"])
+    ap.add_argument("--seq_len", type = int, default = 2048)
+    ap.add_argument("--max_chunks", type = int, default = None,
+                    help = "cap number of PPL windows (smoke/quick-eval only)")
     args = ap.parse_args()
 
     text = load_wikitext2("test")
-    print(f"=== WikiText-2 PPL | {args.model} | seq_len={args.seq_len} | seed={SEED} ===")
+    print(f"=== WikiText-2 PPL | {args.model} | seq_len = {args.seq_len} | seed = {SEED} ===")
 
     # FP32 reference (per model)
     fp32_model, tokenizer = load_fp32(args.model)
-    ppl_fp32 = measure_perplexity(fp32_model, tokenizer, text, seq_len=args.seq_len,
-                                  max_chunks=args.max_chunks, desc=f"{args.model}/fp32")
+    ppl_fp32 = measure_perplexity(fp32_model, tokenizer, text, seq_len = args.seq_len,
+                                  max_chunks = args.max_chunks, desc = f"{args.model}/fp32")
     print(f"  fp32 PPL = {ppl_fp32:.3f}")
     del fp32_model
     gc.collect()
@@ -59,9 +68,9 @@ def main():
     for q in args.quantizers:
         print(f"\n---- {args.model} / {q} ----")
         try:
-            qm, tok = load_quantized(args.model, quantizer=q)
-            ppl_q = measure_perplexity(qm, tok, text, seq_len=args.seq_len,
-                                       max_chunks=args.max_chunks, desc=f"{args.model}/{q}")
+            qm, tok = load_quantized(args.model, quantizer = q)
+            ppl_q = measure_perplexity(qm, tok, text, seq_len = args.seq_len,
+                                       max_chunks = args.max_chunks, desc = f"{args.model}/{q}")
             status = "ok"
             print(f"  {q} PPL = {ppl_q:.3f}  (x{ppl_q / ppl_fp32:.3f} vs fp32)")
             del qm

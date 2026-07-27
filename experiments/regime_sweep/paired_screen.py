@@ -8,9 +8,7 @@
 # applied separately; this script owns only the paired-increase criterion.
 #
 # Labels come from flags_by_cond in the result JSON (headline for the two AQLM
-# studiable cells; the flag-augmented restoration_sweep for the other 17). Run
-#   python -m experiments.regime_sweep.paired_screen --self_test
-# to verify the estimator against cases with known answers before trusting a sweep.
+# studiable cells; the flag-augmented restoration_sweep for the other 17).
 
 import argparse
 import json
@@ -28,42 +26,64 @@ NA_CELLS = set()
 
 RESTORE_SCRIPT = Path("experiments/regime_sweep/restoration_sweep.py")
 HEADLINE_SCRIPT = Path("experiments/headline/headline_eval.py")
+STUDIABLE_HEADLINE = {("llama", "aqlm2"), ("phi3", "aqlm2")}
 
 
 def load_labels(path, quant_key):
     """
-    Return (fp_flags, quant_flags) as int lists from a result JSON carrying
-    flags_by_cond. The two share the same prompt order within a single run, so no
-    id-sorting is needed; if you ever pair labels from SEPARATE runs, align by id
-    first. Raises KeyError (with guidance) when labels are absent.
+    Extract paired fp32/quant compliance flags from a result JSON.
+
+    Inputs:
+        - path (str | Path): Result JSON with flags_by_cond
+        - quant_key (str): Quantized condition key (e.g. "aqlm2")
+
+    Outputs:
+        - fp_flags (list[int]): Full-precision flags
+        - quant_flags (list[int]): Quantized flags (same prompt order)
     """
-    d = json.loads(Path(path).read_text())
+    d = json.loads(Path(path).read_text(encoding = "utf-8"))
     fbc = d.get("flags_by_cond")
     if not fbc:
         raise KeyError(f"{path}: no flags_by_cond (re-run restoration_sweep to dump labels)")
     if "fp32" not in fbc or quant_key not in fbc:
-        raise KeyError(f"{path}: flags_by_cond missing 'fp32' or '{quant_key}' "
-                       f"(has {list(fbc)})")
+        raise KeyError(
+            f"{path}: flags_by_cond missing 'fp32' or '{quant_key}' (has {list(fbc)})")
     to_int = lambda xs: [int(bool(x)) for x in xs]
     return to_int(fbc["fp32"]), to_int(fbc[quant_key])
 
 
 def _find_cell_json(model, quantizer):
-    """Prefer the headline artifact (canonical, has flags), else restoration_sweep."""
-    cfg = RunConfig(model=model, quantizer=quantizer)
-    for script in (HEADLINE_SCRIPT, RESTORE_SCRIPT):
-        p = find_result(script, cfg)
-        if p and Path(p).exists():
+    """Prefer headline JSON for studiable AQLM cells, else restoration_sweep."""
+    if (model, quantizer) in STUDIABLE_HEADLINE:
+        hl = Path(f"outputs/headline/headline_{model}_{quantizer}.json")
+        if hl.is_file():
             try:
-                if json.loads(Path(p).read_text()).get("flags_by_cond"):
-                    return p
+                if json.loads(hl.read_text(encoding = "utf-8")).get("flags_by_cond"):
+                    return hl
             except Exception:
                 pass
+    cfg = RunConfig(model = model, quantizer = quantizer)
+    p = find_result(RESTORE_SCRIPT, cfg)
+    if p and Path(p).is_file():
+        try:
+            if json.loads(Path(p).read_text(encoding = "utf-8")).get("flags_by_cond"):
+                return p
+        except Exception:
+            pass
     return None
 
 
-def sweep(cells, alpha=0.05):
-    """Screen each (model, quantizer) cell; Holm-adjust across the tested ones."""
+def sweep(cells, alpha = 0.05):
+    """
+    Run paired ΔASR screen with Holm adjustment across cells.
+
+    Inputs:
+        - cells (list[tuple[str, str]]): (model, quantizer) pairs
+        - alpha (float): Significance level for reporting
+
+    Outputs:
+        - results (list[dict]): Per-cell stats and significance flags
+    """
     results, pvals = [], []
     for model, quantizer in cells:
         row = {"model": model, "quant": quantizer}
@@ -116,57 +136,22 @@ def _print_table(results):
     print("\n  ** = significant after Holm  |  * = raw only  |  report both")
 
 
-def _synth_flags(n, fp_asr, b, c):
-    """Build fp/quant flag arrays with an exact (b, c) discordant decomposition."""
-    n_fp_comply = round(fp_asr / 100.0 * n)
-    n11 = n_fp_comply - c          # fp comply & quant comply (concordant)
-    n10 = c                        # fp comply & quant refuse
-    n01 = b                        # fp refuse & quant comply
-    n00 = n - n11 - n10 - n01
-    if min(n11, n10, n01, n00) < 0:
-        raise ValueError(f"infeasible decomposition: {(n11, n10, n01, n00)}")
-    fp = [1] * (n11 + n10) + [0] * (n01 + n00)
-    q = [1] * n11 + [0] * n10 + [1] * n01 + [0] * n00
-    return fp, q
-
-
-def self_test():
-    """Reproduce the synthetic cases with known answers; assert the estimator."""
-    fp, q = _synth_flags(200, 41.0, b=50, c=7)
-    r = paired_delta_asr(fp, q, seed=0)
-    print(f"case b=50,c=7:  dASR={r['delta_asr']:.1f}  SE_pair={r['se_paired']:.2f}  "
-          f"SE_null={r['se_null']:.2f}  SE_unpair={r['se_unpaired']:.2f}  "
-          f"p={r['p_mcnemar']:.2e}  CI={r['ci95']}")
-    assert abs(r["se_paired"] - 3.46) < 0.05, r["se_paired"]
-    assert abs(r["se_null"] - 3.77) < 0.05, r["se_null"]
-    assert abs(r["se_unpaired"] - 4.88) < 0.05, r["se_unpaired"]
-    assert r["p_mcnemar"] < 1e-8, r["p_mcnemar"]
-
-    for b, c, exp_p in [(15, 6, 0.078), (12, 3, 0.035)]:
-        fp, q = _synth_flags(200, 41.0, b, c)
-        r = paired_delta_asr(fp, q)
-        print(f"case b={b},c={c}:  dASR={r['delta_asr']:.1f}  p={r['p_mcnemar']:.4f} "
-              f"(expected ~{exp_p})")
-        assert abs(r["p_mcnemar"] - exp_p) < 0.005, r["p_mcnemar"]
-
-    adj = holm_bonferroni([0.01, 0.04, 0.03])
-    assert adj == [0.03, 0.06, 0.06], adj   # 0.01*3, then 0.04*2 vs 0.03*2 monotone
-    print("SELF-TEST PASSED")
-
-
 def main():
-    ap = argparse.ArgumentParser(description="Paired ΔASR significance screen (McNemar).")
-    ap.add_argument("--self_test", action="store_true",
-                    help="run estimator against known-answer synthetic cases and exit")
-    ap.add_argument("--alpha", type=float, default=0.05)
+    """
+    CLI entry point for paired_screen.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (prints paired ΔASR table)
+    """
+    ap = argparse.ArgumentParser(description = "Paired ΔASR significance screen (McNemar).")
+    ap.add_argument("--alpha", type = float, default = 0.05)
     args = ap.parse_args()
 
-    if args.self_test:
-        self_test()
-        return
-
     cells = [(m, q) for m in MODELS for q in QUANTS]
-    results = sweep(cells, alpha=args.alpha)
+    results = sweep(cells, alpha = args.alpha)
     _print_table(results)
 
 

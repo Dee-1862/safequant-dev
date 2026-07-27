@@ -45,8 +45,19 @@ def _param_count(layer, proj_path):
 
 
 def effective_bits(model, role_projs, layer_range, base_q, src_q):
-    """Effective weight bit-width of the repaired model: base quantizer
-    everywhere, source quantizer on the restored (role x band) projections."""
+    """
+    Effective weight bit-width after mixed-precision read-side repair.
+
+    Inputs:
+        - model (torch.nn.Module): Model architecture for param counting
+        - role_projs (list[str]): Restored projection paths
+        - layer_range (tuple | None): (lo, hi) layer band, or None for all layers
+        - base_q (str): Baseline quantizer key (e.g. "aqlm2")
+        - src_q (str): Source quantizer key for restored weights (e.g. "awq")
+
+    Outputs:
+        - stats (dict): Param counts, restored fraction, and effective_bits
+    """
     read, write = get_proj_sets(model)
     all_projs = read + write
     n_layers = model.config.num_hidden_layers
@@ -67,17 +78,26 @@ def effective_bits(model, role_projs, layer_range, base_q, src_q):
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     ap = argparse.ArgumentParser(
-        description="Targeted 4-bit (AWQ) restoration into the 2-bit (AQLM) cell.")
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2", help="damaged cell to repair")
-    ap.add_argument("--source_quant", default="awq",
-                    help="4-bit source of restored weights (dequantized)")
-    ap.add_argument("--role", default="read", choices=["read", "write", "both"])
-    ap.add_argument("--n_eval", type=int, default=200)
-    ap.add_argument("--n_reasoning", type=int, default=50)
-    ap.add_argument("--layer_lo", type=int, default=None)
-    ap.add_argument("--layer_hi", type=int, default=None)
+        description = "Targeted 4-bit (AWQ) restoration into the 2-bit (AQLM) cell.")
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2", help = "damaged cell to repair")
+    ap.add_argument("--source_quant", default = "awq",
+                    help = "4-bit source of restored weights (dequantized)")
+    ap.add_argument("--role", default = "read", choices = ["read", "write", "both"])
+    ap.add_argument("--n_eval", type = int, default = 200)
+    ap.add_argument("--n_reasoning", type = int, default = 50)
+    ap.add_argument("--layer_lo", type = int, default = None)
+    ap.add_argument("--layer_hi", type = int, default = None)
     args = ap.parse_args()
 
     qtz, src = args.quantizer, args.source_quant
@@ -88,9 +108,9 @@ def main():
         band = f"L{args.layer_lo}-{args.layer_hi}"
     variant = f"{args.role}_{src}_{band}"   # e.g. read_awq_L11-22 / read_gptq4_all
 
-    items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
+    items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = [_extract_behavior(it) for it in items]
-    arc_items = load_arc_challenge(n_samples=args.n_reasoning)
+    arc_items = load_arc_challenge(n_samples = args.n_reasoning)
     xstest_items = load_xstest()
 
     all_responses, all_arc, all_xstest = {}, {}, {}
@@ -100,10 +120,10 @@ def main():
     projs = _role_projs(fp32_model, args.role)
     fp32_weights = extract_fp32_weights(fp32_model, projs)
     eff = effective_bits(fp32_model, projs, layer_range, qtz, src)
-    print(f"  effective_bits={eff['effective_bits']} "
+    print(f"  effective_bits = {eff['effective_bits']} "
           f"(base {eff['base_bits']}b -> {eff['source_bits']}b on "
           f"{eff['restored_fraction']*100:.1f}% of quant params)")
-    all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc="FP32")
+    all_responses["fp32"] = generate_only(fp32_model, tokenizer, items, desc = "FP32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
     all_xstest["fp32"] = eval_xstest(fp32_model, tokenizer, xstest_items)["false_refusal_rate"]
     del fp32_model
@@ -111,15 +131,15 @@ def main():
     torch.cuda.empty_cache()
 
     # 4-bit source: dequantized AWQ weights for the same projections
-    src_model, _ = load_quantized(args.model, quantizer=src)
+    src_model, _ = load_quantized(args.model, quantizer = src)
     src_weights = extract_fp32_weights(src_model, projs)
     del src_model
     gc.collect()
     torch.cuda.empty_cache()
 
     # 2-bit baseline (damaged, no restore)
-    q_model, _ = load_quantized(args.model, quantizer=qtz)
-    all_responses[qtz] = generate_only(q_model, tokenizer, items, desc=qtz)
+    q_model, _ = load_quantized(args.model, quantizer = qtz)
+    all_responses[qtz] = generate_only(q_model, tokenizer, items, desc = qtz)
     all_arc[qtz] = measure_arc(q_model, tokenizer, arc_items)
     all_xstest[qtz] = eval_xstest(q_model, tokenizer, xstest_items)["false_refusal_rate"]
     del q_model
@@ -128,9 +148,9 @@ def main():
 
     # + targeted 4-bit restore (the tested repair) and + FP32 restore (upper bound)
     for tag, weights in ((f"{src}4_restore", src_weights), ("fp32_restore", fp32_weights)):
-        q_model, _ = load_quantized(args.model, quantizer=qtz)
-        restore_projections(q_model, weights, projs, layer_range=layer_range)
-        all_responses[tag] = generate_only(q_model, tokenizer, items, desc=tag)
+        q_model, _ = load_quantized(args.model, quantizer = qtz)
+        restore_projections(q_model, weights, projs, layer_range = layer_range)
+        all_responses[tag] = generate_only(q_model, tokenizer, items, desc = tag)
         all_arc[tag] = measure_arc(q_model, tokenizer, arc_items)
         all_xstest[tag] = eval_xstest(q_model, tokenizer, xstest_items)["false_refusal_rate"]
         del q_model
@@ -143,7 +163,7 @@ def main():
     for c in conditions:
         flat_b.extend(behaviors)
         flat_r.extend(all_responses[c])
-    flags = classify_batch(flat_b, flat_r, device=device)
+    flags = classify_batch(flat_b, flat_r, device = device)
     n = args.n_eval
     asr = {c: 100.0 * sum(flags[i * n:(i + 1) * n]) / n for i, c in enumerate(conditions)}
 
@@ -153,8 +173,8 @@ def main():
     frac = (rec_4bit / rec_fp32) if abs(rec_fp32) > 1e-9 else None
 
     cfg = RunConfig(
-        model=args.model, quantizer=qtz, variant=variant,
-        extra={"source_quant": src, "role": args.role, "band": band,
+        model = args.model, quantizer = qtz, variant = variant,
+        extra = {"source_quant": src, "role": args.role, "band": band,
                "n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
     )
     data = {
@@ -169,8 +189,8 @@ def main():
     }
     path = save_result(_SCRIPT, cfg, data)
     print(f"Saved to {path}")
-    print(f"  damage={data['damage_pp']:.1f}pp  4bit_recovery={rec_4bit:.1f}pp  "
-          f"fp32_recovery={rec_fp32:.1f}pp  frac_of_fp32={frac}")
+    print(f"  damage = {data['damage_pp']:.1f}pp  4bit_recovery={rec_4bit:.1f}pp  "
+          f"fp32_recovery = {rec_fp32:.1f}pp  frac_of_fp32 = {frac}")
 
 
 if __name__ == "__main__":

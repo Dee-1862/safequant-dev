@@ -47,7 +47,13 @@ RUN_TARGETS = {
 
 def cells():
     """
-    Generate all the cells for the paper tables.
+    Yield every model/quantizer cell in the paper grid.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - pairs (Iterator[tuple[str, str]]): (model_alias, quantizer) tuples
     """
     for m in MODELS:
         for q in QUANTS:
@@ -58,14 +64,27 @@ def cells():
 
 def M(mod, *args):
     """
-    Generate a command to run a module.
+    Build a python -m command list for subprocess.
+
+    Inputs:
+        - mod (str): Dotted module name
+        - args: CLI flags and values
+
+    Outputs:
+        - cmd (list[str]): argv for subprocess.run
     """
     return [sys.executable, "-u", "-m", mod, *map(str, args)]
 
 
 def parse_flags(argv):
     """
-    Parse the flags from the command line.
+    Parse `--key value` tokens from a command argv tail.
+
+    Inputs:
+        - argv (list[str]): Tokens after the module name
+
+    Outputs:
+        - flags (dict[str, str]): Flag name (no dashes) to value
     """
     flags = {}
     i = 0
@@ -84,9 +103,15 @@ def parse_flags(argv):
     return flags
 
 
-def cfg_from_cmd(cmd):  
+def cfg_from_cmd(cmd):
     """
-    Generate a configuration from a command.
+    Map a planned subprocess command to a RunConfig for output-path lookup.
+
+    Inputs:
+        - cmd (list[str]): Full argv from M()
+
+    Outputs:
+        - cfg (RunConfig | None): Manifest config, or None if unmapped
     """
     mod = cmd[3]
     if mod not in MOD_SCRIPT:
@@ -120,7 +145,13 @@ def cfg_from_cmd(cmd):
 
 def output_exists(cmd):
     """
-    Check if the output exists for a command.
+    Return True when the expected result JSON for cmd already exists.
+
+    Inputs:
+        - cmd (list[str]): Full argv from M()
+
+    Outputs:
+        - exists (bool): Whether a non-empty output file is on disk
     """
     mod = cmd[3]
     rel = MOD_SCRIPT.get(mod)
@@ -133,7 +164,13 @@ def output_exists(cmd):
 
 def table1_cmds():
     """
-    Generate the commands for table 1 (signal geometry direction drift, probe accuracy, probe rotation).
+    Commands for Table 1 (signal geometry over the full 19-cell grid).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     cmds = []
     for exp in ("direction_drift", "probe_accuracy", "probe_rotation"):
@@ -145,7 +182,13 @@ def table1_cmds():
 
 def table2_cmds():
     """
-    Generate the commands for table 2 (restoration matrix).
+    Commands for Table 2 (restoration matrix / regime sweep).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     cmds = []
     for m, q in cells():
@@ -157,38 +200,69 @@ def table2_cmds():
 
 def table3_cmds():
     """
-    Generate the commands for table 3 (per-projection localization).
+    Commands for Table 3 (per-projection localization, Llama + Phi-3).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
-    return [M("experiments.localization.per_projection",
-                "--model", "llama7b", "--quantizer", "aqlm2",
-                "--n_eval", 200, "--n_reasoning", 50,
-                "--layer_lo", 11, "--layer_hi", 22)]
+    cmds = []
+    for m in ("llama7b", "phi3"):
+        cmds.append(M("experiments.localization.per_projection",
+                      "--model", m, "--quantizer", "aqlm2",
+                      "--n_eval", 200, "--n_reasoning", 50,
+                      "--layer_lo", 11, "--layer_hi", 22))
+    return cmds
 
 
 def table4_cmds():
     """
-    Generate the commands for table 4 (depth-band localization).
+    Commands for Table 4 (depth-band localization, read + write sides).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     cmds = []
-    for side in ("read", "write"):
-        cmds.append(M("experiments.localization.depth_bands",
-                      "--model", "llama7b", "--quantizer", "aqlm2",
-                      "--projections", side, "--n_eval", 200, "--n_reasoning", 50))
+    for m in ("llama7b", "phi3"):
+        for side in ("read", "write"):
+            cmds.append(M("experiments.localization.depth_bands",
+                          "--model", m, "--quantizer", "aqlm2",
+                          "--projections", side, "--n_eval", 200, "--n_reasoning", 50))
     return cmds
 
 
 def table5_cmds():
     """
-    Generate the commands for table 5 (headline eval).
+    Commands for Table 5 (headline eval on damaged-coherent AQLM cells).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
-    return [M("experiments.headline.headline_eval",
-              "--model", "llama7b", "--quantizer", "aqlm2",
-              "--n_eval", 200, "--n_reasoning", 100, "--n_boot", 2000)]
+    cmds = []
+    for m in ("llama7b", "phi3"):
+        cmds.append(M("experiments.headline.headline_eval",
+                      "--model", m, "--quantizer", "aqlm2",
+                      "--n_eval", 200, "--n_reasoning", 100, "--n_boot", 2000))
+    return cmds
 
 
 def table6_cmds():
     """
-    Generate the commands for table 6 (controls for param-matched, refit, cosmed, leakage).
+    Commands for Table 6 (localization and leakage controls).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     cmds = []
     for m in ("llama7b", "phi3"):
@@ -206,30 +280,43 @@ def table6_cmds():
 
 def table7_cmds():
     """
-    Generate the commands for table 7 (trained repair with Q-Resafe + LR-QAT).
+    Commands for Table 7 (Q-Resafe rank sweep + LR-QAT bit sweep).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     cmds = [M("experiments.trained_repair.qresafe_pairs",
               "--model", "llama7b", "--quantizer", "aqlm2",
               "--n_prompts", 400)]
-    for r in (128, 256, 512, 1024, 2048):
-        cmds.append(M("experiments.trained_repair.qresafe_dpo",
-                      "--mask", "full", "--r", r, "--alpha", 2 * r, "--tag", f"r{r}",
-                      "--beta", 0.01, "--epochs", 1, "--lr", "5e-7",
-                      "--n_eval", 200, "--opt8bit", "--seed", 42))
+    for mask in ("read", "write", "full"):
+        for r in (128, 256, 512, 1024, 2048):
+            cmds.append(M("experiments.trained_repair.qresafe_dpo",
+                          "--mask", mask, "--r", r, "--alpha", 2 * r, "--tag", f"r{r}",
+                          "--beta", 0.01, "--epochs", 1, "--lr", "5e-7",
+                          "--n_eval", 200, "--opt8bit", "--seed", 42))
     budget = ["--steps", 3000, "--lr", "1e-4", "--rank", 32, "--alpha", 64,
               "--seq_len", 512, "--grad_accum", 8, "--n_train_docs", 4000,
               "--group_size", 128, "--n_eval", 200, "--n_reasoning", 50, "--n_xstest", 50]
     for role in ("read", "write"):
-        for b in (2, 4):
+        for b in (2, 3, 4):
             cmds.append(M("experiments.trained_repair.lrqat",
-                        "--model", "llama7b", "--quantizer", "aqlm2",
-                        "--role", role, "--n_bits", b, *budget))
+                          "--model", "llama7b", "--quantizer", "aqlm2",
+                          "--role", role, "--n_bits", b, *budget))
     return cmds
 
 
 def behavioral_cmds():
     """
-    Generate the commands for the behavioral experiment.
+    Commands for Section 5 (Arditi direction ablation on Llama).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     cmds = []
     for q in ("aqlm2", "fp32"):
@@ -240,7 +327,13 @@ def behavioral_cmds():
 
 def cmds_for_target(name):
     """
-    Generate the commands for a target.
+    Resolve a run target name to its command list.
+
+    Inputs:
+        - name (str): Key in RUN_TARGETS (e.g. "table1", "full")
+
+    Outputs:
+        - cmds (list[list[str]]): Subprocess argv lists
     """
     if name == "table1":
         return table1_cmds()
@@ -269,7 +362,14 @@ def cmds_for_target(name):
 
 def run_pipeline(targets, *, force):
     """
-    Run the pipeline for a list of targets.
+    Execute experiment modules for the requested paper-table targets.
+
+    Inputs:
+        - targets (list[str]): Run target keys
+        - force (bool): Rerun even when output JSON already exists
+
+    Outputs:
+        - failed (int): Number of subprocesses that exited non-zero
     """
     cmds = []
     labels = []
@@ -296,13 +396,19 @@ def run_pipeline(targets, *, force):
         if rc != 0:
             failed += 1
             print(f"  !! exited {rc}; continuing")
-    print(f"\nDone. ran={len(cmds) - skipped - failed}  skipped={skipped}  failed={failed}")
+    print(f"\nDone. ran = {len(cmds) - skipped - failed}  skipped = {skipped}  failed = {failed}")
     return failed
 
 
 def rebuild_results(md = False):
     """
-    Rebuild the paper results from the outputs/.
+    Regenerate PAPER_RESULTS.md and paper_values.json from outputs/.
+
+    Inputs:
+        - md (bool): Also write docs/PAPER_TABLES.md when True
+
+    Outputs:
+        - None (writes files under docs/ and repo root)
     """
     docs = ROOT / "docs"
     docs.mkdir(exist_ok = True)
@@ -328,7 +434,13 @@ def rebuild_results(md = False):
 
 def main():
     """
-    Main function to run the pipeline.
+    CLI entry point for run_pipeline.py.
+
+    Inputs:
+        - None (reads argparse: --run, --results, --force, --md)
+
+    Outputs:
+        - None (runs experiments or rebuilds paper tables)
     """
     target_help = "\n".join(f"  {k:12} {v}" for k, v in RUN_TARGETS.items())
     ap = argparse.ArgumentParser(

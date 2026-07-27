@@ -70,7 +70,7 @@ def build_token_blocks(tokenizer, n_docs, seq_len, device, max_chars = 4000):
         ids.append(tokenizer.eos_token_id)
     n_blocks = len(ids) // seq_len
     if n_blocks == 0:
-        raise RuntimeError(f"C4 produced only {len(ids)} tokens (< seq_len={seq_len}); "
+        raise RuntimeError(f"C4 produced only {len(ids)} tokens (< seq_len = {seq_len}); "
                            f"raise --n_train_docs.")
     blocks = torch.tensor(ids[: n_blocks * seq_len], dtype = torch.long).view(n_blocks, seq_len)
     print(f"  Built {n_blocks} blocks of {seq_len} tokens "
@@ -151,7 +151,7 @@ def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, 
         print(f"  [warn] bitsandbytes optimizer unavailable ({e}); using torch.AdamW")
         optim = torch.optim.AdamW(trainable, lr = args.lr, weight_decay = 0.0)
         opt_name = "torch.AdamW"
-    print(f"  Optimizer: {opt_name} | lr={args.lr} | grad_accum={args.grad_accum}")
+    print(f"  Optimizer: {opt_name} | lr = {args.lr} | grad_accum = {args.grad_accum}")
 
     # Optional gradient checkpointing for partial fine-tuning
     if args.grad_checkpointing:
@@ -323,6 +323,15 @@ def _whole_model_effective_bits(model, role_projs, layer_range, base_eff, inj_ef
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")
@@ -372,16 +381,16 @@ def main():
     lrqat_variant = f"{args.role}_int{args.n_bits}" + ("" if band == "all" else f"_{band}")
 
     print("=" * 74)
-    print(f"  LR-QAT low-bit repair  |  role={args.role}  |  INT-{args.n_bits}")
+    print(f"  LR-QAT low-bit repair  |  role = {args.role}  |  INT-{args.n_bits}")
     print(f"  {args.model} / {args.quantizer}  (Route A1 hybrid)")
     print(f"  projections: {proj_paths}")
     print(f"  band: {band}"
           + (f"  -> layers[{layer_range[0]},{layer_range[1]})" if layer_range else "  (all layers)"))
-    print(f"  budget: steps={args.steps} accum={args.grad_accum} seq_len={args.seq_len} "
-          f"lr={args.lr} rank={args.rank} alpha={args.alpha} group_size={args.group_size}")
+    print(f"  budget: steps = {args.steps} accum = {args.grad_accum} seq_len = {args.seq_len} "
+          f"lr = {args.lr} rank = {args.rank} alpha = {args.alpha} group_size = {args.group_size}")
     print(f"  train corpus: {TRAIN_CORPUS}")
-    print(f"  eval: n_eval={args.n_eval}  n_reasoning={args.n_reasoning}  "
-          f"n_xstest={args.n_xstest}  seed={SEED}")
+    print(f"  eval: n_eval = {args.n_eval}  n_reasoning = {args.n_reasoning}  "
+          f"n_xstest = {args.n_xstest}  seed = {SEED}")
     print("=" * 74)
 
     # Load eval datasets
@@ -401,25 +410,25 @@ def main():
     whole_eff_bits, bumped_frac = _whole_model_effective_bits(
         student, proj_paths, layer_range, args.aqlm_eff_bits, eff_bits_repaired)
     print(f"  Repaired-matrix effective bits/weight: {eff_bits_repaired:.4f} "
-          f"(INT-{args.n_bits}, group_size={args.group_size})")
+          f"(INT-{args.n_bits}, group_size = {args.group_size})")
     if whole_eff_bits is not None:
         print(f"  Whole-model effective bits/weight: ~{whole_eff_bits} "
               f"(AQLM-2 base ~{args.aqlm_eff_bits} on {(1 - bumped_frac) * 100:.1f}% of quant "
               f"params, INT-{args.n_bits} on {bumped_frac * 100:.1f}%)")
 
-    # Effective-bit-width assertion (core control at n_bits=2)
+    # Effective-bit-width assertion (core control at n_bits = 2)
     aqlm_nominal_bits = 2.0
     bit_assert_ok = None
     if args.n_bits == 2:
         bit_assert_ok = eff_bits_repaired <= args.aqlm_eff_bits + 1e-3
         assert bit_assert_ok, (
-            f"Effective-bit control VIOLATED: repaired={eff_bits_repaired:.4f} bits "
+            f"Effective-bit control VIOLATED: repaired = {eff_bits_repaired:.4f} bits "
             f"> AQLM-2 ceiling {args.aqlm_eff_bits}. The repair must not add precision. "
             f"(Lower --group_size raises overhead; raise --aqlm_eff_bits only with evidence.)")
         print(f"  ASSERT OK: repaired {eff_bits_repaired:.4f} <= AQLM-2 ceiling "
               f"{args.aqlm_eff_bits} bits (no added precision)")
     else:
-        print(f"  [sweep] n_bits={args.n_bits}: effective bits {eff_bits_repaired:.4f} "
+        print(f"  [sweep] n_bits = {args.n_bits}: effective bits {eff_bits_repaired:.4f} "
               f"(mixed-precision point, not bit-matched to baseline)")
 
     # Condition A: PTQ untrained (adapter delta = 0)
@@ -505,9 +514,9 @@ def main():
 
     # Print summary table
     print("\n" + "=" * 86)
-    print(f"  RESULT  |  {args.model} / {args.quantizer}  |  role={args.role}  INT-{args.n_bits}")
+    print(f"  RESULT  |  {args.model} / {args.quantizer}  |  role = {args.role}  INT-{args.n_bits}")
     print(f"  baselines from: {base_src}  (FP16 {asr_fp16:.1f} | AQLM-2 {asr_quant:.1f})  "
-          f"| ARC chance={arc_chance:.0f}%")
+          f"| ARC chance = {arc_chance:.0f}%")
     print("-" * 86)
     print(f"  {'Condition':<16}{'EffBits':>9}{'Trained':>9}{'ASR':>8}{'ARC':>7}"
           f"{'FalseRef':>9}{'rho':>8}{'  flag':<10}")
@@ -526,7 +535,7 @@ def main():
               "incoherence,\n           not safety recovery; rho is not interpretable. "
               "Raise --group_size / --n_bits.")
     elif rho_lrqat > 1.0 + 1e-6:
-        print(f"  NOTE: rho={rho_lrqat:.2f} > 1 -> ASR fell BELOW FP16. Check false-refusal "
+        print(f"  NOTE: rho = {rho_lrqat:.2f} > 1 -> ASR fell BELOW FP16. Check false-refusal "
               f"({fr_lrqat}) for over-refusal vs genuine recovery.")
 
     # Persist result payload

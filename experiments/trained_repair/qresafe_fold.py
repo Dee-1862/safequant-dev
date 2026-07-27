@@ -152,7 +152,7 @@ def roundtrip_gate(model, target_names, cfg, atol = 0.0):
         - n_total (int): Quantized modules checked
         - max_diff (float): Max absolute dense difference observed
     """
-    # Walk targets and measure dense + codes identity after delta=0 writeback
+    # Walk targets and measure dense + codes identity after delta = 0 writeback
     n_ok, n_total, max_diff = 0, 0, 0.0
     mods = dict(model.named_modules())
     for name in target_names:
@@ -170,7 +170,7 @@ def roundtrip_gate(model, target_names, cfg, atol = 0.0):
         if d <= atol and codes_identical:
             n_ok += 1
         else:
-            print(f"    [mismatch] {name}: max|dW|={d:.2e} codes_identical={codes_identical}")
+            print(f"    [mismatch] {name}: max|dW|={d:.2e} codes_identical = {codes_identical}")
     return n_ok, n_total, max_diff
 
 
@@ -241,8 +241,8 @@ def delta_fold_smoke(model_alias = "llama7b", quantizer = "aqlm2"):
     # Measure reconstruction move and dtype preservation
     W1 = dequantize_module(m, cfg["nbits"]).float()
     moved = float((W1 - W0).norm() / W0.norm())
-    print(f"  module={name} delta_rel={rel:.4f} codes_changed={100 * frac:.2f}% "
-          f"recon_moved={moved:.4f} codes_dtype={m.codes.dtype}")
+    print(f"  module = {name} delta_rel = {rel:.4f} codes_changed = {100 * frac:.2f}% "
+          f"recon_moved = {moved:.4f} codes_dtype = {m.codes.dtype}")
     ok = (frac > 0.0) and bool(torch.isfinite(W1).all()) and (m.codes.dtype == dtype0)
     print("  DELTA-FOLD SMOKE:", "PASS" if ok else "FAIL")
     return ok

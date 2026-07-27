@@ -10,6 +10,15 @@ OUT = "outputs"
 
 
 def load(p):
+    """
+    Load one JSON file from disk.
+
+    Inputs:
+        - p (str | Path): Path to a result JSON
+
+    Outputs:
+        - data (dict | None): Parsed JSON, or None on failure
+    """
     try:
         with open(p, encoding = "utf-8") as fh:
             return json.load(fh)
@@ -18,6 +27,17 @@ def load(p):
 
 
 def g(d, *path, default = None):
+    """
+    Walk nested dict keys safely.
+
+    Inputs:
+        - d (dict | None): Root object
+        - path: Sequence of keys
+        - default: Fallback when a key is missing
+
+    Outputs:
+        - value: Nested value or default
+    """
     for k in path:
         if not isinstance(d, dict):
             return default
@@ -26,13 +46,35 @@ def g(d, *path, default = None):
 
 
 def num(x, r = 3):
+    """
+    Format a numeric table cell for markdown output.
+
+    Inputs:
+        - x: Numeric value or None
+        - r (int): Decimal places
+
+    Outputs:
+        - s (str): Formatted number or "--"
+    """
     if x is None:
         return "--"
     return f"{float(x):.{r}f}"
 
 
 def grid(title, note, getter, models = MODELS, quants = QUANTS):
-    """Print a model x quantizer markdown table using getter(model, quant)->str."""
+    """
+    Print a model x quantizer markdown table.
+
+    Inputs:
+        - title (str): Subsection heading
+        - note (str): Provenance note printed above the table
+        - getter (callable): (model, quant) -> cell string
+        - models (list[str]): Row labels
+        - quants (list[str]): Column labels
+
+    Outputs:
+        - None (prints to stdout)
+    """
     print(f"\n### {title}\n")
     if note:
         print(f"{note}\n")
@@ -46,39 +88,120 @@ def grid(title, note, getter, models = MODELS, quants = QUANTS):
 
 
 def sig(exp, m, q):
+    """
+    Load a signal_geometry experiment JSON.
+
+    Inputs:
+        - exp (str): Experiment stem
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - data (dict | None): Parsed JSON
+    """
     return load(f"{OUT}/signal_geometry/{exp}_{m}_{q}.json")
 
 
 def restore(m, q):
+    """
+    Load a restoration_sweep experiment JSON.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - data (dict | None): Parsed JSON
+    """
     return load(f"{OUT}/regime_sweep/restoration_sweep_{m}_{q}.json")
 
 
 def drift_cos_median(m, q):
+    """
+    Median cosine similarity of refusal-direction drift (FP32 vs quant).
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted number or "--"
+    """
     d = sig("direction_drift", m, q)
     return num(g(d, "summary", "cos_sim_median"))
 
 
 def drift_cos_min(m, q):
+    """
+    Minimum layer cosine similarity of refusal-direction drift.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted number or "--"
+    """
     d = sig("direction_drift", m, q)
     return num(g(d, "summary", "cos_sim_min"))
 
 
 def probe_rotation_cos(m, q):
+    """
+    Median cosine between FP32 and quant refusal probes after rotation.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted number or "--"
+    """
     d = sig("probe_rotation", m, q)
     return num(g(d, "summary", "cos_median"))
 
 
 def probe_acc_mean(m, q):
+    """
+    Mean quantized refusal-probe accuracy across layers.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted number or "--"
+    """
     d = sig("probe_accuracy", m, q)
     return num(g(d, "summary", "quant_mean_acc"))
 
 
 def probe_acc_min(m, q):
+    """
+    Minimum quantized refusal-probe accuracy across layers.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted number or "--"
+    """
     d = sig("probe_accuracy", m, q)
     return num(g(d, "summary", "quant_min_acc"))
 
 
 def probe_acc_drop_count(m, q):
+    """
+    Count of layers with quantized probe accuracy drop vs FP32.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Integer count or "--"
+    """
     d = sig("probe_accuracy", m, q)
     if d is None:
         return "--"
@@ -87,16 +210,46 @@ def probe_acc_drop_count(m, q):
 
 
 def damage_pp(m, q):
+    """
+    Safety damage (fp32 ASR minus quant ASR) in percentage points.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted damage or "--"
+    """
     d = restore(m, q)
     return num(g(d, "damage_pp"), 1)
 
 
 def quantized_asr(m, q):
+    """
+    Quantized-model attack success rate.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted ASR or "--"
+    """
     d = restore(m, q)
     return num(g(d, "quantized_asr"), 1)
 
 
 def swap_valid_cell(m, q):
+    """
+    Whether activation-swap validity flag is set for the cell.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): "True", "False", or "--"
+    """
     d = restore(m, q)
     if d is None:
         return "--"
@@ -104,6 +257,16 @@ def swap_valid_cell(m, q):
 
 
 def dmed(m, q):
+    """
+    Median per-layer separation_sigma on the quantized model.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+
+    Outputs:
+        - value (str): Formatted median or "--"
+    """
     # Median per-layer separation (separation_sigma) of the QUANTIZED model.
     # FP32 reference is roughly 5.1.
     d = sig("direction_drift", m, q)
@@ -128,6 +291,17 @@ def dmed(m, q):
 
 
 def restore_cell(m, q, cond):
+    """
+    ASR for one restoration condition in a cell.
+
+    Inputs:
+        - m (str): Model key
+        - q (str): Quantizer key
+        - cond (str): Condition key (e.g. "read_restored")
+
+    Outputs:
+        - value (str): Formatted ASR, "N/A", or "--"
+    """
     # Distinguish "no file" (--) from a documented structural N/A.
     d = restore(m, q)
     if d is None:
@@ -138,6 +312,16 @@ def restore_cell(m, q, cond):
 
 
 def corr(xs, ys):
+    """
+    Pearson correlation between two equal-length numeric lists.
+
+    Inputs:
+        - xs (list[float]): First series
+        - ys (list[float]): Second series
+
+    Outputs:
+        - r (float | None): Correlation coefficient, or None if undefined
+    """
     n = len(xs)
     if n < 3:
         return None
@@ -152,6 +336,15 @@ def corr(xs, ys):
 
 
 def main():
+    """
+    Print aggregated markdown grids from experiment JSONs.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - None (prints markdown tables to stdout)
+    """
     print("# SafeQuant Aggregated Results (paper values)\n")
 
     # -- Table 1: refusal-direction drift ----------------------------------
@@ -192,12 +385,42 @@ def main():
          quantized_asr)
 
     def read_restored(m, q):
+        """
+        ASR after read-side projection restoration.
+
+        Inputs:
+            - m (str): Model key
+            - q (str): Quantizer key
+
+        Outputs:
+            - value (str): Formatted ASR from restore_cell
+        """
         return restore_cell(m, q, "read_restored")
 
     def write_restored(m, q):
+        """
+        ASR after write-side projection restoration.
+
+        Inputs:
+            - m (str): Model key
+            - q (str): Quantizer key
+
+        Outputs:
+            - value (str): Formatted ASR from restore_cell
+        """
         return restore_cell(m, q, "write_restored")
 
     def both_restored(m, q):
+        """
+        ASR after read and write projection restoration.
+
+        Inputs:
+            - m (str): Model key
+            - q (str): Quantizer key
+
+        Outputs:
+            - value (str): Formatted ASR from restore_cell
+        """
         return restore_cell(m, q, "both_restored")
 
     grid("3c. ASR after READ-projection restoration",
@@ -266,9 +489,9 @@ def main():
 
     print(f"- swap-valid cells with damage: **{len(rows)}**")
     print(f"- corr(damage, 1 - diff-in-means cosmed) = "
-          f"**{num(c1)}**  (n={len(cm)})")
+          f"**{num(c1)}**  (n = {len(cm)})")
     print(f"- corr(damage, 1 - probe rotation)       = "
-          f"**{num(c2)}**  (n={len(pm)})")
+          f"**{num(c2)}**  (n = {len(pm)})")
     print("- NOTE: sign is confounded. GPTQ-2/3 cells show large displacement "
           "AND *negative* damage (safety improved via generic degradation), while "
           "AQLM/Phi-3 cells show positive damage at moderate displacement. Report "
@@ -285,23 +508,23 @@ def main():
         print(f"\n### {m}/aqlm2\n")
         if pm:
             rec = g(pm, "recovery_pp", default = {}) or {}
-            print(f"- param_matched write_full={num(rec.get('write_full'),1)} "
-                  f"read_structured={num(rec.get('read_matched_whole'),1)} "
-                  f"read_random={num(rec.get('read_matched_random_mean'),1)}")
+            print(f"- param_matched write_full = {num(rec.get('write_full'),1)} "
+                  f"read_structured = {num(rec.get('read_matched_whole'),1)} "
+                  f"read_random = {num(rec.get('read_matched_random_mean'),1)}")
         else:
             print("- param_matched: **missing**")
         if refit and pr:
-            print(f"- probe refit floor={num(g(refit,'summary','cos_floor_median'),3)} "
-                  f"observed_rotation={num(g(pr,'summary','cos_median'),3)}")
+            print(f"- probe refit floor = {num(g(refit,'summary','cos_floor_median'),3)} "
+                  f"observed_rotation = {num(g(pr,'summary','cos_median'),3)}")
         if cosmed and g(cosmed, "summary"):
             sm = cosmed["summary"]
             quant_cos = sm.get("cosmed_quant")
             if quant_cos is None:
                 quant_cos = g(dd, "summary", "cos_sim_median")
-            print(f"- cosmed after restore: quant={num(quant_cos,3)} "
-                  f"read={num(sm.get('cosmed_read_restored'),3)} "
-                  f"write={num(sm.get('cosmed_write_restored'),3)} "
-                  f"both={num(sm.get('cosmed_both_restored'),3)}")
+            print(f"- cosmed after restore: quant = {num(quant_cos,3)} "
+                  f"read = {num(sm.get('cosmed_read_restored'),3)} "
+                  f"write = {num(sm.get('cosmed_write_restored'),3)} "
+                  f"both = {num(sm.get('cosmed_both_restored'),3)}")
         elif Path(f"{OUT}/signal_geometry/cosmed_after_restore_{m}_aqlm2.json").exists():
             print("- cosmed_after_restore: **empty or corrupt** (re-run cosmed job)")
 
@@ -309,13 +532,13 @@ def main():
     for f in sorted(glob.glob(f"{OUT}/boundary/probe_leakage_control_*.json")):
         d = load(f)
         summary = g(d, "summary", default = {})
-        print(f"- **{Path(f).stem}**: {json.dumps(summary, default=str)}")
+        print(f"- **{Path(f).stem}**: {json.dumps(summary, default = str)}")
 
     print("\n## Boundary: probe refit (all cells)\n")
     for f in sorted(glob.glob(f"{OUT}/boundary/probe_refit_control_*.json")):
         d = load(f)
         floor = num(g(d, "summary", "cos_floor_median"), 3)
-        print(f"- **{Path(f).stem}**: floor_median={floor}")
+        print(f"- **{Path(f).stem}**: floor_median = {floor}")
 
     print("\n## Signal: cosmed after restore\n")
     for f in sorted(glob.glob(f"{OUT}/signal_geometry/cosmed_after_restore_*.json")):
@@ -324,13 +547,13 @@ def main():
             print(f"- **{Path(f).stem}**: EMPTY (re-run job)")
             continue
         sm = g(d, "summary", default = {}) or {}
-        print(f"- **{Path(f).stem}**: {json.dumps(sm, default=str)}")
+        print(f"- **{Path(f).stem}**: {json.dumps(sm, default = str)}")
 
     print("\n## Regime: param matched restore\n")
     for f in sorted(glob.glob(f"{OUT}/regime_sweep/param_matched_restore_*.json")):
         d = load(f)
         rec = g(d, "recovery_pp", default = {})
-        print(f"- **{Path(f).stem}**: recovery_pp={json.dumps(rec)}")
+        print(f"- **{Path(f).stem}**: recovery_pp = {json.dumps(rec)}")
 
     # -- Behavioral (Arditi), boundary, localization, dequant, repair ------
     print("\n## Behavioral direction (Arditi ablation)\n")
@@ -343,13 +566,6 @@ def main():
               f"| {num(g(d,'baseline_asr'),1)} | {num(g(d,'ablated_asr'),1)} "
               f"| {num(g(d,'delta_asr_pp'),1)} | {g(d,'selected_layer')} "
               f"| {g(d,'selected_pos')} | {g(d,'operative')} |")
-
-    print("\n## Boundary: activation swap (llama/aqlm2)\n")
-    for f in sorted(glob.glob(f"{OUT}/boundary/activation_swap_*.json")):
-        d = load(f)
-        swap = g(d, "swap_asr", default = {})
-        label = Path(f).stem.replace("activation_swap_", "")
-        print(f"- {label}: {json.dumps(swap)}")
 
     print("\n## Localization (per-projection / depth-band recovery)\n")
     for f in sorted(glob.glob(f"{OUT}/localization/*.json")):
@@ -365,10 +581,10 @@ def main():
     print("\n## Targeted dequant (source-agnostic read-restore)\n")
     for f in sorted(glob.glob(f"{OUT}/regime_sweep/targeted_dequant_*.json")):
         d = load(f)
-        print(f"- **{Path(f).stem}**: recov_4bit={num(g(d,'recovery_pp_4bit'),1)}, "
-              f"recov_fp32={num(g(d,'recovery_pp_fp32'),1)}, "
-              f"frac_of_fp32={num(g(d,'frac_of_fp32_recovery'),2)} "
-              f"(role={g(d,'role')}, layers={g(d,'layer_range')})")
+        print(f"- **{Path(f).stem}**: recov_4bit = {num(g(d,'recovery_pp_4bit'),1)}, "
+              f"recov_fp32 = {num(g(d,'recovery_pp_fp32'),1)}, "
+              f"frac_of_fp32 = {num(g(d,'frac_of_fp32_recovery'),2)} "
+              f"(role = {g(d,'role')}, layers = {g(d,'layer_range')})")
 
     print("\n## Trained repair (Q-Resafe DPO / LR-QAT)\n")
     for f in sorted(glob.glob(f"{OUT}/trained_repair/*.json")):
@@ -379,25 +595,31 @@ def main():
             continue
         if "asr_lrqat_trained" in d:
             print(f"- **{stem}**: "
-                  f"asr fp16={num(g(d,'asr_fp16'),1)} aqlm2={num(g(d,'asr_aqlm2'),1)} "
-                  f"ptq={num(g(d,'asr_ptq_untrained'),1)} "
-                  f"lrqat={num(g(d,'asr_lrqat_trained'),1)}; "
-                  f"arc ptq={num(g(d,'arc_ptq_untrained'),1)} "
-                  f"lrqat={num(g(d,'arc_lrqat_trained'),1)}; "
-                  f"rho={num(g(d,'rho_lrqat_trained'),2)}; "
-                  f"eff_bits={num(g(d,'repaired_effective_bits'),2)}; "
-                  f"collapse={g(d,'coherence_collapse_lrqat_trained')}; "
-                  f"role={g(d,'role')} n_bits={g(d,'n_bits')}")
+                  f"asr fp16 = {num(g(d,'asr_fp16'),1)} aqlm2 = {num(g(d,'asr_aqlm2'),1)} "
+                  f"ptq = {num(g(d,'asr_ptq_untrained'),1)} "
+                  f"lrqat = {num(g(d,'asr_lrqat_trained'),1)}; "
+                  f"arc ptq = {num(g(d,'arc_ptq_untrained'),1)} "
+                  f"lrqat = {num(g(d,'arc_lrqat_trained'),1)}; "
+                  f"rho = {num(g(d,'rho_lrqat_trained'),2)}; "
+                  f"eff_bits = {num(g(d,'repaired_effective_bits'),2)}; "
+                  f"collapse = {g(d,'coherence_collapse_lrqat_trained')}; "
+                  f"role = {g(d,'role')} n_bits = {g(d,'n_bits')}")
             continue
         if any(k in d for k in ("fp_lora", "folded")):
             keep = {}
             for k in ("mean_codes_changed", "fp_lora", "folded", "role"):
                 if k in d:
                     keep[k] = d[k]
-            print(f"- **{stem}**: {json.dumps(keep, default=str)}")
+            print(f"- **{stem}**: {json.dumps(keep, default = str)}")
+            continue
+        if stem.startswith("qresafe_pairs"):
+            n_pairs = g(d, "n_pairs", default = 0)
+            anon = g(d, "meta", "extra", "anonymized", default = False)
+            suffix = ", anonymized (hashes only)" if anon else ""
+            print(f"- **{stem}**: {n_pairs} displacement pairs{suffix}")
             continue
         print(f"- **{stem}**: INCOMPLETE stub "
-              f"(keys={sorted(d.keys())}); job unfinished or crashed")
+              f"(keys = {sorted(d.keys())}); job unfinished or crashed")
 
     # -- Headline (rich XSTest/ARC/mcnemar) --------------------------------
     print("\n## Headline eval (full XSTest / ARC / McNemar)\n")
@@ -409,7 +631,7 @@ def main():
             for k in ("damage_pp", "recovery_pp", "asr", "arc", "recovery_ci_95"):
                 if k in d:
                     subset[k] = d[k]
-        print(json.dumps(subset, indent = 2, default=str))
+        print(json.dumps(subset, indent = 2, default = str))
         xs = g(d, "xstest", default = {})
         if xs:
             fr = {}
@@ -421,7 +643,7 @@ def main():
             pvals = {}
             for k, v in mc.items():
                 pvals[k] = g(v, "p_value")
-            print("mcnemar p-values: " + json.dumps(pvals, default=str))
+            print("mcnemar p-values: " + json.dumps(pvals, default = str))
         print("```")
 
     # -- Gaps (computed from disk, not hardcoded) --------------------------

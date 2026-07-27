@@ -23,7 +23,16 @@ _SCRIPT = Path(__file__)
 
 
 def proj_params(weights, projs):
-    """Total parameter count over all layers for the given projection paths."""
+    """
+    Total parameter count over all layers for the given projection paths.
+
+    Inputs:
+        - weights (dict): Layer -> projection -> weight tensor
+        - projs (list[str]): Projection dotted paths
+
+    Outputs:
+        - total (int): Sum of out * in across layers and projections
+    """
     total = 0
     for L in weights:
         for p in projs:
@@ -33,13 +42,24 @@ def proj_params(weights, projs):
 
 
 def select_whole_subset(weights, read_projs, budget):
-    """Greedily pick whole read projections whose total params ~= write budget."""
+    """
+    Greedily pick whole read projections whose total params fit the write budget.
+
+    Inputs:
+        - weights (dict): Layer -> projection -> weight tensor
+        - read_projs (list[str]): Candidate read-side projections
+        - budget (int): Target parameter budget (write-side volume)
+
+    Outputs:
+        - chosen (list[str]): Selected projection paths
+        - total (int): Total params in the chosen set
+    """
     n_layers = len(weights)
     L0 = next(iter(weights))
     per = {p: weights[L0][p].shape[0] * weights[L0][p].shape[1] * n_layers
            for p in read_projs}
     chosen, total = [], 0
-    for p in sorted(per, key=per.get, reverse=True):
+    for p in sorted(per, key = per.get, reverse = True):
         if total + per[p] <= budget * 1.10: # allow up to 10% over the budget
             chosen.append(p)
             total += per[p]
@@ -47,8 +67,19 @@ def select_whole_subset(weights, read_projs, budget):
 
 
 def restore_read_rows(model, fp32_read_weights, read_projs, frac, rng):
-    """Restore a random `frac` of each read projection's output rows to FP32,
-    leaving the remaining rows at their quantized (dequantized) values."""
+    """
+    Restore a random fraction of each read projection's output rows to FP32.
+
+    Inputs:
+        - model (torch.nn.Module): Quantized model to patch in place
+        - fp32_read_weights (dict): FP32 read weights by layer and projection
+        - read_projs (list[str]): Read-side projection paths
+        - frac (float): Fraction of output rows to restore per projection
+        - rng (torch.Generator): RNG for row selection
+
+    Outputs:
+        - None (mutates model weights in place)
+    """
     inner = get_inner(model)
     device = next(model.parameters()).device
     act_dtype = inner.norm.weight.dtype
@@ -56,7 +87,7 @@ def restore_read_rows(model, fp32_read_weights, read_projs, frac, rng):
         layer = inner.layers[L]
         for p in read_projs:
             orig = _get_submodule(layer, p)
-            base = get_weight(orig, as_dtype=torch.float32).cpu()  # dequant [out,in]
+            base = get_weight(orig, as_dtype = torch.float32).cpu()  # dequant [out,in]
             fp = fp32_read_weights[L][p]                           # FP32   [out,in]
             out, in_f = base.shape
             k = int(round(frac * out))
@@ -64,27 +95,36 @@ def restore_read_rows(model, fp32_read_weights, read_projs, frac, rng):
             new_w = base.clone()
             new_w[idx] = fp[idx]
             has_bias = orig.bias is not None
-            lin = nn.Linear(in_f, out, bias=has_bias).to(device).to(act_dtype)
+            lin = nn.Linear(in_f, out, bias = has_bias).to(device).to(act_dtype)
             lin.weight = nn.Parameter(new_w.to(device).to(act_dtype),
-                                      requires_grad=False)
+                                      requires_grad = False)
             if has_bias:
-                lin.bias = nn.Parameter(orig.bias.data.clone(), requires_grad=False)
+                lin.bias = nn.Parameter(orig.bias.data.clone(), requires_grad = False)
             _set_submodule(layer, p, lin)
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_eval", type=int, default=200)
-    ap.add_argument("--n_reasoning", type=int, default=50)
-    ap.add_argument("--seeds", type=int, default=3)
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_eval", type = int, default = 200)
+    ap.add_argument("--n_reasoning", type = int, default = 50)
+    ap.add_argument("--seeds", type = int, default = 3)
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
+    items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
     behaviors = [_extract_behavior(it) for it in items]
-    arc_items = load_arc_challenge(n_samples=args.n_reasoning)
+    arc_items = load_arc_challenge(n_samples = args.n_reasoning)
 
     # FP32 baseline; cache read/write weights and compute the param budget.
     fp32_model, tokenizer = load_fp32(args.model)
@@ -96,8 +136,8 @@ def main():
     frac = write_budget / read_total
     whole_subset, whole_total = select_whole_subset(read_w, read_projs, write_budget)
     restorer = Restorer(fp32_model)  # full-write reference
-    print(f"write_budget={write_budget:,}  read_total={read_total:,}  "
-          f"frac={frac:.3f}  whole_subset={whole_subset} ({whole_total:,})")
+    print(f"write_budget = {write_budget:,}  read_total = {read_total:,}  "
+          f"frac = {frac:.3f}  whole_subset = {whole_subset} ({whole_total:,})")
 
     # Scope audit: how many matrices and params each restore condition TOUCHES.
     # Full write must be len(write_projs) x n_layers matrices (Llama: 2 x 32 = 64);
@@ -119,17 +159,27 @@ def main():
               f"{s['matrices']:>3} matrices  {s['params'] / 1e9:.3f}B  {s['projs']}")
 
     all_resp, all_arc = {}, {}
-    all_resp["fp32"] = generate_only(fp32_model, tokenizer, items, desc="fp32")
+    all_resp["fp32"] = generate_only(fp32_model, tokenizer, items, desc = "fp32")
     all_arc["fp32"] = measure_arc(fp32_model, tokenizer, arc_items)
     del fp32_model
     gc.collect()
     torch.cuda.empty_cache()
 
     def eval_condition(name, restore_fn):
-        m, _ = load_quantized(args.model, quantizer=args.quantizer)
+        """
+        Evaluate one restoration condition on the quantized model.
+
+        Inputs:
+            - name (str): Condition label for result keys
+            - restore_fn (callable | None): In-place restore hook, or None for raw quant
+
+        Outputs:
+            - None (writes into all_resp and all_arc)
+        """
+        m, _ = load_quantized(args.model, quantizer = args.quantizer)
         if restore_fn is not None:
             restore_fn(m)
-        all_resp[name] = generate_only(m, tokenizer, items, desc=name)
+        all_resp[name] = generate_only(m, tokenizer, items, desc = name)
         all_arc[name] = measure_arc(m, tokenizer, arc_items)
         del m
         gc.collect()
@@ -142,7 +192,7 @@ def main():
     for s in range(args.seeds):
         rng = np.random.default_rng(SEED + s)
         eval_condition(f"read_matched_random_s{s}",
-                       lambda m, rng=rng: restore_read_rows(m, read_w, read_projs,
+                       lambda m, rng = rng: restore_read_rows(m, read_w, read_projs,
                                                             frac, rng))
 
     # Classify every condition in one HarmBench session for comparability.
@@ -151,7 +201,7 @@ def main():
     for c in conds:
         flatb.extend(behaviors)
         flatr.extend(all_resp[c])
-    flags = classify_batch(flatb, flatr, device=device)
+    flags = classify_batch(flatb, flatr, device = device)
     n = args.n_eval
     asr = {c: 100.0 * sum(flags[i * n:(i + 1) * n]) / n for i, c in enumerate(conds)}
     rand = [asr[f"read_matched_random_s{s}"] for s in range(args.seeds)]
@@ -175,8 +225,8 @@ def main():
         },
     }
     cfg = RunConfig(
-        model=args.model, quantizer=args.quantizer,
-        extra={"n_eval": args.n_eval, "n_reasoning": args.n_reasoning,
+        model = args.model, quantizer = args.quantizer,
+        extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning,
                "seeds": args.seeds, "seed": SEED},
     )
     path = save_result(_SCRIPT, cfg, data)

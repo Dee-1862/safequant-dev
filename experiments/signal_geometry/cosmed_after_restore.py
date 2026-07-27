@@ -35,16 +35,26 @@ def directions(model, tokenizer, harmful, harmless, layers, device, token_pos):
         - vecs (dict): Layer index -> unit direction tensor
     """
     h = extract_last_token_residuals(
-        model, tokenizer, harmful, layers, device, token_pos=token_pos
+        model, tokenizer, harmful, layers, device, token_pos = token_pos
     )
     s = extract_last_token_residuals(
-        model, tokenizer, harmless, layers, device, token_pos=token_pos
+        model, tokenizer, harmless, layers, device, token_pos = token_pos
     )
     return {L: compute_r_hat(h[L], s[L]) for L in layers}
 
 
 def cosmed_vs(fp32_dirs, cond_dirs, layers):
-    """Per-layer cosine of a condition's directions against FP32."""
+    """
+    Per-layer cosine of a condition's directions against FP32 reference.
+
+    Inputs:
+        - fp32_dirs (dict): Layer -> FP32 unit direction
+        - cond_dirs (dict): Layer -> condition unit direction
+        - layers (list[int]): Layer indices to compare
+
+    Outputs:
+        - summary (dict): Median/min/max cosines and per-layer map
+    """
     cos = [cos_sim(fp32_dirs[L], cond_dirs[L]) for L in layers]
     return {
         "cos_median": float(np.median(cos)),
@@ -55,21 +65,30 @@ def cosmed_vs(fp32_dirs, cond_dirs, layers):
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="llama7b")
-    ap.add_argument("--quantizer", default="aqlm2")
-    ap.add_argument("--n_calib", type=int, default=200)
-    ap.add_argument("--token_pos", type=int, default=None)
+    ap.add_argument("--model", default = "llama7b")
+    ap.add_argument("--quantizer", default = "aqlm2")
+    ap.add_argument("--n_calib", type = int, default = 200)
+    ap.add_argument("--token_pos", type = int, default = None)
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     token_pos = (args.token_pos if args.token_pos is not None
                  else default_token_pos(args.model))
 
-    hi = load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")
+    hi = load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")
     harmful = [(it.get("behavior") or it.get("prompt") or "")
                if isinstance(it, dict) else str(it) for it in hi]
-    harmless = load_harmless_prompts(n_samples=args.n_calib)
+    harmless = load_harmless_prompts(n_samples = args.n_calib)
 
     # FP32 directions + Restorer (both need the FP32 model, built before delete).
     fp32_model, tokenizer = load_fp32(args.model)
@@ -87,7 +106,7 @@ def main():
                   ("write_restored", "restore_write"),
                   ("both_restored", "restore_both")]
     for name, fn in conditions:
-        model, _ = load_quantized(args.model, quantizer=args.quantizer)
+        model, _ = load_quantized(args.model, quantizer = args.quantizer)
         if fn is not None:
             getattr(restorer, fn)(model)
         d = directions(model, tokenizer, harmful, harmless, layers, device, token_pos)
@@ -111,8 +130,8 @@ def main():
         "per_condition": results,
     }
     cfg = RunConfig(
-        model=args.model, quantizer=args.quantizer,
-        extra={"n_calib": args.n_calib, "token_pos": token_pos, "seed": SEED},
+        model = args.model, quantizer = args.quantizer,
+        extra = {"n_calib": args.n_calib, "token_pos": token_pos, "seed": SEED},
     )
     path = save_result(_SCRIPT, cfg, data)
     print(f"Saved to {path}")

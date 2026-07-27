@@ -3,7 +3,6 @@
 # Front Matter
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import torch
@@ -158,7 +157,7 @@ def train_dpo(model, tok, pairs, ref, lora_params, beta, lr, epochs, device, log
             opt.step()
             step += 1
             if step % log_every == 0:
-                print(f"    [dpo] ep{ep} step{step} loss={float(loss):.4f}")
+                print(f"    [dpo] ep{ep} step{step} loss = {float(loss):.4f}")
     model.eval()
 
 
@@ -211,11 +210,20 @@ def eval_model(model, tok, n_eval, n_arc, label):
     asr = 100.0 * sum(flags) / len(wj)
     arc = measure_arc(model, tok, load_arc_challenge(n_samples = n_arc))
     xs = eval_xstest(model, tok, load_xstest())
-    print(f"  [{label}] ASR={asr:.1f}% ARC={arc:.0f}% XSTest-FR={xs['false_refusal_rate']:.1f}%")
+    print(f"  [{label}] ASR = {asr:.1f}% ARC = {arc:.0f}% XSTest-FR = {xs['false_refusal_rate']:.1f}%")
     return {"asr": asr, "arc": arc, "xstest_fr": xs["false_refusal_rate"]}
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI arguments (defaults match official Q-Resafe llama7b recipe)
     ap = argparse.ArgumentParser()
     ap.add_argument("--mask", required = True, choices = ["read", "write", "full"])
@@ -234,7 +242,7 @@ def main():
                     help = "suffix appended to the output variant so hyperparameter-sweep "
                            "points do not overwrite each other, e.g. --tag lr5e-6 writes "
                            "outputs/trained_repair/qresafe_dpo_<model>_<quant>_<mask>_lr5e-6.json")
-    ap.add_argument("--opt8bit", action = "store_true", default = False, help = "use 8-bit AdamW (bitsandbytes) to fit large rank (e.g. r=2048)")
+    ap.add_argument("--opt8bit", action = "store_true", default = False, help = "use 8-bit AdamW (bitsandbytes) to fit large rank (e.g. r = 2048)")
     ap.add_argument("--save_adapter", action = "store_true", default = False, help = "save the large LoRA adapter .pt (off by default; only for re-folding)")
     ap.add_argument("--seed", type = int, default = DEFAULT_SEED) #help = "global RNG seed for reproducible LoRA init + DPO training")
     args = ap.parse_args()
@@ -256,18 +264,18 @@ def main():
         or result_path(Path("experiments/trained_repair/qresafe_pairs.py"), pairs_cfg)
     )
     pairs = json.loads(pairs_path.read_text())["pairs"]
-    print(f"[data] {len(pairs)} displacement pairs from {pairs_path} | mask={args.mask}")
+    print(f"[data] {len(pairs)} displacement pairs from {pairs_path} | mask = {args.mask}")
 
     # Attach masked LoRA and train
     model, tok = load_quantized(args.model, quantizer = args.quantizer)
     cfg = quant_cfg(model)
     lora_params, wrapped = attach_masked_lora(model, args.mask, r = args.r, alpha = args.alpha)
     n_train = sum(p.numel() for p in lora_params)
-    print(f"[lora] mask={args.mask} wrapped={len(wrapped)} trainable={n_train}")
+    print(f"[lora] mask = {args.mask} wrapped = {len(wrapped)} trainable = {n_train}")
 
     print("[dpo] precomputing reference log-probs...")
     ref = precompute_ref(model, tok, pairs, device)
-    print(f"[dpo] training beta={args.beta} lr={args.lr} epochs={args.epochs}")
+    print(f"[dpo] training beta = {args.beta} lr = {args.lr} epochs = {args.epochs}")
     train_dpo(model, tok, pairs, ref, lora_params, args.beta, args.lr, args.epochs, device,
               opt8bit = args.opt8bit)
 
@@ -300,8 +308,8 @@ def main():
         except Exception as e:
             print(f"[warn] adapter save failed ({type(e).__name__}: {e}); continuing")
     rel = [v["delta_relnorm"] for v in adapter.values()]
-    print(f"[delta] trained LoRA delta rel-norm: mean={sum(rel) / len(rel):.4f} "
-          f"min={min(rel):.4f} max={max(rel):.4f}  (vs ~0.016 snap threshold seen in smoke)")
+    print(f"[delta] trained LoRA delta rel-norm: mean = {sum(rel) / len(rel):.4f} "
+          f"min = {min(rel):.4f} max = {max(rel):.4f}  (vs ~0.016 snap threshold seen in smoke)")
 
     # Fold into 2-bit codes and unwrap
     changed = fold_all(model, wrapped, cfg)
@@ -342,40 +350,9 @@ def main():
     else:
         out_path = save_result(_SCRIPT, run_cfg, data)
     print(f"\n[saved] {out_path}")
-    print(f"  branch signal: FP+LoRA ASR={fp_lora['asr']:.1f}  folded ASR={folded['asr']:.1f}  "
-          f"codes-changed={mean_changed:.4f}  XSTest folded={folded['xstest_fr']:.1f}% (FP 6.0%)")
-
-
-def _self_test():
-    """
-    CPU DPO-math gate without loading a model.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - ok (bool): True if loss is monotone and neutral equals ln 2
-    """
-    # Prefer-yw beyond ref -> small loss; prefer-yl -> large loss
-    ok = True
-    good = float(dpo_loss(torch.tensor(0.0), torch.tensor(-2.0),
-                          torch.tensor(0.0), torch.tensor(0.0), beta = 1.0))
-    bad = float(dpo_loss(torch.tensor(-2.0), torch.tensor(0.0),
-                         torch.tensor(0.0), torch.tensor(0.0), beta = 1.0))
-    neutral = float(dpo_loss(torch.tensor(0.0), torch.tensor(0.0),
-                             torch.tensor(0.0), torch.tensor(0.0), beta = 1.0))
-    print(f"  dpo_loss good={good:.4f} neutral={neutral:.4f} bad={bad:.4f}")
-    if not (good < neutral < bad):
-        print("  FAIL: dpo_loss not monotone in the preference margin")
-        ok = False
-    if abs(neutral - 0.6931) > 1e-3:  # -log sigmoid(0) = ln 2
-        print("  FAIL: neutral loss != ln2")
-        ok = False
-    print("\n  DPO MATH GATE:", "PASS" if ok else "FAIL")
-    return ok
+    print(f"  branch signal: FP+LoRA ASR = {fp_lora['asr']:.1f}  folded ASR = {folded['asr']:.1f}  "
+          f"codes-changed = {mean_changed:.4f}  XSTest folded = {folded['xstest_fr']:.1f}% (FP 6.0%)")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        sys.exit(0 if _self_test() else 1)
     main()

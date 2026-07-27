@@ -75,6 +75,15 @@ def _send_prompt(item):
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")
@@ -98,7 +107,7 @@ def main():
     sends = [_send_prompt(it) for it in items]
     behaviors = [_extract_behavior(it) for it in items]
     n = len(items)
-    print(f"[data] {n} prompts from {args.prompt_source} (config={args.wj_config})")
+    print(f"[data] {n} prompts from {args.prompt_source} (config = {args.wj_config})")
 
     # FP completions (yw candidates)
     fp_model, tok = load_fp32(args.model)
@@ -122,7 +131,7 @@ def main():
     q_harmful = flags[n:]
     fp_asr = 100.0 * sum(fp_harmful) / n
     q_asr = 100.0 * sum(q_harmful) / n
-    print(f"[asr] FP={fp_asr:.1f}%  {args.quantizer}={q_asr:.1f}%  "
+    print(f"[asr] FP = {fp_asr:.1f}%  {args.quantizer}={q_asr:.1f}%  "
           f"({args.prompt_source}, HarmBench judge)")
 
     # Displacement set: FP refused, quantized complied

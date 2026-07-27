@@ -346,7 +346,7 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
     # Under the logit metric `induce` is a refusal LOG-ODDS, so the feasibility
     # test is "adding the direction RAISES refusal above the harmless baseline"
     # (a floor). The old `induce > 0.0` meant log-odds>0 <=> P(refuse)>0.5 -- a
-    # ceiling nothing clears, so every cell wrongly reported operative=False
+    # ceiling nothing clears, so every cell wrongly reported operative = False
     # (incl. FP32, where Arditi's method demonstrably works). Baseline = harmless
     # refusal score with NO direction added.
     induce_baseline = float(
@@ -367,7 +367,7 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
                 refusal_toks = refusal_toks,
             )
             rows.append((l, pos_idx, b, i, k))
-            print(f"  bypass={b:.3f}  induce={i:.3f}  kl={k:.3f}")
+            print(f"  bypass = {b:.3f}  induce = {i:.3f}  kl = {k:.3f}")
 
     # Feasible: direction INDUCES refusal (score above the harmless baseline)
     # and KL under threshold; pick min bypass.
@@ -379,7 +379,7 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
         return None, None, rows
     winner = min(feasible, key = lambda row: row[2])     # argmin bypass
     print(f"\nselected layer {winner[0]}, position {winner[1] - K_POSITIONS} "
-          f"(bypass={winner[2]:.3f})")
+          f"(bypass = {winner[2]:.3f})")
     return winner[0], winner[1], rows
 
 
@@ -449,6 +449,15 @@ def run_cell(name, quantizer):
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI and run the cell
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")

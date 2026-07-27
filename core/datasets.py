@@ -6,21 +6,28 @@ from datasets import load_dataset
 
 def load_harmbench_prompts(n_samples = None, cache_dir = None):
     """
-    Load harmful behaviors from HarmBench (secondary safety benchmark) directly from GitHub.
-    Dataset: https://github.com/centerforaisafety/HarmBench/blob/main/data/behavior_datasets/harmbench_behaviors_text_all.csv
-    Reference: Mazeika et al., HarmBench (ICML 2024).
-    Pinned revision: 8e1604d1171fe8a48d8febecd22f600e462bdcdd (recorded 2026-07-10)
+    Load harmful behaviors from HarmBench (secondary safety benchmark).
 
-    Returns list of str: harmful behavior strings for the HarmBench judge.
+    Dataset: centerforaisafety/HarmBench (CSV pinned by revision SHA).
+    Reference: Mazeika et al., HarmBench (ICML 2024).
+
+    Inputs:
+        - n_samples (int | None): Optional cap on number of prompts
+        - cache_dir (str | None): Unused (GitHub CSV); kept for API symmetry
+
+    Outputs:
+        - prompts (list[str]): Harmful behavior strings for the HarmBench judge
     """
     try:
-        sha = "8e1604d1171fe8a48d8febecd22f600e462bdcdd"  # centerforaisafety/HarmBench, pinned for reproducibility
-        url = f"https://raw.githubusercontent.com/centerforaisafety/HarmBench/{sha}/data/behavior_datasets/harmbench_behaviors_text_all.csv"
+        sha = "8e1604d1171fe8a48d8febecd22f600e462bdcdd"
+        url = (
+            f"https://raw.githubusercontent.com/centerforaisafety/HarmBench/{sha}"
+            "/data/behavior_datasets/harmbench_behaviors_text_all.csv"
+        )
         df = pd.read_csv(url)
     except Exception as e:
         raise RuntimeError(f"[ERROR] Cannot load HarmBench CSV from GitHub: {e}") from e
 
-    # The CSV usually has 'Behavior' column
     prompts = []
     for behavior in df["Behavior"].dropna():
         behavior = str(behavior).strip()
@@ -37,41 +44,35 @@ def load_harmbench_prompts(n_samples = None, cache_dir = None):
     return prompts
 
 
-# -- Safety: adversarial jailbreak prompts ------------------------------------
 def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = None):
     """
     Load adversarial jailbreak prompts from WildJailbreak (NeurIPS 2024).
 
-    Dataset: wildjailbreak (https://huggingface.co/datasets/allenai/wildjailbreak)
-    Configs: "train" (262K examples, has vanilla+adversarial) or "eval" (2,210, no vanilla)
+    Uses the adversarial_harmful subset (jailbreak tactics composed in).
 
-    Reference: Jiang et al., WildTeaming (NeurIPS 2024).
-    Pinned revision: 5ddc12a7894f842b0619b8e1c7ee496b198af009 (recorded 2026-07-10)
+    Inputs:
+        - n_samples (int | None): Optional cap after shuffle
+        - config (str): HF config name ("train" or "eval")
+        - cache_dir (str | None): HuggingFace datasets cache directory
 
-    Uses the "adversarial_harmful" subset, prompts with jailbreak tactics composed in.
-
-    Returns list of dicts containing:
-      - prompt (str): the adversarial (jailbroken) prompt to send to the model
-      - vanilla (str): the original harmful intent (short, used as behavior label for judge)
-      - data_type (str): the type of the data
+    Outputs:
+        - items (list[dict]): Each dict has prompt, vanilla, data_type keys
     """
     try:
         dataset = load_dataset(
             "allenai/wildjailbreak",
             config,
-            revision="5ddc12a7894f842b0619b8e1c7ee496b198af009",  # pinned for reproducibility
-            delimiter="\t",
-            keep_default_na=False,
-            cache_dir=cache_dir,
+            revision = "5ddc12a7894f842b0619b8e1c7ee496b198af009",
+            delimiter = "\t",
+            keep_default_na = False,
+            cache_dir = cache_dir,
         )
-        # Config defines one split; access via "train" key
         dataset = dataset["train"]
     except Exception as e:
         raise RuntimeError(
-            f"[ERROR] Cannot load WildJailbreak (allenai/wildjailbreak, config='{config}'): {e}"
+            f"[ERROR] Cannot load WildJailbreak (allenai/wildjailbreak, config = '{config}'): {e}"
         ) from e
 
-    # Filter for adversarial harmful prompts only
     items = []
     for row in dataset:
         dtype = row.get("data_type", "")
@@ -81,43 +82,37 @@ def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = N
         if not adv:
             continue
         vanilla = row.get("vanilla", "").strip()
-        items.append(
-            {
-                "prompt": adv,
-                "vanilla": vanilla,
-                "data_type": dtype,
-            }
-        )
+        items.append({"prompt": adv, "vanilla": vanilla, "data_type": dtype})
 
     if not items:
         raise RuntimeError(
             "[ERROR] WildJailbreak loaded but no adversarial_harmful items found."
         )
 
-    # Fixed seed ensures same prompts across phases in a single pipeline run
+    # Fixed seed keeps prompt order stable across pipeline phases
     random.Random(42).shuffle(items)
     if n_samples:
         items = items[:n_samples]
     return items
 
 
-# -- Safety: harmless prompts (for refusal direction) -------------------------
-
-
 def load_harmless_prompts(n_samples = None, cache_dir = None):
     """
-    Load harmless prompts from Alpaca-cleaned.
+    Load harmless prompts from Alpaca-cleaned (GitHub JSON, pinned revision).
 
-    Dataset: gururise/AlpacaDataCleaned (origin repo of the cleaned Alpaca data; the HF
-             'yahma/alpaca-cleaned' dataset is a mirror of this). Loaded as raw JSON from
-             GitHub. Original Alpaca: Taori et al., Stanford Alpaca (2023).
-    Pinned revision: d03c782bffd50ceeb1f4ef3c020129229ec4698c (recorded 2026-07-10)
+    Inputs:
+        - n_samples (int | None): Optional cap after shuffle
+        - cache_dir (str | None): Unused (GitHub JSON); kept for API symmetry
 
-    Returns list of str: instruction [+ newline + input if present].
+    Outputs:
+        - prompts (list[str]): instruction [+ newline + input if present]
     """
     try:
-        sha = "d03c782bffd50ceeb1f4ef3c020129229ec4698c"  # gururise/AlpacaDataCleaned, pinned for reproducibility
-        url = f"https://raw.githubusercontent.com/gururise/AlpacaDataCleaned/{sha}/alpaca_data_cleaned.json"
+        sha = "d03c782bffd50ceeb1f4ef3c020129229ec4698c"
+        url = (
+            f"https://raw.githubusercontent.com/gururise/AlpacaDataCleaned/{sha}"
+            "/alpaca_data_cleaned.json"
+        )
         df = pd.read_json(url)
     except Exception as e:
         raise RuntimeError(
@@ -146,29 +141,29 @@ def load_harmless_prompts(n_samples = None, cache_dir = None):
     return prompts
 
 
-def load_arc_challenge(n_samples = None, split="test", cache_dir = None):
+def load_arc_challenge(n_samples = None, split = "test", cache_dir = None):
     """
-    ARC-Challenge: 4-way science multiple-choice task.
+    Load ARC-Challenge multiple-choice items (Clark et al., 2018).
 
-    Dataset: ai2_arc (https://huggingface.co/datasets/allenai/ai2_arc/viewer/ARC-Challenge/train?p=11)
-    Reference: Clark et al., ARC (2018).
-    Pinned revision: 210d026faf9955653af8916fad021475a3f00453 (recorded 2026-07-10)
-    Returns list of dicts containing:
-    - question (str): the question to send to the model
-    - choices (list of str): the choices to send to the model
-    - answer_idx (int): the index of the correct choice
+    Inputs:
+        - n_samples (int | None): Optional cap on number of items
+        - split (str): HF split name (default "test")
+        - cache_dir (str | None): HuggingFace datasets cache directory
+
+    Outputs:
+        - items (list[dict]): question, choices, answer_idx per item
     """
     try:
         dataset = load_dataset(
             "allenai/ai2_arc",
             "ARC-Challenge",
-            split=split,
-            revision="210d026faf9955653af8916fad021475a3f00453",  # pinned for reproducibility
-            cache_dir=cache_dir,
+            split = split,
+            revision = "210d026faf9955653af8916fad021475a3f00453",
+            cache_dir = cache_dir,
         )
     except Exception as e:
         raise RuntimeError(
-            f"[ERROR] Cannot load ARC-Challenge (allenai/ai2_arc/ARC-Challenge, split='{split}'): {e}"
+            f"[ERROR] Cannot load ARC-Challenge (allenai/ai2_arc/ARC-Challenge, split = '{split}'): {e}"
         ) from e
 
     items = []
@@ -179,7 +174,7 @@ def load_arc_challenge(n_samples = None, split="test", cache_dir = None):
         try:
             answer_idx = labels.index(answer_key)
         except ValueError:
-            continue  # Skips rare malformed entries where the answer key is not found in the label list
+            continue
         items.append(
             {"question": item["question"], "choices": texts, "answer_idx": answer_idx}
         )
@@ -192,25 +187,19 @@ def load_arc_challenge(n_samples = None, split="test", cache_dir = None):
     return items
 
 
-# -- XSTest: over-refusal benchmark (Rottger et al. 2024) ---------------------
-
-
 def load_xstest(n_samples = None, cache_dir = None):
     """
-    XSTest: 450 prompts (250 'safe' designed-to-trick benign + 200 'unsafe' genuinely
-    harmful) used to measure exaggerated safety behavior (over-refusal).
+    Load XSTest prompts for over-refusal measurement (Rottger et al., NAACL 2024).
 
-    Dataset: paul-rottger/xstest (original author repo, loaded as raw CSV from GitHub)
-    Reference: Röttger et al., XSTest (NAACL 2024).
-    Pinned revision: d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d (recorded 2026-07-10)
+    Inputs:
+        - n_samples (int | None): Optional cap on number of prompts
+        - cache_dir (str | None): Unused (GitHub CSV); kept for API symmetry
 
-    Returns list of dicts containing:
-    - prompt (str): the prompt to send to the model
-    - type (str): "safe" or "unsafe"
-    - category (str): the category of the prompt
+    Outputs:
+        - items (list[dict]): prompt, type ("safe"/"unsafe"), category per row
     """
     try:
-        sha = "d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d"  # paul-rottger/xstest, pinned for reproducibility
+        sha = "d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d"
         url = f"https://raw.githubusercontent.com/paul-rottger/xstest/{sha}/xstest_prompts.csv"
         df = pd.read_csv(url)
     except Exception as e:
@@ -218,10 +207,6 @@ def load_xstest(n_samples = None, cache_dir = None):
             f"[ERROR] Cannot load XSTest CSV from GitHub (paul-rottger/xstest): {e}"
         ) from e
 
-    # CSV schema: id, prompt, type, label, focus, note
-    # 'label' is an explicit 'safe'/'unsafe' column, so no contrast-prefix heuristic needed:
-    #   safe   -> 250 designed-to-trick-but-benign prompts (homonyms, figurative_language, ...)
-    #   unsafe -> 200 genuinely harmful contrast prompts (contrast_homonyms, ...)
     items = []
     for _, row in df.iterrows():
         prompt = str(row.get("prompt", "")).strip()
@@ -242,28 +227,26 @@ def load_xstest(n_samples = None, cache_dir = None):
     return items
 
 
-# -- C4: generic web text for the perplexity-only calibration baseline --------
-
-
 def load_c4_calibration(n_samples = 64, max_chars = 1000, cache_dir = None):
     """
-    Random C4 (Colossal Clean Crawled Corpus) passages for use as perplexity-style (no harmful/harmless contrast) calibration data.
-    Reference: Raffel et al., C4/T5 (JMLR 2020).
+    Stream random C4 passages for generic calibration / distillation text.
 
-    Dataset: allenai/c4 (https://huggingface.co/datasets/allenai/c4/viewer/en/train?p=11)
-    Pinned revision: 1588ec454efa1a09f29cd18ddd04fe05fc8653a2 (recorded 2026-07-10)
+    Inputs:
+        - n_samples (int): Number of passages to collect
+        - max_chars (int): Truncate each passage to this many characters
+        - cache_dir (str | None): HuggingFace datasets cache directory
 
-    Returns a list of strings, each <= max_chars characters, suitable as the 'user turn' in a chat template. The teacher will generate continuations.
-
+    Outputs:
+        - prompts (list[str]): Text snippets suitable as chat user turns
     """
     try:
         ds = load_dataset(
             "allenai/c4",
             "en",
-            split="train",
-            revision="1588ec454efa1a09f29cd18ddd04fe05fc8653a2",  # pinned for reproducibility
-            streaming=True,
-            cache_dir=cache_dir,
+            split = "train",
+            revision = "1588ec454efa1a09f29cd18ddd04fe05fc8653a2",
+            streaming = True,
+            cache_dir = cache_dir,
         )
     except Exception as e:
         raise RuntimeError(f"[ERROR] Cannot load C4 (allenai/c4, 'en'): {e}") from e
@@ -272,7 +255,7 @@ def load_c4_calibration(n_samples = 64, max_chars = 1000, cache_dir = None):
     for doc in ds:
         text = (doc.get("text") or "").strip()
         if len(text) < 100:
-            continue  # skip very short documents
+            continue
         prompts.append(text[:max_chars])
         if len(prompts) >= n_samples:
             break
@@ -283,19 +266,14 @@ def load_c4_calibration(n_samples = 64, max_chars = 1000, cache_dir = None):
 
 def load_wikitext2(split = "test", cache_dir = None):
     """
-    Full WikiText-2 (raw) corpus as one concatenated string, for perplexity eval.
-    Reference: Merity et al., Pointer Sentinel Mixture Models (2016).
-
-    Dataset: wikitext / wikitext-2-raw-v1. Rows are joined with blank lines,
-    matching the GPTQ/AWQ perplexity convention so the numbers are directly
-    comparable to the quantization literature.
+    Load WikiText-2 (raw) as one concatenated string for perplexity evaluation.
 
     Inputs:
         - split (str): "test" (default), "validation", or "train"
-        - cache_dir (str | None): optional HF datasets cache dir
+        - cache_dir (str | None): HuggingFace datasets cache directory
 
     Outputs:
-        - text (str): the concatenated corpus
+        - text (str): Full corpus joined with blank lines between rows
     """
     try:
         ds = load_dataset(
@@ -303,6 +281,6 @@ def load_wikitext2(split = "test", cache_dir = None):
         )
     except Exception as e:
         raise RuntimeError(
-            f"[ERROR] Cannot load WikiText-2 (wikitext-2-raw-v1, split={split}): {e}"
+            f"[ERROR] Cannot load WikiText-2 (wikitext-2-raw-v1, split = {split}): {e}"
         ) from e
     return "\n\n".join(ds["text"])

@@ -36,7 +36,7 @@ def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, to
         - seps (dict[int, dict]): Separation statistics per layer
     """
     # Extract last-token residuals for both prompt sets
-    print(f"\n[{label}] extracting residuals (token_pos={token_pos})")
+    print(f"\n[{label}] extracting residuals (token_pos = {token_pos})")
     h_caps = extract_last_token_residuals(
         model, tokenizer, harmful, layers, device, token_pos = token_pos
     )
@@ -105,6 +105,15 @@ def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default = "llama7b")

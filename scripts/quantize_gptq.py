@@ -25,7 +25,15 @@ from core.datasets import load_dataset
 
 
 def _register_phi3_autogptq():
-    """Register Phi-3 fused layout for auto-gptq 0.7.1 (no-op on other archs)."""
+    """
+    Register Phi-3 fused layout for auto-gptq 0.7.1 (no-op on other archs).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - None (registers Phi3GPTQForCausalLM when auto-gptq is available)
+    """
     if BaseGPTQForCausalLM is None:
         return
     try:
@@ -94,6 +102,15 @@ def build_calibration(tokenizer, n_samples, seqlen, seed):
 
 
 def main():
+    """
+    CLI entry point: quantize a model with AutoGPTQ and save to Ocean storage.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes quantized checkpoint to disk)
+    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser(description = "Reproducible GPTQ quantization via AutoGPTQ.")
     ap.add_argument("--model", required = True,
@@ -119,8 +136,8 @@ def main():
 
     print("=" * 72)
     print(f"  AutoGPTQ quantize: {args.model}  ({model_path})")
-    print(f"  bits={args.bits}  group_size={args.group_size}  "
-          f"n_calib={args.n_calib}  seqlen={args.seqlen}  seed={args.seed}")
+    print(f"  bits = {args.bits}  group_size = {args.group_size}  "
+          f"n_calib = {args.n_calib}  seqlen = {args.seqlen}  seed = {args.seed}")
     if revision:
         print(f"  FP-base revision pin: {revision[:12]}")
     print(f"  output: {out_dir}")

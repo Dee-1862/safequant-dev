@@ -24,6 +24,15 @@ _SCRIPT = Path(__file__)
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required = True)
@@ -63,7 +72,7 @@ def main():
     # Write / read / both restored cells. If the quantized checkpoint's
     # architecture does not match the FP32 model -- e.g. an "unfused"
     # Mistral-layout requantization of fused Phi-3 (Sreenington's Phi-3 AWQ is
-    # model_type=mistral with separate q/k/v vs Phi-3's fused qkv_proj) -- its
+    # model_type = mistral with separate q/k/v vs Phi-3's fused qkv_proj) -- its
     # projection modules don't correspond to the FP32 ones, so restoration is
     # structurally undefined. Catch that and record N/A rather than crash; the
     # FP32 and quant baselines above stay valid.

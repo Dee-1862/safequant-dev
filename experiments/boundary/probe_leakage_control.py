@@ -55,6 +55,15 @@ def _fit(X, y):
 
 
 def main():
+    """
+    CLI entry point.
+
+    Inputs:
+        - None (command-line arguments via argparse)
+
+    Outputs:
+        - None (writes result JSON under outputs/)
+    """
     # Parse CLI arguments
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required = True)
@@ -65,14 +74,14 @@ def main():
 
     # -- prompt sets --
     harmful_txt = [_as_text(x) for x in
-                   load_wildjailbreak_prompts(n_samples=args.n_calib, config="train")]
-    harmless_txt = [_as_text(x) for x in load_harmless_prompts(n_samples=args.n_calib)]
+                   load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")]
+    harmless_txt = [_as_text(x) for x in load_harmless_prompts(n_samples = args.n_calib)]
     xs = load_xstest()
     xs_safe = [it["prompt"] for it in xs if it["type"] == "safe"]
     xs_unsafe = [it["prompt"] for it in xs if it["type"] == "unsafe"]
-    hb_txt = [_as_text(x) for x in load_harmbench_prompts(n_samples=args.n_transfer)]
-    print(f"[data] wj harmful={len(harmful_txt)} harmless={len(harmless_txt)} "
-          f"xstest safe={len(xs_safe)} unsafe={len(xs_unsafe)} harmbench={len(hb_txt)}")
+    hb_txt = [_as_text(x) for x in load_harmbench_prompts(n_samples = args.n_transfer)]
+    print(f"[data] wj harmful = {len(harmful_txt)} harmless = {len(harmless_txt)} "
+          f"xstest safe = {len(xs_safe)} unsafe = {len(xs_unsafe)} harmbench = {len(hb_txt)}")
 
     # -- FP32 residuals for every set --
     model, tok = load_fp32(args.model)
@@ -80,8 +89,17 @@ def main():
     layers = list(range(len(get_inner(model).layers)))
 
     def resid(texts):
+        """
+        Extract last-token residuals for a text batch at all layers.
+
+        Inputs:
+            - texts (list[str]): Prompt strings
+
+        Outputs:
+            - caps (dict): Layer -> list of residual tensors
+        """
         return extract_last_token_residuals(
-            model, tok, texts, layers, device, token_pos=args.token_pos)
+            model, tok, texts, layers, device, token_pos = args.token_pos)
 
     h, s = resid(harmful_txt), resid(harmless_txt)
     safe_r, unsafe_r, hb_r = resid(xs_safe), resid(xs_unsafe), resid(hb_txt)
@@ -91,6 +109,16 @@ def main():
 
     # -- (1)+(3) residual probe per layer: fit on WJ, score XSTest + HarmBench --
     def stack(cap, L):
+        """
+        Stack per-prompt residual vectors for one layer.
+
+        Inputs:
+            - cap (dict): Layer -> list of tensors
+            - L (int): Layer index
+
+        Outputs:
+            - X (ndarray): Shape (n_prompts, hidden_dim)
+        """
         return np.stack([t.numpy() for t in cap[L]])
 
     per_layer = {}
@@ -109,13 +137,22 @@ def main():
 
     # best layer by balanced XSTest accuracy (specificity + recall)/2
     def bal(L):
+        """
+        Balanced XSTest accuracy for one layer's residual probe.
+
+        Inputs:
+            - L (int): Layer index
+
+        Outputs:
+            - score (float): Mean of safe specificity and unsafe recall
+        """
         return 0.5 * (per_layer[L]["xstest_safe_specificity"]
                       + per_layer[L]["xstest_unsafe_recall"])
 
-    best = max(layers, key=bal)
+    best = max(layers, key = bal)
 
     # -- (2) strong surface baseline: TF-IDF 1-2gram logistic regression --
-    vec = TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_features=20000)
+    vec = TfidfVectorizer(ngram_range = (1, 2), min_df = 2, max_features = 20000)
     Xtr = vec.fit_transform(harmful_txt + harmless_txt)
     ytr = np.array([1] * len(harmful_txt) + [0] * len(harmless_txt))
     surf = _fit(Xtr, ytr)
@@ -145,17 +182,17 @@ def main():
         "surface_tfidf_baseline": surface,
     }
     cfg = RunConfig(
-        model=args.model, omit_quantizer=True,
-        extra={"n_calib": args.n_calib, "n_transfer": args.n_transfer,
+        model = args.model, omit_quantizer = True,
+        extra = {"n_calib": args.n_calib, "n_transfer": args.n_transfer,
                "token_pos": args.token_pos, "seed": SEED,
                "surface_baseline": "tfidf_ngram_1_2"},
     )
     path = save_result(_SCRIPT, cfg, data)
     print(f"Saved to {path}")
-    print(f"[best L{best}] residual: XSTest-safe spec={b['xstest_safe_specificity']:.3f} "
-          f"unsafe recall={b['xstest_unsafe_recall']:.3f} "
-          f"harmbench transfer={b['harmbench_transfer_recall']:.3f}")
-    print(f"           surface : XSTest-safe spec={surface['xstest_safe_specificity']:.3f}  "
+    print(f"[best L{best}] residual: XSTest-safe spec = {b['xstest_safe_specificity']:.3f} "
+          f"unsafe recall = {b['xstest_unsafe_recall']:.3f} "
+          f"harmbench transfer = {b['harmbench_transfer_recall']:.3f}")
+    print(f"           surface : XSTest-safe spec = {surface['xstest_safe_specificity']:.3f}  "
           f"(specificity gap = {data['summary']['specificity_gap_residual_minus_surface']:+.3f})")
 
 

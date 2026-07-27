@@ -10,7 +10,15 @@ RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
 
 def _load_dotenv():
-    """Load .env from repo root (does not override variables already in the shell)."""
+    """
+    Load environment variables from `.env` at the repo root.
+
+    Inputs:
+        - None (reads PROJECT_ROOT/.env)
+
+    Outputs:
+        - None (sets os.environ via setdefault only)
+    """
     path = os.path.join(PROJECT_ROOT, ".env")
     if not os.path.isfile(path):
         return
@@ -104,7 +112,7 @@ QUANTIZED_CHECKPOINTS = {
     ("gemma7b", "gptq4"): "TechxGenus/gemma-7b-it-GPTQ",
     ("gemma7b", "awq"):   "casperhansen/gemma-7b-it-awq",
     # Llama-3.1-8B-Instruct GPTQ: self-generated via scripts/quantize_gptq.py using
-    # AutoGPTQ (bits/group 128, desc_act, sym, damp 0.1, WikiText-2 calib n=128,
+    # AutoGPTQ (bits/group 128, desc_act, sym, damp 0.1, WikiText-2 calib n = 128,
     # seed 0 -- the hugging-quants recipe). AutoGPTQ (not gptqmodel) makes gptq4
     # match the literature (cos >0.97); gptq3/gptq2 give the low-bit degradation
     # curve under the SAME recipe. See docs/MODELS_QUANTIZATION.md.
@@ -150,7 +158,7 @@ QUANTIZED_CHECKPOINTS = {
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16 if DEVICE == "cuda" else torch.float32
 
-# how many prompts to use at each stage (SafeQuant v2: n=1000 for both ASR and ARC)
+# how many prompts to use at each stage (SafeQuant v2: n = 1000 for both ASR and ARC)
 N_TRAIN = 128         # used for direction extraction (Arditi protocol)
 N_VAL = 32            # used for direction selection and validation
 N_EVAL = 1000         # WildJailbreak prompts for ASR evaluation

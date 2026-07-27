@@ -53,7 +53,7 @@ def _use_remote_code(model_path):
         - model_path (str): HF model path / id
 
     Outputs:
-        - use_remote_code (bool): Whether to set trust_remote_code=True
+        - use_remote_code (bool): Whether to set trust_remote_code = True
     """
     # Phi-3 remote modeling is incompatible with newer transformers DynamicCache
     p = str(model_path).lower()
@@ -386,9 +386,9 @@ def _load_gptq(model_name, device = None, bits = 4):
         device = DEVICE
 
     # --- optimum 2.2.0 / gptqmodel 7.1.0 load shim (act-order checkpoints) ---
-    # optimum's GPTQQuantizer defaults act_group_aware=True and passes it
-    # EXPLICITLY into gptqmodel's QuantizeConfig, which rejects act_group_aware=True
-    # together with desc_act=True -- i.e. every standard act-order GPTQ checkpoint.
+    # optimum's GPTQQuantizer defaults act_group_aware = True and passes it
+    # EXPLICITLY into gptqmodel's QuantizeConfig, which rejects act_group_aware = True
+    # together with desc_act = True -- i.e. every standard act-order GPTQ checkpoint.
     # transformers' GPTQConfig.to_dict_optimum() drops the field, so it cannot be
     # overridden through the config. Force it False here. act_group_aware is a
     # quantization-TIME knob (it controls how groups are ORDERED while quantizing);

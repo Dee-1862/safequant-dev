@@ -291,7 +291,7 @@ def _generate_responses(
     """
     Generate model responses for all prompts (ASR phase A), BATCHED.
 
-    Greedy decoding (do_sample=False) is padding-invariant, so left-padded
+    Greedy decoding (do_sample = False) is padding-invariant, so left-padded
     batching yields byte-identical outputs to one-at-a-time generation -- just
     ~4-8x faster. Override the batch with EVAL_BATCH_SIZE if a model OOMs.
 
@@ -432,7 +432,7 @@ def measure_perplexity(model, tokenizer, text, seq_len = 2048, max_chunks = None
     n_tokens = enc.shape[1]
     n_chunks = n_tokens // seq_len
     if n_chunks == 0:
-        raise RuntimeError(f"corpus has {n_tokens} tokens < seq_len={seq_len}")
+        raise RuntimeError(f"corpus has {n_tokens} tokens < seq_len = {seq_len}")
     if max_chunks:                       # smoke / quick-eval cap (not for paper numbers)
         n_chunks = min(n_chunks, max_chunks)
 

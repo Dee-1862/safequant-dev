@@ -74,7 +74,7 @@ def symmetric_int_ptq(weight, n_bits, group_size = 128, eps = 1e-8):
     if group_size is None or group_size <= 0 or group_size >= in_f:
         group_size = in_f
     if in_f % group_size != 0:
-        raise ValueError(f"in_features={in_f} not divisible by group_size={group_size}")
+        raise ValueError(f"in_features = {in_f} not divisible by group_size = {group_size}")
     n_groups = in_f // group_size
 
     # Per-group absmax scales and rounded codes
@@ -298,10 +298,10 @@ class LRQATLinear(nn.Module):
             - extra_repr (str): Summary of shapes and hyperparams
         """
         return (
-            f"in={self.in_features}, out={self.out_features}, "
-            f"n_bits={self.n_bits}, group_size={self.group_size}, "
-            f"rank={self.rank}, scaling={self.lora_scaling:.3g}, "
-            f"merged={self.merged}"
+            f"in = {self.in_features}, out = {self.out_features}, "
+            f"n_bits = {self.n_bits}, group_size = {self.group_size}, "
+            f"rank = {self.rank}, scaling = {self.lora_scaling:.3g}, "
+            f"merged = {self.merged}"
         )
 
 
@@ -363,7 +363,7 @@ def inject_lrqat_adapters(
         - n_bits (int): Integer bitwidth
         - rank (int): LoRA rank
         - alpha (float): LoRA alpha
-        - get_weight_fn (callable): Weight extractor (module, as_dtype=...)
+        - get_weight_fn (callable): Weight extractor (module, as_dtype = ...)
         - compute_dtype (torch.dtype): Bias / compute dtype
         - group_size (int): PTQ group size
         - layer_range (tuple | None): (lo, hi) to inject only on layers[lo:hi]
@@ -420,7 +420,7 @@ def inject_lrqat_adapters(
         band = f"layers[{lo},{hi})" if layer_range else "all-layers"
         print(
             f"  Injected {len(injected)} LRQATLinear adapters "
-            f"(n_bits={n_bits}, group_size={group_size}, rank={rank}, alpha={alpha}, band={band})"
+            f"(n_bits = {n_bits}, group_size = {group_size}, rank = {rank}, alpha = {alpha}, band = {band})"
         )
         print(
             f"  Trainable adapter params: {n_train:,} "
@@ -514,10 +514,31 @@ def activation_aware_fill(injected, student, teacher, calib_blocks, device,
     xcache = {}                           # id(inj) -> this block's flattened input
 
     def s_pre_hook(mod, args):
+        """
+        Cache flattened student input activations for one injected projection.
+
+        Inputs:
+            - mod (torch.nn.Module): Injected LRQATLinear module
+            - args (tuple): Forward pre-hook args (input tensor first)
+
+        Outputs:
+            - None (writes into xcache side table)
+        """
         x = args[0]
         xcache[id(mod)] = x.detach().reshape(-1, x.shape[-1]).float()
 
     def t_out_hook(mod, args, out):
+        """
+        Accumulate second-moment statistics from teacher outputs vs student inputs.
+
+        Inputs:
+            - mod (torch.nn.Module): Teacher projection module
+            - args (tuple): Forward hook args
+            - out (Tensor): Teacher projection output
+
+        Outputs:
+            - None (updates A and B accumulators)
+        """
         inj = tmod_to_inj[mod]
         if id(inj) not in xcache:
             return
