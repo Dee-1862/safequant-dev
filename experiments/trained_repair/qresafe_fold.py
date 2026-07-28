@@ -1,5 +1,6 @@
 # Fold trained LoRA delta back into AQLM quantized weights.
 
+#Front Matter
 import os
 import sys
 
@@ -23,15 +24,7 @@ except ImportError:
 
 
 def quant_cfg(model):
-    """
-    Extract AQLM codebook / group sizes from the model config.
-
-    Inputs:
-        - model (nn.Module): Quantized model with quantization_config
-
-    Outputs:
-        - cfg (dict): nbits, num_codebooks, in_group_size, out_group_size
-    """
+    """Extract AQLM codebook / group sizes from the model config."""
     # Normalize config object to a plain dict
     qc = model.config.quantization_config
     if not isinstance(qc, dict):
@@ -45,15 +38,7 @@ def quant_cfg(model):
 
 
 def is_quantized_linear(module):
-    """
-    Return whether a module exposes AQLM codes/codebooks/scales.
-
-    Inputs:
-        - module (nn.Module): Candidate module
-
-    Outputs:
-        - is_quant (bool): True if quantized linear fields are present
-    """
+    """Return whether a module exposes AQLM codes/codebooks/scales."""
     # Require the three AQLM storage tensors
     return (
         hasattr(module, "codes")
@@ -63,34 +48,14 @@ def is_quantized_linear(module):
 
 
 def dequantize_module(module, nbits):
-    """
-    Dequantize an AQLM linear module to a dense weight matrix.
-
-    Inputs:
-        - module (nn.Module): Quantized linear module
-        - nbits (int): Bits per codebook entry
-
-    Outputs:
-        - weight (Tensor): Dense dequantized weight
-    """
+    """Dequantize an AQLM linear module to a dense weight matrix."""
     # Unpack signed codes then reconstruct with codebooks/scales
     codes_u = unpack_int_data(module.codes.data, nbits)
     return _dequantize_weight(codes_u, module.codebooks.data, module.scales.data)
 
 
 def fold_and_writeback_(module, delta, cfg, beam_size = 5):
-    """
-    Fold a dense delta into AQLM codes and write codes/codebooks/scales back.
-
-    Inputs:
-        - module (nn.Module): Quantized linear module (mutated in place)
-        - delta (Tensor | None): Dense [out, in] update, or None/zero for pure writeback
-        - cfg (dict): Quantization configuration from quant_cfg
-        - beam_size (int): Beam width for code updates
-
-    Outputs:
-        - changed (float): Fraction of codes that changed
-    """
+    """Fold a dense delta into AQLM codes and write codes/codebooks/scales back."""
     # Unpack current codes and storage tensors
     nbits = cfg["nbits"]
     codes_u = unpack_int_data(module.codes.data, nbits)          # [out_g,in_g,ncb] >=0
@@ -137,20 +102,7 @@ def fold_and_writeback_(module, delta, cfg, beam_size = 5):
 
 
 def roundtrip_gate(model, target_names, cfg, atol = 0.0):
-    """
-    Zero-delta writeback gate: dense weights and codes must stay bit-identical.
-
-    Inputs:
-        - model (nn.Module): Quantized model
-        - target_names (list[str]): Module names to check
-        - cfg (dict): Quantization configuration
-        - atol (float): Allowed max absolute dense difference
-
-    Outputs:
-        - n_ok (int): Modules that passed
-        - n_total (int): Quantized modules checked
-        - max_diff (float): Max absolute dense difference observed
-    """
+    """Zero-delta writeback gate: dense weights and codes must stay bit-identical."""
     # Walk targets and measure dense + codes identity after delta = 0 writeback
     n_ok, n_total, max_diff = 0, 0, 0.0
     mods = dict(model.named_modules())
@@ -174,17 +126,7 @@ def roundtrip_gate(model, target_names, cfg, atol = 0.0):
 
 
 def run_gate(model_alias = "llama7b", quantizer = "aqlm2", n_arc = 100):
-    """
-    Real-checkpoint round-trip gate: bit-identity plus ARC unchanged.
-
-    Inputs:
-        - model_alias (str): Model alias to load
-        - quantizer (str): Quantizer id
-        - n_arc (int): Number of ARC items
-
-    Outputs:
-        - ok (bool): True if the gate passed
-    """
+    """Real-checkpoint round-trip gate: bit-identity plus ARC unchanged."""
     # Load checkpoint and resolve targets
     model, tok = load_quantized(model_alias, quantizer = quantizer)
     cfg = quant_cfg(model)
@@ -212,16 +154,7 @@ def run_gate(model_alias = "llama7b", quantizer = "aqlm2", n_arc = 100):
 
 
 def delta_fold_smoke(model_alias = "llama7b", quantizer = "aqlm2"):
-    """
-    Smoke-test non-zero delta fold on one real reader module.
-
-    Inputs:
-        - model_alias (str): Model alias to load
-        - quantizer (str): Quantizer id
-
-    Outputs:
-        - ok (bool): True if codes moved and reconstruction stayed finite
-    """
+    """Smoke-test non-zero delta fold on one real reader module."""
     # Load one reader module and build a small random LoRA-like delta
     model, tok = load_quantized(model_alias, quantizer = quantizer)
     cfg = quant_cfg(model)

@@ -1,5 +1,6 @@
-# Quant-domain low-rank repair (LR-QAT) for SafeQuant v2.
+# Quant-domain low-rank repair (LR-QAT) for SafeQuant.
 
+#Front Matter
 import math
 
 import torch
@@ -9,59 +10,25 @@ import torch.nn.functional as F
 from core.residuals import get_inner
 
 
-# -- straight-through round ---------------------------------------------------
-# Forward rounds to nearest integer; backward passes the gradient through
+# straight-through round: forward rounds to nearest integer, backward passes the gradient through.
 class _RoundSTE(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
-        """
-        Round tensor to nearest integer (STE forward).
-
-        Inputs:
-            - ctx: Autograd context (unused)
-            - x (torch.Tensor): Real-valued tensor
-
-        Outputs:
-            - y (torch.Tensor): Rounded tensor
-        """
+        """Round tensor to nearest integer (STE forward)."""
         return torch.round(x)
 
     @staticmethod
     def backward(ctx, grad_output):
-        """
-        Straight-through backward: pass gradient unchanged.
-
-        Inputs:
-            - ctx: Autograd context (unused)
-            - grad_output (torch.Tensor): Upstream gradient
-
-        Outputs:
-            - grad_input (torch.Tensor): Same as grad_output
-        """
+        """Straight-through backward: pass gradient unchanged."""
         return grad_output
 
 
 round_ste = _RoundSTE.apply
 
 
-# -- symmetric group-wise integer PTQ -----------------------------------------
+# symmetric group-wise integer PTQ
 def symmetric_int_ptq(weight, n_bits, group_size = 128, eps = 1e-8):
-    """
-    Group-wise symmetric signed INT-b post-training quantization.
-
-    Inputs:
-        - weight (torch.Tensor): Dense weight to quantize
-        - n_bits (int): Integer bitwidth
-        - group_size (int): Group size along in_features (or full row if invalid)
-        - eps (float): Floor for absmax scale
-
-    Outputs:
-        - W_int (torch.Tensor): Integer codes
-        - scale (torch.Tensor): Per-group scales [out, n_groups]
-        - qmin (int): Minimum representable integer
-        - qmax (int): Maximum representable integer
-        - group_size (int): Effective group size used
-    """
+    """Group-wise symmetric signed INT-b post-training quantization."""
     # Signed integer range for n_bits
     qmax = 2 ** (n_bits - 1) - 1
     qmin = -(2 ** (n_bits - 1))
@@ -98,22 +65,7 @@ class LRQATLinear(nn.Module):
         compute_dtype = torch.float16,
         group_size = 128,
     ):
-        """
-        Build an INT-b grid linear plus trainable integer-domain low-rank adapter.
-
-        Inputs:
-            - weight_fp (torch.Tensor): Dense FP weight to quantize
-            - bias (torch.Tensor | None): Optional bias
-            - n_bits (int): Integer bitwidth
-            - rank (int): LoRA rank
-            - alpha (float): LoRA alpha (scaling = alpha / rank)
-            - device (torch.device): Parameter device
-            - compute_dtype (torch.dtype): Bias / compute dtype
-            - group_size (int): Group size for symmetric PTQ
-
-        Outputs:
-            - None
-        """
+        """Build an INT-b grid linear plus trainable integer-domain low-rank adapter."""
         super().__init__()
 
         # Shape bookkeeping
@@ -153,56 +105,24 @@ class LRQATLinear(nn.Module):
         self.merged = False
 
     def _delta(self):
-        """
-        Compute the scaled low-rank adapter delta in integer space.
-
-        Inputs:
-            - None
-
-        Outputs:
-            - delta (torch.Tensor): (lora_A @ lora_Bt) * scaling
-        """
+        """Compute the scaled low-rank adapter delta in integer space."""
         return (self.lora_A @ self.lora_Bt) * self.lora_scaling
 
     def _scale_full(self):
-        """
-        Expand group-wise scale [out, n_groups] to [out, in].
-
-        Inputs:
-            - None
-
-        Outputs:
-            - scale (torch.Tensor): Broadcastable / expanded scale
-        """
+        """Expand group-wise scale [out, n_groups] to [out, in]."""
         if self.group_size >= self.in_features:
             return self.scale
         return self.scale.repeat_interleave(self.group_size, dim = 1)
 
     def _w_hat(self):
-        """
-        Differentiable repaired weight (un-merged path).
-
-        Inputs:
-            - None
-
-        Outputs:
-            - w_hat (torch.Tensor): scale * clamp(W_int + round_ste(delta))
-        """
+        """Differentiable repaired weight (un-merged path)."""
         W_int_hat = torch.clamp(
             self.W_int + round_ste(self._delta()), self.qmin, self.qmax
         )
         return self._scale_full() * W_int_hat
 
     def forward(self, x):
-        """
-        Apply the (merged or repaired) quantized linear to x.
-
-        Inputs:
-            - x (torch.Tensor): Input activations
-
-        Outputs:
-            - y (torch.Tensor): Linear output
-        """
+        """Apply the (merged or repaired) quantized linear to x."""
         # Merged path uses frozen codes only
         if self.merged:
             weight = (self._scale_full() * self.W_int).to(x.dtype)
@@ -213,15 +133,7 @@ class LRQATLinear(nn.Module):
 
     @torch.no_grad()
     def merge_and_requantize(self):
-        """
-        Fold the trained adapter into the integer grid (LR-QAT merge).
-
-        Inputs:
-            - None
-
-        Outputs:
-            - None
-        """
+        """Fold the trained adapter into the integer grid (LR-QAT merge)."""
         # No-op if already merged
         if self.merged:
             return
@@ -235,20 +147,9 @@ class LRQATLinear(nn.Module):
 
     @torch.no_grad()
     def closed_form_fill(self, weight_fp, rank = None):
-        """
-        Training-free repair: fold the top-r SVD of the quantization residual
-        (W_fp - dequant(W_int)) into the INT grid. This is the closed-form
-        analogue of the distilled low-rank adapter -- same slot, same bit-width,
-        no gradient steps. The correction is requantized into the existing grid,
-        so effective bits are unchanged.
-
-        Inputs:
-            - weight_fp (torch.Tensor): FP16/FP32 target (teacher) weight
-            - rank (int | None): correction rank (defaults to the adapter rank)
-
-        Outputs:
-            - None
-        """
+        """Training-free repair: fold the top-r SVD of the quantization residual (W_fp - dequant(W_int)) into the INT grid.
+        This is the closed-form analogue of the distilled low-rank adapter, same slot, same bit-width, no gradient steps.
+        The correction is requantized into the existing grid, so effective bits are unchanged."""
         r = self.rank if rank is None else int(rank)
         scale_full = self._scale_full().float()
         W_deq = scale_full * self.W_int.float()
@@ -262,41 +163,17 @@ class LRQATLinear(nn.Module):
         self.merged = True
 
     def effective_bits(self):
-        """
-        Effective storage bits/weight once fused (codes + fp16 scales).
-
-        Inputs:
-            - None
-
-        Outputs:
-            - effective_bits (float): Mean bits per weight element
-        """
+        """Effective storage bits/weight once fused (codes + fp16 scales)."""
         numel = self.W_int.numel()
         scale_bits = 16 * self.scale.numel()
         return (self.n_bits * numel + scale_bits) / numel
 
     def trainable_parameters(self):
-        """
-        Return the trainable low-rank adapter parameters.
-
-        Inputs:
-            - None
-
-        Outputs:
-            - params (list): [lora_A, lora_Bt]
-        """
+        """Return the trainable low-rank adapter parameters."""
         return [self.lora_A, self.lora_Bt]
 
     def extra_repr(self):
-        """
-        Compact string for Module printing.
-
-        Inputs:
-            - None
-
-        Outputs:
-            - extra_repr (str): Summary of shapes and hyperparams
-        """
+        """Compact string for Module printing."""
         return (
             f"in = {self.in_features}, out = {self.out_features}, "
             f"n_bits = {self.n_bits}, group_size = {self.group_size}, "
@@ -305,18 +182,9 @@ class LRQATLinear(nn.Module):
         )
 
 
-# -- module tree helpers (kept local so core/ has no diagnostics dependency) ---
+# module tree helpers (kept local so core/ has no diagnostics dependency)
 def _get_submodule(layer, dotted):
-    """
-    Resolve a dotted submodule path under a layer.
-
-    Inputs:
-        - layer (torch.nn.Module): Parent module
-        - dotted (str): Dotted attribute path
-
-    Outputs:
-        - m (torch.nn.Module): Resolved submodule
-    """
+    """Resolve a dotted submodule path under a layer."""
     m = layer
     for p in dotted.split("."):
         m = getattr(m, p)
@@ -324,17 +192,7 @@ def _get_submodule(layer, dotted):
 
 
 def _set_submodule(layer, dotted, new_module):
-    """
-    Replace a dotted submodule path under a layer.
-
-    Inputs:
-        - layer (torch.nn.Module): Parent module
-        - dotted (str): Dotted attribute path
-        - new_module (torch.nn.Module): Replacement module
-
-    Outputs:
-        - None
-    """
+    """Replace a dotted submodule path under a layer."""
     parts = dotted.split(".")
     parent = layer
     for p in parts[:-1]:
@@ -354,26 +212,8 @@ def inject_lrqat_adapters(
     layer_range = None,
     verbose = True,
 ):
-    """
-    Replace each selected QuantLinear with an LRQATLinear (Route A1).
-
-    Inputs:
-        - model (torch.nn.Module): Model to modify in place
-        - proj_paths (list): Projection dotted paths per layer
-        - n_bits (int): Integer bitwidth
-        - rank (int): LoRA rank
-        - alpha (float): LoRA alpha
-        - get_weight_fn (callable): Weight extractor (module, as_dtype = ...)
-        - compute_dtype (torch.dtype): Bias / compute dtype
-        - group_size (int): PTQ group size
-        - layer_range (tuple | None): (lo, hi) to inject only on layers[lo:hi]
-          (depth-band hybrid); None injects on all layers
-        - verbose (bool): Print injection summary
-
-    Outputs:
-        - injected (list): Injected LRQATLinear modules
-        - trainable (list): Trainable adapter parameter tensors
-    """
+    """Replace each selected QuantLinear with an LRQATLinear (Route A1).
+    (depth-band hybrid), None injects on all layers"""
     # Freeze base and resolve layer stack / device
     inner = get_inner(model)
     device = next(model.parameters()).device
@@ -430,16 +270,7 @@ def inject_lrqat_adapters(
 
 
 def merge_all(injected, verbose = True):
-    """
-    Fuse + requantize every injected adapter into its INT-b grid.
-
-    Inputs:
-        - injected (list): Injected LRQATLinear modules
-        - verbose (bool): Print merge summary
-
-    Outputs:
-        - None
-    """
+    """Fuse + requantize every injected adapter into its INT-b grid."""
     for m in injected:
         m.merge_and_requantize()
     if verbose:
@@ -449,18 +280,7 @@ def merge_all(injected, verbose = True):
 
 
 def closed_form_all(injected, get_teacher_weight, rank = None, verbose = True):
-    """
-    Fill every injected adapter with a closed-form low-rank residual correction.
-
-    Inputs:
-        - injected (list): Injected LRQATLinear modules
-        - get_teacher_weight (callable): module -> FP target weight tensor
-        - rank (int | None): correction rank (defaults to each adapter's rank)
-        - verbose (bool): Print summary
-
-    Outputs:
-        - None
-    """
+    """Fill every injected adapter with a closed-form low-rank residual correction."""
     for m in injected:
         m.closed_form_fill(get_teacher_weight(m), rank = rank)
     if verbose:
@@ -474,30 +294,9 @@ def closed_form_all(injected, get_teacher_weight, rank = None, verbose = True):
 @torch.no_grad()
 def activation_aware_fill(injected, student, teacher, calib_blocks, device,
                           ridge = 1e-2, verbose = True):
-    """
-    Training-free OUTPUT-matching repair (the fix for weight-SVD's failure).
-
-    For each injected role projection, accumulate over calibration blocks the
-    second moment of the student's quantized INPUT activations (A = sum x x^T)
-    and their cross moment with the teacher's FP OUTPUT (B = sum y x^T), then set
-    the projection to the ridge least-squares weight W* = B (A + lam I)^-1 -- the
-    weight that best maps the quantized inputs to the FP outputs -- and requantize
-    W* into the INT grid. Because W* is a COMPENSATORY target (matches outputs,
-    not weights), it differs from W_fp by integer-level amounts and survives the
-    grid rounding that zeroes out the sub-step weight-SVD correction.
-
-    Inputs:
-        - injected (list): Injected LRQATLinear modules (need ._lrqat_layer/_proj)
-        - student (nn.Module): quantized student holding the injected modules
-        - teacher (nn.Module): frozen FP teacher (same architecture)
-        - calib_blocks (Tensor): [n_blocks, seq_len] CPU token blocks
-        - device: forward device
-        - ridge (float): ridge strength, relative to the mean diagonal of A
-        - verbose (bool): print progress
-
-    Outputs:
-        - None
-    """
+    """Training-free OUTPUT-matching repair (the fix for weight-SVD's failure).
+    For each injected role projection, accumulate over calibration blocks the second moment of the student's quantized INPUT activations (A = sum x x^T) and their cross moment with the teacher's FP OUTPUT (B = sum y x^T), then set the projection to the ridge least-squares weight W* = B (A + lam I)^-1, the weight that best maps the quantized inputs to the FP outputs, and requantize W* into the INT grid.
+    Because W* is a COMPENSATORY target (matches outputs, not weights), it differs from W_fp by integer-level amounts and survives the grid rounding that zeroes out the sub-step weight-SVD correction."""
     t_inner = get_inner(teacher)
 
     def _teacher_mod(m):
@@ -514,31 +313,12 @@ def activation_aware_fill(injected, student, teacher, calib_blocks, device,
     xcache = {}                           # id(inj) -> this block's flattened input
 
     def s_pre_hook(mod, args):
-        """
-        Cache flattened student input activations for one injected projection.
-
-        Inputs:
-            - mod (torch.nn.Module): Injected LRQATLinear module
-            - args (tuple): Forward pre-hook args (input tensor first)
-
-        Outputs:
-            - None (writes into xcache side table)
-        """
+        """Cache flattened student input activations for one injected projection."""
         x = args[0]
         xcache[id(mod)] = x.detach().reshape(-1, x.shape[-1]).float()
 
     def t_out_hook(mod, args, out):
-        """
-        Accumulate second-moment statistics from teacher outputs vs student inputs.
-
-        Inputs:
-            - mod (torch.nn.Module): Teacher projection module
-            - args (tuple): Forward hook args
-            - out (Tensor): Teacher projection output
-
-        Outputs:
-            - None (updates A and B accumulators)
-        """
+        """Accumulate second-moment statistics from teacher outputs vs student inputs."""
         inj = tmod_to_inj[mod]
         if id(inj) not in xcache:
             return
@@ -586,15 +366,7 @@ def activation_aware_fill(injected, student, teacher, calib_blocks, device,
 
 
 def injected_effective_bits(injected):
-    """
-    Mean effective bits/weight across all injected (repaired) matrices.
-
-    Inputs:
-        - injected (list): Injected LRQATLinear modules
-
-    Outputs:
-        - effective_bits (float): Mean bits/weight, or nan if empty
-    """
+    """Mean effective bits/weight across all injected (repaired) matrices."""
     if not injected:
         return float("nan")
     return sum(m.effective_bits() for m in injected) / len(injected)

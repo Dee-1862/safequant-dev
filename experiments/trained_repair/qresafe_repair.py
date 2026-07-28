@@ -1,4 +1,5 @@
 # Q-Resafe LoRA repair library (mask selection, attach, train helpers).
+#Front Matter
 import math
 
 import torch
@@ -14,16 +15,7 @@ MASK_SETS = {
 
 
 def select_target_modules(model, mask):
-    """
-    Select module names matching the requested read/write/full mask.
-
-    Inputs:
-        - model (nn.Module): Model whose modules are scanned
-        - mask (str): One of MASK_SETS keys
-
-    Outputs:
-        - names (list[str]): Fully-qualified target module names
-    """
+    """Select module names matching the requested read/write/full mask."""
     # Validate mask and collect matching linear / quantized linear names
     if mask not in MASK_SETS:
         raise ValueError(f"mask must be one of {list(MASK_SETS)}, got {mask!r}")
@@ -40,16 +32,7 @@ def select_target_modules(model, mask):
 
 
 def _infeat_outfeat(module):
-    """
-    Resolve input and output feature sizes from a linear-like module.
-
-    Inputs:
-        - module (nn.Module): Linear or quantized linear module
-
-    Outputs:
-        - inf (int | None): Input features
-        - out (int | None): Output features
-    """
+    """Resolve input and output feature sizes from a linear-like module."""
     # Support both HuggingFace and GPTQ-style attribute names
     inf = getattr(module, "in_features", None) or getattr(module, "infeatures", None)
     out = getattr(module, "out_features", None) or getattr(module, "outfeatures", None)
@@ -60,18 +43,7 @@ class LoRALinear(nn.Module):
     # Frozen base + trainable LoRA delta: y = base(x) + scaling * (dropout(x) @ A^T) @ B^T.
 
     def __init__(self, base, r, alpha, dropout = 0.0):
-        """
-        Wrap a linear module with a zero-init LoRA delta.
-
-        Inputs:
-            - base (nn.Module): Frozen base module
-            - r (int): LoRA rank
-            - alpha (float): LoRA alpha (scaling = alpha / r)
-            - dropout (float): Optional dropout on the LoRA path
-
-        Outputs:
-            - None
-        """
+        """Wrap a linear module with a zero-init LoRA delta."""
         # Freeze the base and create A/B on the same device
         super().__init__()
         self.base = base
@@ -93,16 +65,8 @@ class LoRALinear(nn.Module):
         self.enabled = True   # toggle off to get the DPO reference (base, no adapter)
 
     def forward(self, x):
-        """
-        Forward through base plus optional LoRA delta.
-
-        Inputs:
-            - x (Tensor): Input activations
-
-        Outputs:
-            - out (Tensor): Base output, optionally plus LoRA delta
-        """
-        # Base path always runs; delta only when enabled
+        """Forward through base plus optional LoRA delta."""
+        # Base path always runs, delta only when enabled
         base_out = self.base(x)
         if not self.enabled:
             return base_out
@@ -111,31 +75,13 @@ class LoRALinear(nn.Module):
         return base_out + self.scaling * delta.to(base_out.dtype)
 
     def delta_weight(self):
-        """
-        Dense LoRA weight delta: scaling * B @ A with shape [out, in].
-
-        Inputs:
-            - None
-
-        Outputs:
-            - delta (Tensor): Dense LoRA contribution to the weight matrix
-        """
+        """Dense LoRA weight delta: scaling * B @ A with shape [out, in]."""
         # Materialize the low-rank update as a dense matrix
         return self.scaling * (self.lora_B @ self.lora_A)
 
 
 def _set_module(model, name, new):
-    """
-    Replace a nested submodule by dotted name.
-
-    Inputs:
-        - model (nn.Module): Root model
-        - name (str): Dotted module path
-        - new (nn.Module): Replacement module
-
-    Outputs:
-        - None
-    """
+    """Replace a nested submodule by dotted name."""
     # Walk parents, supporting integer ModuleList indices
     parts = name.split(".")
     parent = model
@@ -145,20 +91,7 @@ def _set_module(model, name, new):
 
 
 def attach_masked_lora(model, mask, r = 128, alpha = 128.0, dropout = 0.0):
-    """
-    Freeze the model and wrap the masked projection set with LoRALinear.
-
-    Inputs:
-        - model (nn.Module): Model to wrap
-        - mask (str): read / write / full
-        - r (int): LoRA rank
-        - alpha (float): LoRA alpha
-        - dropout (float): LoRA dropout
-
-    Outputs:
-        - lora_params (list[Parameter]): Trainable LoRA parameters
-        - wrapped (list[str]): Names of wrapped modules
-    """
+    """Freeze the model and wrap the masked projection set with LoRALinear."""
     # Freeze everything, then wrap only the mask targets
     for p in model.parameters():
         p.requires_grad_(False)
@@ -173,16 +106,7 @@ def attach_masked_lora(model, mask, r = 128, alpha = 128.0, dropout = 0.0):
 
 
 def set_lora_enabled(model, flag):
-    """
-    Toggle every LoRALinear; False yields the DPO reference (base only).
-
-    Inputs:
-        - model (nn.Module): Model containing LoRALinear wrappers
-        - flag (bool): Whether adapters are enabled
-
-    Outputs:
-        - None
-    """
+    """Toggle every LoRALinear, False yields the DPO reference (base only)."""
     # Toggle the enabled flag on each LoRALinear
     for m in model.modules():
         if type(m).__name__ == "LoRALinear":
@@ -190,16 +114,7 @@ def set_lora_enabled(model, flag):
 
 
 def unwrap_lora(model, wrapped_names):
-    """
-    Replace each LoRALinear with its base module after folding.
-
-    Inputs:
-        - model (nn.Module): Model containing LoRALinear wrappers
-        - wrapped_names (list[str]): Names previously returned by attach_masked_lora
-
-    Outputs:
-        - None
-    """
+    """Replace each LoRALinear with its base module after folding."""
     # Restore the (possibly updated) base modules in place
     mods = dict(model.named_modules())
     for name in wrapped_names:

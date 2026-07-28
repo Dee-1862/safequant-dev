@@ -1,4 +1,5 @@
 # Table 5 / Figure 1: headline ASR+ARC+XSTest with McNemar and bootstrap CIs.
+#Front Matter
 import argparse
 import gc
 import json
@@ -28,23 +29,7 @@ _SCRIPT = Path(__file__)
 
 
 def eval_condition(model, tokenizer, name, wj_items, arc_items, xstest_items, max_new_tokens):
-    """
-    Run ASR generation, ARC, and XSTest for one model condition.
-
-    Inputs:
-        - model (nn.Module): Model under evaluation
-        - tokenizer (PreTrainedTokenizer): Tokenizer matched to model
-        - name (str): Condition label used in progress bars
-        - wj_items (list): WildJailbreak eval prompts
-        - arc_items (list): ARC-Challenge items
-        - xstest_items (list): XSTest items
-        - max_new_tokens (int): ASR generation length cap
-
-    Outputs:
-        - resp (list[str]): ASR responses
-        - arc (float): ARC score
-        - xs (dict): XSTest metrics
-    """
+    """Run ASR generation, ARC, and XSTest for one model condition."""
     # ASR responses on WildJailbreak
     resp = generate_only(
         model = model,
@@ -102,15 +87,7 @@ def main():
     all_resp, all_arc, all_xs = {}, {}, {}
 
     def checkpoint():
-        """
-        Flush partial response/ARC/XSTest dumps to the raw sidecar.
-
-        Inputs:
-            - None
-
-        Outputs:
-            - None
-        """
+        """Flush partial response/ARC/XSTest dumps to the raw sidecar."""
         # Drop bulky per-prompt XSTest fields from the sidecar
         raw_path.write_text(
             json.dumps(

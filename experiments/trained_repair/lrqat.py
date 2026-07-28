@@ -1,5 +1,6 @@
 # Reader-side (vs writer-side) low-bit REPAIR via quant-domain LR-QAT.
 
+#Front Matter
 import argparse
 import gc
 import json
@@ -43,24 +44,12 @@ _SCRIPT = Path(__file__)
 ASR_FP16_DEFAULT = 41.0
 ASR_QUANT_DEFAULT = 62.5
 
-# Documented training corpus -- contains NO harmful or safety examples.
-TRAIN_CORPUS = "allenai/c4 (en) -- general web text, no harmful/safety data"
+# Documented training corpus: contains NO harmful or safety examples.
+TRAIN_CORPUS = "allenai/c4 (en), general web text, no harmful/safety data"
 
 
 def build_token_blocks(tokenizer, n_docs, seq_len, device, max_chars = 4000):
-    """
-    Stream C4, concatenate, and chunk into fixed-length LM blocks.
-
-    Inputs:
-        - tokenizer (PreTrainedTokenizer): Tokenizer for C4 docs
-        - n_docs (int): Number of C4 documents to stream
-        - seq_len (int): Tokens per training block
-        - device (str | torch.device): Unused here; blocks stay on CPU
-        - max_chars (int): Per-document character cap
-
-    Outputs:
-        - blocks (Tensor): CPU long tensor shaped [n_blocks, seq_len]
-    """
+    """Stream C4, concatenate, and chunk into fixed-length LM blocks."""
     # Tokenize streamed C4 docs and append EOS between documents
     docs = load_c4_calibration(n_samples = n_docs, max_chars = max_chars)
     ids = []
@@ -78,17 +67,7 @@ def build_token_blocks(tokenizer, n_docs, seq_len, device, max_chars = 4000):
 
 
 def kl_distill_loss(student_logits, teacher_logits, temperature = 1.0):
-    """
-    Forward KL from teacher to student over tokens (batchmean reduction).
-
-    Inputs:
-        - student_logits (Tensor): Student next-token logits
-        - teacher_logits (Tensor): Teacher next-token logits
-        - temperature (float): Softmax temperature
-
-    Outputs:
-        - loss (Tensor): Scaled KL divergence loss
-    """
+    """Forward KL from teacher to student over tokens (batchmean reduction)."""
     # F.kl_div expects log-probs for student and probs for teacher
     t = temperature
     s_logp = F.log_softmax(student_logits / t, dim = -1)
@@ -98,19 +77,7 @@ def kl_distill_loss(student_logits, teacher_logits, temperature = 1.0):
 
 @torch.no_grad()
 def eval_val_kl(student, teacher, val_blocks, device, max_batches = 8):
-    """
-    Mean KL on held-out C4 blocks between student and frozen teacher.
-
-    Inputs:
-        - student (nn.Module): Student model with adapters
-        - teacher (nn.Module): Frozen FP teacher
-        - val_blocks (Tensor): Validation token blocks
-        - device (str | torch.device): Device for forwards
-        - max_batches (int): Cap on validation blocks
-
-    Outputs:
-        - mean_kl (float): Average KL over evaluated batches
-    """
+    """Mean KL on held-out C4 blocks between student and frozen teacher."""
     # Eval mode for student during validation, then restore train mode
     student.eval()
     total, n = 0.0, 0
@@ -125,21 +92,7 @@ def eval_val_kl(student, teacher, val_blocks, device, max_batches = 8):
 
 
 def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, device):
-    """
-    Distill LR-QAT adapters toward the FP teacher on neutral C4 blocks.
-
-    Inputs:
-        - student (nn.Module): Student with trainable adapters
-        - teacher (nn.Module): Frozen FP teacher
-        - trainable (list[Parameter]): Adapter parameters
-        - train_blocks (Tensor): Training token blocks
-        - val_blocks (Tensor): Validation token blocks
-        - args (Namespace): Training hyperparameters from CLI
-        - device (str | torch.device): Training device
-
-    Outputs:
-        - stats (dict): Steps, tokens, best val KL, wall clock, history
-    """
+    """Distill LR-QAT adapters toward the FP teacher on neutral C4 blocks."""
     # Prefer 8-bit AdamW when bitsandbytes is available
     try:
         if bnb is None:
@@ -240,18 +193,7 @@ def train_adapters(student, teacher, trainable, train_blocks, val_blocks, args, 
 
 
 def load_baseline_asr(model, quantizer):
-    """
-    Read FP16/quant baseline ASR from the F3a sweep output, or use defaults.
-
-    Inputs:
-        - model (str): Model alias
-        - quantizer (str): Quantizer id
-
-    Outputs:
-        - asr_fp16 (float): FP baseline ASR
-        - asr_quant (float): Quantized baseline ASR
-        - source (str): Path or "spec-constants"
-    """
+    """Read FP16/quant baseline ASR from the F3a sweep output, or use defaults."""
     # Prefer the mirrored restoration_sweep result when present
     cfg = RunConfig(model = model, quantizer = quantizer)
     p = find_result(Path("experiments/regime_sweep/restoration_sweep.py"), cfg)
@@ -265,17 +207,7 @@ def load_baseline_asr(model, quantizer):
 
 
 def recovery_fraction(asr_repaired, asr_quant, asr_fp16):
-    """
-    Fraction of quantization ASR damage recovered by a repair condition.
-
-    Inputs:
-        - asr_repaired (float): ASR after repair
-        - asr_quant (float): Quantized baseline ASR
-        - asr_fp16 (float): FP baseline ASR
-
-    Outputs:
-        - rho (float): Recovery fraction, or NaN if damage is zero
-    """
+    """Fraction of quantization ASR damage recovered by a repair condition."""
     # (quant - repaired) / (quant - fp16)
     denom = (asr_quant - asr_fp16)
     if denom == 0:
@@ -296,13 +228,9 @@ def _proj_numel(layer, dotted):
 
 
 def _whole_model_effective_bits(model, role_projs, layer_range, base_eff, inj_eff):
-    """Whole-model effective bits/weight: AQLM-2 base on every quantized matrix,
-    INT-b only on the injected (role x band) matrices. Returns (bits, fraction).
-
-    base_eff is the AQLM-2 effective-bit proxy (~2.2); inj_eff is the injected
-    per-matrix effective bits. Defensive: returns (None, None) on any failure so
-    reporting never crashes a 5h run.
-    """
+    """Whole-model effective bits/weight: AQLM-2 base on every quantized matrix, INT-b only on the injected (role x band) matrices.
+    Returns (bits, fraction). base_eff is the AQLM-2 effective-bit proxy (~2.2), inj_eff is the injected per-matrix effective bits.
+    Defensive: returns (None, None) on any failure so reporting never crashes a 5h run."""
     try:
         inner = get_inner(model)
         read, write = get_proj_sets(model)
@@ -491,15 +419,7 @@ def main():
     fr_lrqat = xstest_lrqat["false_refusal_rate"] if xstest_lrqat else None
 
     def _fr(v):
-        """
-        Format an optional false-refusal percentage for the result table.
-
-        Inputs:
-            - v (float | None): False-refusal rate, or None when skipped
-
-        Outputs:
-            - text (str): Fixed-width percentage string or dash placeholder
-        """
+        """Format an optional false-refusal percentage for the result table."""
         return f"{v:>6.0f}%" if v is not None else f"{'-':>7}"
 
     # Print summary table

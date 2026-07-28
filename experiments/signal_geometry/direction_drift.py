@@ -1,4 +1,5 @@
 # Table 1: direction drift (delta_med + cosmed).
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -18,23 +19,7 @@ _SCRIPT = Path(__file__)
 
 
 def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, token_pos = -1):
-    """
-    Extract per-layer refusal directions and separations for one model.
-
-    Inputs:
-        - model (nn.Module): Model to extract residuals from
-        - tokenizer (PreTrainedTokenizer): Tokenizer matched to model
-        - harmful (list): Harmful prompts
-        - harmless (list): Harmless prompts
-        - layers (list[int]): Layer indices
-        - device (str | torch.device): Device for extraction
-        - label (str): Log label for this condition
-        - token_pos (int): Token position for residuals
-
-    Outputs:
-        - r_hats (dict[int, Tensor]): Unit refusal direction per layer
-        - seps (dict[int, dict]): Separation statistics per layer
-    """
+    """Extract per-layer refusal directions and separations for one model."""
     # Extract last-token residuals for both prompt sets
     print(f"\n[{label}] extracting residuals (token_pos = {token_pos})")
     h_caps = extract_last_token_residuals(
@@ -55,22 +40,7 @@ def run_for_model(model, tokenizer, harmful, harmless, layers, device, label, to
 
 
 def analyze(quantizer, fp32_r_hats, fp32_seps, q_r_hats, q_seps, layers, n_calib, model_name):
-    """
-    Compare FP32 vs quantized directions and package the result payload.
-
-    Inputs:
-        - quantizer (str): Quantizer id used for the quantized cell
-        - fp32_r_hats (dict): FP32 directions by layer
-        - fp32_seps (dict): FP32 separations by layer
-        - q_r_hats (dict): Quantized directions by layer
-        - q_seps (dict): Quantized separations by layer
-        - layers (list[int]): Layer indices
-        - n_calib (int): Calibration sample count
-        - model_name (str): Model alias
-
-    Outputs:
-        - data (dict): Result payload for save_result
-    """
+    """Compare FP32 vs quantized directions and package the result payload."""
     # Cosine similarity and Pearson of sep vs cosine
     cos_per_layer = {L: cos_sim(fp32_r_hats[L], q_r_hats[L]) for L in layers}
     cos_vals = list(cos_per_layer.values())

@@ -1,5 +1,6 @@
 # FP32 weight extraction and projection restoration (read/write split).
 
+#Front Matter
 import torch
 import torch.nn as nn
 
@@ -20,16 +21,7 @@ PHI3_WRITE_PROJS = ["self_attn.o_proj", "mlp.down_proj"]
 
 
 def get_proj_sets(model):
-    """
-    Return (read_projs, write_projs) matching the model projection layout.
-
-    Inputs:
-        - model (torch.nn.Module): Model used to detect Phi-3 fused projs
-
-    Outputs:
-        - read_projs (list): Read projection dotted paths
-        - write_projs (list): Write projection dotted paths
-    """
+    """Return (read_projs, write_projs) matching the model projection layout."""
     # Inspect leaf submodule names for Phi-3 fused layouts
     submods = {n.rsplit(".", 1)[-1] for n, _ in model.named_modules()}
     if "qkv_proj" in submods or "gate_up_proj" in submods:
@@ -38,16 +30,7 @@ def get_proj_sets(model):
 
 
 def _get_submodule(layer, proj_path):
-    """
-    Resolve a dotted projection path under a transformer layer.
-
-    Inputs:
-        - layer (torch.nn.Module): Single decoder layer
-        - proj_path (str): Dotted attribute path (e.g. self_attn.q_proj)
-
-    Outputs:
-        - m (torch.nn.Module): Resolved submodule
-    """
+    """Resolve a dotted projection path under a transformer layer."""
     # Walk attribute path
     m = layer
     for part in proj_path.split("."):
@@ -56,17 +39,7 @@ def _get_submodule(layer, proj_path):
 
 
 def _set_submodule(layer, proj_path, new_module):
-    """
-    Replace a dotted projection path under a transformer layer.
-
-    Inputs:
-        - layer (torch.nn.Module): Single decoder layer
-        - proj_path (str): Dotted attribute path
-        - new_module (torch.nn.Module): Replacement module
-
-    Outputs:
-        - None
-    """
+    """Replace a dotted projection path under a transformer layer."""
     # Walk to parent, then setattr the leaf
     parts = proj_path.split(".")
     parent = layer
@@ -76,29 +49,12 @@ def _set_submodule(layer, proj_path, new_module):
 
 
 def _is_awq_module(module):
-    """
-    Detect AWQ WQLinear modules by class name.
-
-    Inputs:
-        - module (torch.nn.Module): Candidate linear / quant linear
-
-    Outputs:
-        - is_awq (bool): True if the module looks like AWQ WQLinear
-    """
+    """Detect AWQ WQLinear modules by class name."""
     return "WQLinear" in type(module).__name__
 
 
 def _transform_fp32_to_awq_space(fp32_weight, awq_module):
-    """
-    Rescale an FP32 weight into the AWQ activation/weight scale space.
-
-    Inputs:
-        - fp32_weight (torch.Tensor): Dense FP32 weight
-        - awq_module (torch.nn.Module): AWQ module providing scales
-
-    Outputs:
-        - transformed (torch.Tensor): Weight in AWQ scale space
-    """
+    """Rescale an FP32 weight into the AWQ activation/weight scale space."""
     # Expand group scales along the input feature axis
     scales = awq_module.scales.float()
     group_size = awq_module.group_size
@@ -107,16 +63,7 @@ def _transform_fp32_to_awq_space(fp32_weight, awq_module):
 
 
 def extract_fp32_weights(fp32_model, proj_paths):
-    """
-    Snapshot FP32 projection weights for every layer and path.
-
-    Inputs:
-        - fp32_model (torch.nn.Module): Dense FP32 model
-        - proj_paths (list): Projection dotted paths to extract
-
-    Outputs:
-        - weights (dict): layer_idx -> proj -> CPU float32 weight clone
-    """
+    """Snapshot FP32 projection weights for every layer and path."""
     # Iterate all hidden layers
     n_layers = fp32_model.config.num_hidden_layers
     weights = {}
@@ -133,18 +80,7 @@ def extract_fp32_weights(fp32_model, proj_paths):
 
 
 def restore_projections(model, fp32_weights, proj_paths, layer_range = None):
-    """
-    Restore projections in the model, optionally limited to a layer range.
-
-    Inputs:
-        - model (torch.nn.Module): Target (possibly quantized) model
-        - fp32_weights (dict): Weights from extract_fp32_weights
-        - proj_paths (list): Projection paths to restore
-        - layer_range (tuple | None): Optional [lo, hi) layer indices
-
-    Outputs:
-        - None
-    """
+    """Restore projections in the model, optionally limited to a layer range."""
     # Resolve inner layers and activation device/dtype
     inner = get_inner(model)
     act_dtype = inner.norm.weight.dtype
@@ -182,17 +118,7 @@ def restore_projections(model, fp32_weights, proj_paths, layer_range = None):
 
 
 def measure_arc(model, tokenizer, arc_items):
-    """
-    Measure multiple-choice accuracy of the model on ARC items.
-
-    Inputs:
-        - model (torch.nn.Module): Model under test
-        - tokenizer (Tokenizer): Matching tokenizer
-        - arc_items (list): ARC items with question/choices/answer_idx
-
-    Outputs:
-        - accur (float): Accuracy percentage in [0, 100]
-    """
+    """Measure multiple-choice accuracy of the model on ARC items."""
     # Score each item by summed choice log-probs
     device = next(model.parameters()).device
     correct = 0
@@ -207,53 +133,21 @@ def measure_arc(model, tokenizer, arc_items):
 
 class Restorer:
     def __init__(self, fp32_model):
-        """
-        Cache FP32 read/write projection weights from a dense model.
-
-        Inputs:
-            - fp32_model (torch.nn.Module): Dense FP32 source model
-
-        Outputs:
-            - None
-        """
+        """Cache FP32 read/write projection weights from a dense model."""
         # Snapshot both proj sets once for later restores
         self.read_projs, self.write_projs = get_proj_sets(fp32_model)
         self.write_weights = extract_fp32_weights(fp32_model, self.write_projs)
         self.read_weights = extract_fp32_weights(fp32_model, self.read_projs)
 
     def restore_write(self, model):
-        """
-        Restore write projections on a (possibly quantized) model.
-
-        Inputs:
-            - model (torch.nn.Module): Target model
-
-        Outputs:
-            - None
-        """
+        """Restore write projections on a (possibly quantized) model."""
         restore_projections(model, self.write_weights, self.write_projs)
 
     def restore_read(self, model):
-        """
-        Restore read projections on a (possibly quantized) model.
-
-        Inputs:
-            - model (torch.nn.Module): Target model
-
-        Outputs:
-            - None
-        """
+        """Restore read projections on a (possibly quantized) model."""
         restore_projections(model, self.read_weights, self.read_projs)
 
     def restore_both(self, model):
-        """
-        Restore write then read projections on a model.
-
-        Inputs:
-            - model (torch.nn.Module): Target model
-
-        Outputs:
-            - None
-        """
+        """Restore write then read projections on a model."""
         self.restore_write(model)
         self.restore_read(model)

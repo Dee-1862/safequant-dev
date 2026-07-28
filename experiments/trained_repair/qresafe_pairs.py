@@ -1,4 +1,5 @@
 # Build FP-refused / quant-complied displacement pairs for Q-Resafe DPO.
+#Front Matter
 import argparse
 import gc
 import json
@@ -21,15 +22,7 @@ ADVBENCH_SPLIT = (
 
 
 def _advbench(n_prompts):
-    """
-    Load AdvBench instruction prompts from the local refusal_direction split.
-
-    Inputs:
-        - n_prompts (int | None): Cap on prompts, or None for all
-
-    Outputs:
-        - items (list[dict]): Prompt dicts with prompt/vanilla fields
-    """
+    """Load AdvBench instruction prompts from the local refusal_direction split."""
     # Read the AdvBench JSON split
     with open(ADVBENCH_SPLIT) as f:
         items = json.load(f)
@@ -41,17 +34,7 @@ def _advbench(n_prompts):
 
 
 def get_items(source, n_prompts, wj_config):
-    """
-    Load prompt items from WildJailbreak or AdvBench.
-
-    Inputs:
-        - source (str): "wildjailbreak" or "advbench"
-        - n_prompts (int): Number of prompts to load
-        - wj_config (str): WildJailbreak split name when source is wildjailbreak
-
-    Outputs:
-        - items (list): Prompt items
-    """
+    """Load prompt items from WildJailbreak or AdvBench."""
     # Dispatch by prompt source
     if source == "wildjailbreak":
         return load_wildjailbreak_prompts(n_samples = n_prompts, config = wj_config)
@@ -61,15 +44,7 @@ def get_items(source, n_prompts, wj_config):
 
 
 def _send_prompt(item):
-    """
-    Extract the user-facing prompt string from a heterogeneous item dict.
-
-    Inputs:
-        - item (dict): Prompt item
-
-    Outputs:
-        - prompt (str): Prompt text sent to the model
-    """
+    """Extract the user-facing prompt string from a heterogeneous item dict."""
     # Prefer prompt, then goal, then instruction
     return (item.get("prompt") or item.get("goal") or item.get("instruction") or "")
 
@@ -132,7 +107,7 @@ def main():
             pairs.append({"instruction": sp, "yw": fw.strip(), "yl": qr.strip()})
     print(f"[pairs] {len(pairs)} displacement pairs (FP refused & {args.quantizer} complied)")
     if len(pairs) < 20:
-        print(f"  WARNING: only {len(pairs)} displacement pairs -- saliency may be noisy. "
+        print(f"  WARNING: only {len(pairs)} displacement pairs, saliency may be noisy. "
               f"Consider widening n_prompts or relaxing the filter.")
 
     # Persist pairs JSON

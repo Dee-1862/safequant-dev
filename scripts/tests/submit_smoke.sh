@@ -1,6 +1,6 @@
 #!/bin/bash
 # Submit smoke chain with Slurm dependencies:
-#   env → (llama + phi in parallel) → optional pairs (llama then phi)
+#   env -> (llama + phi in parallel) -> optional pairs (llama then phi)
 #
 # Usage (from repo root on Bridges-2):
 #   bash scripts/tests/submit_smoke.sh

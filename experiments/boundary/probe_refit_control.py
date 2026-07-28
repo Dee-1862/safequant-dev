@@ -1,4 +1,5 @@
 # Probe refit noise-floor control for probe-rotation screen.
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -18,16 +19,7 @@ _SCRIPT = Path(__file__)
 
 
 def _cos(a, b):
-    """
-    Cosine similarity between two vectors.
-
-    Inputs:
-        - a (array-like): First vector
-        - b (array-like): Second vector
-
-    Outputs:
-        - cos (float): Cosine similarity, or 0.0 if either vector is near-zero
-    """
+    """Cosine similarity between two vectors."""
     # Cast to float64 for stable norms
     a = np.asarray(a, np.float64)
     b = np.asarray(b, np.float64)
@@ -38,16 +30,7 @@ def _cos(a, b):
 
 
 def _fit_w(h_list, s_list):
-    """
-    Fit a linear probe and return its weight vector.
-
-    Inputs:
-        - h_list (list[Tensor]): Harmful residual vectors
-        - s_list (list[Tensor]): Harmless residual vectors
-
-    Outputs:
-        - weight (ndarray): LogisticRegression coef_[0]
-    """
+    """Fit a linear probe and return its weight vector."""
     # Stack features and binary labels (harmful = 1)
     X = np.stack([t.numpy() for t in h_list] + [t.numpy() for t in s_list])
     y = np.array([1] * len(h_list) + [0] * len(s_list))

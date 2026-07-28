@@ -1,4 +1,5 @@
 # Probe leakage control: FP32 refusal probe vs surface-feature baseline (XSTest + HarmBench).
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -22,15 +23,7 @@ _SCRIPT = Path(__file__)
 
 
 def _as_text(x):
-    """
-    Normalize a prompt item to plain text for TF-IDF or logging.
-
-    Inputs:
-        - x (str | dict | other): Prompt field or item dict
-
-    Outputs:
-        - text (str): User-facing prompt string
-    """
+    """Normalize a prompt item to plain text for TF-IDF or logging."""
     if isinstance(x, str):
         return x
     if isinstance(x, dict):
@@ -39,16 +32,7 @@ def _as_text(x):
 
 
 def _fit(X, y):
-    """
-    Fit a logistic regression classifier on feature matrix X.
-
-    Inputs:
-        - X: Feature matrix
-        - y: Binary labels
-
-    Outputs:
-        - clf: Fitted LogisticRegression
-    """
+    """Fit a logistic regression classifier on feature matrix X."""
     clf = LogisticRegression(C = 1.0, max_iter = 2000, random_state = SEED)
     clf.fit(X, y)
     return clf
@@ -63,7 +47,7 @@ def main():
     ap.add_argument("--token_pos", type = int, default = -1)
     args = ap.parse_args()
 
-    # -- prompt sets --
+    # prompt sets
     harmful_txt = [_as_text(x) for x in
                    load_wildjailbreak_prompts(n_samples = args.n_calib, config = "train")]
     harmless_txt = [_as_text(x) for x in load_harmless_prompts(n_samples = args.n_calib)]
@@ -74,21 +58,13 @@ def main():
     print(f"[data] wj harmful = {len(harmful_txt)} harmless = {len(harmless_txt)} "
           f"xstest safe = {len(xs_safe)} unsafe = {len(xs_unsafe)} harmbench = {len(hb_txt)}")
 
-    # -- FP32 residuals for every set --
+    # FP32 residuals for every set
     model, tok = load_fp32(args.model)
     device = next(model.parameters()).device
     layers = list(range(len(get_inner(model).layers)))
 
     def resid(texts):
-        """
-        Extract last-token residuals for a text batch at all layers.
-
-        Inputs:
-            - texts (list[str]): Prompt strings
-
-        Outputs:
-            - caps (dict): Layer -> list of residual tensors
-        """
+        """Extract last-token residuals for a text batch at all layers."""
         return extract_last_token_residuals(
             model, tok, texts, layers, device, token_pos = args.token_pos)
 
@@ -98,18 +74,9 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # -- (1)+(3) residual probe per layer: fit on WJ, score XSTest + HarmBench --
+    # (1)+(3) residual probe per layer: fit on WJ, score XSTest + HarmBench
     def stack(cap, L):
-        """
-        Stack per-prompt residual vectors for one layer.
-
-        Inputs:
-            - cap (dict): Layer -> list of tensors
-            - L (int): Layer index
-
-        Outputs:
-            - X (ndarray): Shape (n_prompts, hidden_dim)
-        """
+        """Stack per-prompt residual vectors for one layer."""
         return np.stack([t.numpy() for t in cap[L]])
 
     per_layer = {}
@@ -128,21 +95,13 @@ def main():
 
     # best layer by balanced XSTest accuracy (specificity + recall)/2
     def bal(L):
-        """
-        Balanced XSTest accuracy for one layer's residual probe.
-
-        Inputs:
-            - L (int): Layer index
-
-        Outputs:
-            - score (float): Mean of safe specificity and unsafe recall
-        """
+        """Balanced XSTest accuracy for one layer's residual probe."""
         return 0.5 * (per_layer[L]["xstest_safe_specificity"]
                       + per_layer[L]["xstest_unsafe_recall"])
 
     best = max(layers, key = bal)
 
-    # -- (2) strong surface baseline: TF-IDF 1-2gram logistic regression --
+    # (2) strong surface baseline: TF-IDF 1-2gram logistic regression
     vec = TfidfVectorizer(ngram_range = (1, 2), min_df = 2, max_features = 20000)
     Xtr = vec.fit_transform(harmful_txt + harmless_txt)
     ytr = np.array([1] * len(harmful_txt) + [0] * len(harmless_txt))

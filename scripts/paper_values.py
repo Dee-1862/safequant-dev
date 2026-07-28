@@ -1,4 +1,5 @@
 # Pull paper-table values from outputs/ JSON files (one block per LaTeX table label).
+#Front Matter
 import glob
 import json
 import statistics
@@ -64,25 +65,14 @@ DEPTH_RANGES = [
     ("late", "Late", "[22,32)"),
 ]
 
-# AQLM inference is nondeterministic at +-1-2pp on 200 prompts, so the
-# restoration re-run's ASR for AQLM cells can differ from the headline run.
-# For the two studiable AQLM cells (which also appear in tab:f3a and carry the
-# significance stats), source ASR/ARC/damage from the single headline run so
-# every table agrees by construction. gptq/awq cells are deterministic -> use
-# restoration directly.
+# AQLM inference is nondeterministic at +-1-2pp on 200 prompts, so the restoration re-run's ASR for AQLM cells can differ from the headline run.
+# For the two studiable AQLM cells (which also appear in tab:f3a and carry the significance stats), source ASR/ARC/damage from the single headline run so every table agrees by construction.
+# gptq/awq cells are deterministic -> use restoration directly.
 STUDIABLE_HEADLINE = {("llama", "aqlm2"), ("phi3", "aqlm2")}
 
 
 def load(p):
-    """
-    Load one JSON result file from disk.
-
-    Inputs:
-        - p (str | Path): Path to a result JSON
-
-    Outputs:
-        - data (dict | None): Parsed JSON, or None on missing/corrupt data
-    """
+    """Load one JSON result file from disk."""
     try:
         with open(p, encoding = "utf-8") as fh:
             return json.load(fh)
@@ -91,17 +81,7 @@ def load(p):
 
 
 def g(d, *path, default = None):
-    """
-    Walk nested dict keys safely.
-
-    Inputs:
-        - d (dict | None): Root object
-        - path: Sequence of keys
-        - default: Fallback when a key is missing
-
-    Outputs:
-        - value: Nested value or default
-    """
+    """Walk nested dict keys safely."""
     for k in path:
         if not isinstance(d, dict):
             return default
@@ -110,75 +90,29 @@ def g(d, *path, default = None):
 
 
 def rnd(x, n = 3):
-    """
-    Round a numeric value for paper display.
-
-    Inputs:
-        - x: Numeric value (or None)
-        - n (int): Decimal places
-
-    Outputs:
-        - rounded (float | None): Rounded value, or None if x is None
-    """
+    """Round a numeric value for paper display."""
     if x is None:
         return None
     return round(float(x), n)
 
 
 def sig(exp, m, q):
-    """
-    Load a signal_geometry experiment JSON.
-
-    Inputs:
-        - exp (str): Experiment stem (e.g. "direction_drift")
-        - m (str): Model key
-        - q (str): Quantizer key
-
-    Outputs:
-        - data (dict | None): Parsed JSON
-    """
+    """Load a signal_geometry experiment JSON."""
     return load(f"{OUT}/signal_geometry/{exp}_{m}_{q}.json")
 
 
 def restore(m, q):
-    """
-    Load a restoration_sweep experiment JSON.
-
-    Inputs:
-        - m (str): Model key
-        - q (str): Quantizer key
-
-    Outputs:
-        - data (dict | None): Parsed JSON
-    """
+    """Load a restoration_sweep experiment JSON."""
     return load(f"{OUT}/regime_sweep/restoration_sweep_{m}_{q}.json")
 
 
 def headline(m, q):
-    """
-    Load a headline eval JSON.
-
-    Inputs:
-        - m (str): Model key
-        - q (str): Quantizer key
-
-    Outputs:
-        - data (dict | None): Parsed JSON
-    """
+    """Load a headline eval JSON."""
     return load(f"{OUT}/headline/headline_{m}_{q}.json")
 
 
 def cell_json(m, q):
-    """
-    Pick the canonical JSON for one model/quant cell.
-
-    Inputs:
-        - m (str): Model key
-        - q (str): Quantizer key
-
-    Outputs:
-        - data (dict | None): Headline JSON for studiable AQLM cells, else restoration
-    """
+    """Pick the canonical JSON for one model/quant cell."""
     if (m, q) in STUDIABLE_HEADLINE:
         hl = headline(m, q)
         if hl:
@@ -187,17 +121,7 @@ def cell_json(m, q):
 
 
 def flags_for_cell(m, q):
-    """
-    Extract paired fp32/quant compliance flags for McNemar stats.
-
-    Inputs:
-        - m (str): Model key
-        - q (str): Quantizer key
-
-    Outputs:
-        - fp_flags (list[int] | None): Full-precision flags
-        - quant_flags (list[int] | None): Quantized flags (same prompt order)
-    """
+    """Extract paired fp32/quant compliance flags for McNemar stats."""
     if m == "qwen" and q == "aqlm2":
         return None, None
     d = cell_json(m, q)
@@ -211,18 +135,7 @@ def flags_for_cell(m, q):
 
 
 def bootstrap_delta_asr(flags_a, flags_b, n_boot = 2000, seed = 42):
-    """
-    Bootstrap a 95% CI for paired delta ASR (a minus b).
-
-    Inputs:
-        - flags_a (list[int]): Compliance flags for condition A
-        - flags_b (list[int]): Compliance flags for condition B
-        - n_boot (int): Bootstrap replicates
-        - seed (int): RNG seed
-
-    Outputs:
-        - ci95 (list[float]): [lower, upper] percentile bounds in pp
-    """
+    """Bootstrap a 95% CI for paired delta ASR (a minus b)."""
     a = np.asarray(flags_a, dtype = int)
     b = np.asarray(flags_b, dtype = int)
     n = a.size
@@ -235,16 +148,7 @@ def bootstrap_delta_asr(flags_a, flags_b, n_boot = 2000, seed = 42):
 
 
 def dmed_quant(m, q):
-    """
-    Median per-layer separation_sigma on the quantized model (Table 1 dmed).
-
-    Inputs:
-        - m (str): Model key
-        - q (str): Quantizer key
-
-    Outputs:
-        - dmed (float | None): Median separation_sigma across layers
-    """
+    """Median per-layer separation_sigma on the quantized model (Table 1 dmed)."""
     d = sig("direction_drift", m, q)
     if not d:
         return None
@@ -262,16 +166,7 @@ def dmed_quant(m, q):
 
 
 def cond_map(d, block):
-    """
-    Normalize restoration/headline ASR/ARC blocks to fixed condition keys.
-
-    Inputs:
-        - d (dict): Result JSON
-        - block (str): Top-level key ("asr", "arc", or "asr_per_condition")
-
-    Outputs:
-        - out (dict): Map from CONDS keys to rounded percentages
-    """
+    """Normalize restoration/headline ASR/ARC blocks to fixed condition keys."""
     src = g(d, block, default = {}) or {}
     qtz = next(
         (k for k in src if k not in ("fp32", "write_restored", "read_restored", "both_restored")),
@@ -292,15 +187,7 @@ def cond_map(d, block):
 
 
 def screen_verdict(rs):
-    """
-    Heuristic damaged-coherent screen label (Table 2 verdict column).
-
-    Inputs:
-        - rs (dict | None): Restoration sweep JSON
-
-    Outputs:
-        - verdict (str | None): Human-readable screen label
-    """
+    """Heuristic damaged-coherent screen label (Table 2 verdict column)."""
     if not rs:
         return None
     if g(rs, "restore_status") == "arch_mismatch_na":
@@ -326,16 +213,7 @@ def screen_verdict(rs):
 
 
 def recovery_rho(recovery_pp, damage_pp):
-    """
-    Share of safety damage recovered (percent).
-
-    Inputs:
-        - recovery_pp (float | None): Recovery in percentage points
-        - damage_pp (float | None): Baseline damage in percentage points
-
-    Outputs:
-        - rho_pct (int | None): Integer percent recovered
-    """
+    """Share of safety damage recovered (percent)."""
     if recovery_pp is None or not damage_pp:
         return None
     pct = 100.0 * float(recovery_pp) / float(damage_pp)
@@ -343,15 +221,7 @@ def recovery_rho(recovery_pp, damage_pp):
 
 
 def build_geometry():
-    """
-    Build tab:geometry: dmed, a_min, cosmed, coswmed per model/quant cell.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:geometry
-    """
+    """Build tab:geometry: dmed, a_min, cosmed, coswmed per model/quant cell."""
     by_model = {}
     for m in MODELS:
         rows = []
@@ -382,15 +252,7 @@ def build_geometry():
 
 
 def build_regime():
-    """
-    Build tab:regime: ASR/ARC per condition, paired screen stats, verdict.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:regime
-    """
+    """Build tab:regime: ASR/ARC per condition, paired screen stats, verdict."""
     cells = {}
     paired_raw = []
 
@@ -458,15 +320,7 @@ def build_regime():
 
 
 def _build_f3a_proj_model(m):
-    """
-    Per-projection rho for one damaged-coherent model.
-
-    Inputs:
-        - m (str): Model key ("llama" or "phi3")
-
-    Outputs:
-        - block (dict): Per-projection rows for tab:f3a_proj
-    """
+    """Per-projection rho for one damaged-coherent model."""
     if m == "phi3":
         proj_order = PROJ_ORDER_PHI3
     else:
@@ -494,15 +348,7 @@ def _build_f3a_proj_model(m):
 
 
 def build_f3a_proj():
-    """
-    Build tab:f3a_proj: per-projection recovery rho (Llama + Phi-3).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:f3a_proj
-    """
+    """Build tab:f3a_proj: per-projection recovery rho (Llama + Phi-3)."""
     return {
         "source": "per_projection_{llama,phi3}_aqlm2_L11-22.json",
         "by_model": {m: _build_f3a_proj_model(m) for m in F3A_MODELS},
@@ -510,17 +356,7 @@ def build_f3a_proj():
 
 
 def _side_rows(db, side, damage):
-    """
-    Depth-band rows for one read or write side.
-
-    Inputs:
-        - db (dict): depth_bands JSON
-        - side (str): "read" or "write"
-        - damage (float | None): Cell damage_pp for rho
-
-    Outputs:
-        - rows (list[dict]): Depth-band table rows
-    """
+    """Depth-band rows for one read or write side."""
     asr = g(db, "asr_per_condition", default = {}) or {}
     arc = g(db, "arc_per_condition", default = {}) or {}
     rec = g(db, "recovery_pp_per_range", default = {}) or {}
@@ -540,15 +376,7 @@ def _side_rows(db, side, damage):
 
 
 def _build_f3a_range_model(m):
-    """
-    Depth-band recovery rho for one model.
-
-    Inputs:
-        - m (str): Model key
-
-    Outputs:
-        - block (dict): Depth-band rows for tab:f3a_range
-    """
+    """Depth-band recovery rho for one model."""
     dbr = load(f"{OUT}/localization/depth_bands_{m}_aqlm2_read.json")
     dbw = load(f"{OUT}/localization/depth_bands_{m}_aqlm2_write.json")
     damage = g(dbr, "damage_pp") or g(dbw, "damage_pp")
@@ -561,15 +389,7 @@ def _build_f3a_range_model(m):
 
 
 def build_f3a_range():
-    """
-    Build tab:f3a_range: depth-band recovery rho (Llama + Phi-3).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:f3a_range
-    """
+    """Build tab:f3a_range: depth-band recovery rho (Llama + Phi-3)."""
     return {
         "source": "depth_bands_{llama,phi3}_aqlm2_read/write.json",
         "by_model": {m: _build_f3a_range_model(m) for m in F3A_MODELS},
@@ -577,34 +397,14 @@ def build_f3a_range():
 
 
 def _build_f3a_model(m):
-    """
-    Combined per-projection and depth-band block for one model.
-
-    Inputs:
-        - m (str): Model key
-
-    Outputs:
-        - block (dict): Rows for tab:f3a
-    """
+    """Combined per-projection and depth-band block for one model."""
     hl = headline(m, "aqlm2")
     damage = g(hl, "damage_pp")
     rec = g(hl, "recovery_pp", default = {}) or {}
     xs = g(hl, "xstest", default = {}) or {}
 
     def row(restoration, asr_key, rec_key = None, arc_key = None, xs_key = None):
-        """
-        Build one tab:f3a row from headline JSON fields.
-
-        Inputs:
-            - restoration (str): Display label for the restoration condition
-            - asr_key (str): Key under hl["asr"]
-            - rec_key (str | None): Key under recovery_pp
-            - arc_key (str | None): Key under hl["arc"]
-            - xs_key (str | None): Key under xstest block
-
-        Outputs:
-            - row (dict): One table row with ASR, rho, ARC, and XSTest FR
-        """
+        """Build one tab:f3a row from headline JSON fields."""
         rec_pp = None
         if rec_key:
             rec_pp = rec.get(rec_key)
@@ -639,15 +439,7 @@ def _build_f3a_model(m):
 
 
 def build_f3a():
-    """
-    Build tab:f3a: localization recovery summary (Llama + Phi-3).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:f3a
-    """
+    """Build tab:f3a: localization recovery summary (Llama + Phi-3)."""
     return {
         "source": "headline_{llama,phi3}_aqlm2.json",
         "by_model": {m: _build_f3a_model(m) for m in F3A_MODELS},
@@ -655,15 +447,7 @@ def build_f3a():
 
 
 def build_controls():
-    """
-    Build tab:controls: param-matched, refit, and post-restoration cosmed numbers.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:controls
-    """
+    """Build tab:controls: param-matched, refit, and post-restoration cosmed numbers."""
     out = {}
     for m, label in (("llama", "Llama-AQLM-2"), ("phi3", "Phi-3-AQLM-2")):
         pm = load(f"{OUT}/regime_sweep/param_matched_restore_{m}_aqlm2.json")
@@ -704,15 +488,7 @@ def build_controls():
 
 
 def build_trained_repair():
-    """
-    Build tab:trained_repair: Q-Resafe DPO sweep across ranks and patches.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:trained_repair
-    """
+    """Build tab:trained_repair: Q-Resafe DPO sweep across ranks and patches."""
     grid = {}
     rows = []
     missing = []
@@ -746,15 +522,7 @@ def build_trained_repair():
 
 
 def build_lrqat():
-    """
-    Build tab:lrqat: LR-QAT int2/int3/int4 repair results.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:lrqat
-    """
+    """Build tab:lrqat: LR-QAT int2/int3/int4 repair results."""
     rows = [
         {
             "role": "FP reference",
@@ -815,15 +583,7 @@ def build_lrqat():
 
 
 def build_ppl():
-    """
-    Build tab:ppl: WikiText perplexity under restoration conditions.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:ppl
-    """
+    """Build tab:ppl: WikiText perplexity under restoration conditions."""
     by_model = {}
     for m in MODELS:
         rows = []
@@ -855,16 +615,7 @@ def build_ppl():
 
 
 def _dequant_row_from_json(j, label):
-    """
-    Format one targeted-dequant row from a result JSON.
-
-    Inputs:
-        - j (dict): targeted_dequant JSON
-        - label (str): Row label for the table
-
-    Outputs:
-        - row (dict): Formatted ASR/ARC/recovery fields
-    """
+    """Format one targeted-dequant row from a result JSON."""
     if not j:
         return None
     eff = g(j, "effective_bits")
@@ -889,15 +640,7 @@ def _dequant_row_from_json(j, label):
 
 
 def build_dequant():
-    """
-    Build tab:dequant: targeted dequantization baselines.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:dequant
-    """
+    """Build tab:dequant: targeted dequantization baselines."""
     out = {}
     for m in F3A_MODELS:
         hl = headline(m, "aqlm2")
@@ -938,15 +681,7 @@ def build_dequant():
 
 
 def build_behavioral():
-    """
-    Build tab:behavioral: Arditi-style direction ablation (RQ1 actuation).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:behavioral
-    """
+    """Build tab:behavioral: Arditi-style direction ablation (RQ1 actuation)."""
     rows = []
     quant_order = {"fp32": 0, "aqlm2": 1}
     for f in sorted(glob.glob(f"{OUT}/behavioral_direction/arditi_repro_*.json")):
@@ -977,15 +712,7 @@ def build_behavioral():
 
 
 def build_table_stats():
-    """
-    Build tab:stats: headline paired McNemar replication.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - block (dict): LaTeX table block for tab:stats
-    """
+    """Build tab:stats: headline paired McNemar replication."""
     hl = headline("llama", "aqlm2")
     fbc = g(hl, "flags_by_cond", default = {}) or {}
     q_flags = [int(bool(x)) for x in fbc.get("aqlm2", [])]
@@ -1018,15 +745,7 @@ def build_table_stats():
 
 
 def build():
-    """
-    Assemble all paper-table blocks into one JSON document.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - paper_values (dict): All LaTeX table blocks keyed by label
-    """
+    """Assemble all paper-table blocks into one JSON document."""
     return {
         "meta": {
             "generated_by": "scripts/paper_values.py",
@@ -1055,30 +774,14 @@ def build():
 
 
 def fmt_cell(x):
-    """
-    Format one table cell for markdown output.
-
-    Inputs:
-        - x: Cell value (any)
-
-    Outputs:
-        - text (str): Display string ("--" when x is None)
-    """
+    """Format one table cell for markdown output."""
     if x is None:
         return "--"
     return str(x)
 
 
 def as_markdown(pv):
-    """
-    Render paper_values JSON as human-readable markdown tables.
-
-    Inputs:
-        - pv (dict): paper_values document from build()
-
-    Outputs:
-        - markdown (str): Markdown table text
-    """
+    """Render paper_values JSON as human-readable markdown tables."""
     lines = ["# Paper values (LaTeX table alignment)\n", pv["meta"]["note"] + "\n"]
 
     lines.append("\n## tab:geometry\n")

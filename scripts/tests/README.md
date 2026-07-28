@@ -7,11 +7,11 @@ Use these only for plumbing. Numbers from smoke runs are **not** paper results.
 ## Order of operations
 
 ```text
-1. Login node   →  git pull + pytest (CPU)
-2. Env check    →  sbatch scripts/tests/00_env_check.sbatch
-3. GPU smoke    →  llama/aqlm2 + phi3/aqlm2 (can run in parallel)
-4. Optional     →  qresafe pairs smokes (llama, phi3)
-5. Full grid    →  only after 1–3 look clean
+1. Login node   ->  git pull + pytest (CPU)
+2. Env check    ->  sbatch scripts/tests/00_env_check.sbatch
+3. GPU smoke    ->  llama/aqlm2 + phi3/aqlm2 (can run in parallel)
+4. Optional     ->  qresafe pairs smokes (llama, phi3)
+5. Full grid    ->  only after 1-3 look clean
 ```
 
 Or submit the full chain with Slurm dependencies:
@@ -33,7 +33,7 @@ source scripts/_env.sh
 # If pytest is missing:  pip install pytest
 python -m pytest tests/ -v
 
-# Seed fingerprint from docs/SEEDS.md
+# Seed fingerprint (DEFAULT_SEED=42)
 python -c "
 from core.seeds import set_global_seed
 import numpy as np
@@ -68,7 +68,7 @@ Each runs, with small sample sizes:
 
 Phi-3 specifically exercises the fused `qkv_proj` / `gate_up_proj` layout (and the pinned FP revision in `config.py`).
 
-Success looks like: job exits 0, JSONs under `outputs/`. Cos-sim / ASR at these `n_*` are noisy  -  ignore magnitude.
+Success looks like: job exits 0, JSONs under `outputs/`. Cos-sim / ASR at these `n_*` are noisy, ignore magnitude.
 
 ## 4. Optional Q-Resafe pairs smokes
 

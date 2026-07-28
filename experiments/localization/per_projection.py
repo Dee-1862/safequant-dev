@@ -1,4 +1,5 @@
 # Tables 3-4: per-projection restoration sweep.
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -24,15 +25,7 @@ PROJ_TYPES_PHI3 = ["self_attn.qkv_proj", "self_attn.o_proj", "mlp.gate_up_proj",
 
 
 def _proj_types(model):
-    """
-    Return the projection-type paths for this model architecture.
-
-    Inputs:
-        - model (nn.Module): Loaded model (Llama-style or Phi-3)
-
-    Outputs:
-        - proj_types (list[str]): Projection paths to restore one at a time
-    """
+    """Return the projection-type paths for this model architecture."""
     # Detect Phi-3 fused qkv vs Llama-style separate projections
     submods = {n.rsplit(".", 1)[-1] for n, _ in model.named_modules()}
     if "qkv_proj" in submods:

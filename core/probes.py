@@ -1,5 +1,6 @@
 # Linear/MLP refusal probes on residual streams.
 
+#Front Matter
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
@@ -13,15 +14,7 @@ except ModuleNotFoundError:
 
 
 def make_probe(probe_type):
-    """
-    Construct an unfitted sklearn probe of the requested type.
-
-    Inputs:
-        - probe_type (str): "linear" or "mlp"
-
-    Outputs:
-        - probe (LogisticRegression | MLPClassifier): Unfitted estimator
-    """
+    """Construct an unfitted sklearn probe of the requested type."""
     # Linear logistic regression probe
     if probe_type == "linear":
         return LogisticRegression(
@@ -51,18 +44,7 @@ def make_probe(probe_type):
 def fit_probe_per_layer(
     harmful_by_layer, harmless_by_layer, n_folds = 5, probe_type = "linear"
 ):
-    """
-    Stratified k-fold probe accuracy per residual layer.
-
-    Inputs:
-        - harmful_by_layer (dict): Layer -> harmful residual tensors
-        - harmless_by_layer (dict): Layer -> harmless residual tensors
-        - n_folds (int): Number of CV folds
-        - probe_type (str): "linear" or "mlp"
-
-    Outputs:
-        - results (dict): Layer -> mean/std and class-wise accuracies
-    """
+    """Stratified k-fold probe accuracy per residual layer."""
     # Stable layer order and output dict
     layers = sorted(harmful_by_layer.keys())
     results = {}
@@ -109,16 +91,7 @@ def fit_probe_per_layer(
 
 
 def fit_probe_get_weights(harmful_by_layer, harmless_by_layer):
-    """
-    Fit one logistic regression per layer on all data and return weight + bias.
-
-    Inputs:
-        - harmful_by_layer (dict): Layer -> harmful residual tensors
-        - harmless_by_layer (dict): Layer -> harmless residual tensors
-
-    Outputs:
-        - out (dict): Layer -> weight, bias, train_acc
-    """
+    """Fit one logistic regression per layer on all data and return weight + bias."""
     # Stable layer order
     layers = sorted(harmful_by_layer.keys())
     out = {}
@@ -143,16 +116,7 @@ def fit_probe_get_weights(harmful_by_layer, harmless_by_layer):
 
 
 def per_layer_probe_accuracy(residuals_by_layer, labels):
-    """
-    5-fold CV accuracy per layer for a logistic-regression probe.
-
-    Inputs:
-        - residuals_by_layer (dict): Layer -> residual tensors
-        - labels (list): Per-prompt binary labels
-
-    Outputs:
-        - accs (dict): Layer -> mean fold accuracy (nan if single class)
-    """
+    """5-fold CV accuracy per layer for a logistic-regression probe."""
     # Shared fold splitter and label array
     layers = sorted(residuals_by_layer.keys())
     accs = {}

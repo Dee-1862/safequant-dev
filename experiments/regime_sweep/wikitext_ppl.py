@@ -1,10 +1,6 @@
 # WikiText-2 perplexity across the regime cells.
-#
-# A continuous coherence / language-modeling-quality metric to complement the
-# discrete ARC-Challenge accuracy (addresses the "is ARC a sufficient coherence
-# proxy?" review comment). Runs one model's fp32 reference + every quantizer cell
-# in a single job; the phi3/awq NA cell is skipped gracefully (status recorded).
 
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -57,7 +53,7 @@ def main():
 
     # Each quantizer cell
     for q in args.quantizers:
-        print(f"\n---- {args.model} / {q} ----")
+        print(f"\n{args.model} / {q}")
         try:
             qm, tok = load_quantized(args.model, quantizer = q)
             ppl_q = measure_perplexity(qm, tok, text, seq_len = args.seq_len,

@@ -1,22 +1,14 @@
 # Exact McNemar, Wilson CIs, and paired bootstrap recovery intervals.
 
+#Front Matter
 import math
 
 import numpy as np
 
 
 def mcnemar_exact(flags_a, flags_b):
-    """
-    Exact two-sided McNemar on paired binary flags (1 = complied).
-
-    Inputs:
-        - flags_a (list): Binary flags for condition A
-        - flags_b (list): Binary flags for condition B
-
-    Outputs:
-        - result (dict): Keys b, c, n_discordant, p_value
-    """
-    # Count discordant pairs (b: A yes B no; c: A no B yes)
+    """Exact two-sided McNemar on paired binary flags (1 = complied)."""
+    # Count discordant pairs (b: A yes B no, c: A no B yes)
     b = 0
     c = 0
     for x, y in zip(flags_a, flags_b):
@@ -37,32 +29,15 @@ def mcnemar_exact(flags_a, flags_b):
 
 
 def paired_delta_asr(fp_flags, quant_flags, n_boot = 5000, seed = 0):
-    """
-    Paired ΔASR estimator with the correct (McNemar-style) standard error.
-
-    Flags are per-prompt compliance labels on the SAME prompts (1 = complied with
-    the harmful request = attack success, 0 = refused). Because the two variants
-    see identical prompts, only discordant pairs carry information:
-
-        b = #(fp refused, quant complied)   -- quantization-induced compliance
-        c = #(fp complied, quant refused)
-        ΔASR = 100 (b - c) / n              == quant_asr - fp_asr
-
-    The paired SE uses the multinomial variance of that difference, not the
-    p(1-p)/n form (which assumes independent samples and is conservative here):
-
-        SE = 100/n * sqrt( (b + c) - (b - c)^2 / n )
-
-    Inputs:
-        - fp_flags (list[int]): full-precision per-prompt compliance flags
-        - quant_flags (list[int]): quantized per-prompt flags, SAME prompt order
-        - n_boot (int): paired bootstrap resamples for the CI
-        - seed (int): bootstrap RNG seed
-
-    Outputs:
-        - res (dict): b, c, n, delta_asr, se_paired, se_null, se_unpaired,
-          p_mcnemar, ci95 (paired bootstrap), fp_asr, quant_asr
-    """
+    """Paired ΔASR estimator with the correct (McNemar-style) standard error.
+    Flags are per-prompt compliance labels on the SAME prompts (1 = complied with the harmful request = attack success, 0 = refused).
+    Because the two variants see identical prompts, only discordant pairs carry information.
+    b = #(fp refused, quant complied), quantization-induced compliance.
+    c = #(fp complied, quant refused).
+    ΔASR = 100 (b - c) / n == quant_asr - fp_asr.
+    The paired SE uses the multinomial variance of that difference, not the p(1-p)/n form (which assumes independent samples and is conservative here).
+    SE = 100/n * sqrt( (b + c) - (b - c)^2 / n ).
+    Returns p_mcnemar, ci95 (paired bootstrap), fp_asr, quant_asr."""
     a = np.asarray(fp_flags, dtype = int)
     q = np.asarray(quant_flags, dtype = int)
     if a.shape != q.shape:
@@ -100,15 +75,7 @@ def paired_delta_asr(fp_flags, quant_flags, n_boot = 5000, seed = 0):
 
 
 def holm_bonferroni(pvalues):
-    """
-    Holm step-down adjusted p-values (strong family-wise error control).
-
-    Inputs:
-        - pvalues (list[float]): raw p-values, in any order
-
-    Outputs:
-        - adj (list[float]): Holm-adjusted p-values, in the ORIGINAL order
-    """
+    """Holm step-down adjusted p-values (strong family-wise error control)."""
     m = len(pvalues)
     if m == 0:
         return []
@@ -123,17 +90,7 @@ def holm_bonferroni(pvalues):
 
 
 def wilson_ci(k, n, z = 1.96):
-    """
-    Wilson score 95% CI for a proportion k/n.
-
-    Inputs:
-        - k (int): Number of successes
-        - n (int): Number of trials
-        - z (float): Normal quantile (default 1.96)
-
-    Outputs:
-        - bounds (list): [lower, upper] clipped to [0, 1]
-    """
+    """Wilson score 95% CI for a proportion k/n."""
     # Empty trials -> degenerate interval
     if n == 0:
         return [0.0, 0.0]
@@ -147,18 +104,7 @@ def wilson_ci(k, n, z = 1.96):
 
 
 def bootstrap_recovery(flags_by_cond, qtz, n_boot = 2000, seed = 0):
-    """
-    Paired bootstrap CIs on read/write/both recovery percentages.
-
-    Inputs:
-        - flags_by_cond (dict): Condition name -> list of binary flags
-        - qtz (str): Quantized-condition key to compare against fp32
-        - n_boot (int): Number of bootstrap resamples
-        - seed (int): RNG seed
-
-    Outputs:
-        - rec (dict): Recovery name -> [lo, hi] percentile CI
-    """
+    """Paired bootstrap CIs on read/write/both recovery percentages."""
     # Seeded RNG and float arrays
     rng = np.random.default_rng(seed)
     arrs = {c: np.asarray(v, dtype = float) for c, v in flags_by_cond.items()}
@@ -181,15 +127,7 @@ def bootstrap_recovery(flags_by_cond, qtz, n_boot = 2000, seed = 0):
         rec["read_minus_write"].append(rr - rw)
 
     def ci(a):
-        """
-        2.5 / 97.5 percentile interval for a bootstrap sample list.
-
-        Inputs:
-            - a (array-like): Bootstrap statistic samples
-
-        Outputs:
-            - bounds (list): [lo, hi] as floats
-        """
+        """2.5 / 97.5 percentile interval for a bootstrap sample list."""
         a = np.asarray(a)
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 

@@ -1,5 +1,6 @@
 # SafeQuant reproduction CLI: run paper tables or rebuild results from outputs/.
 
+#Front Matter
 import argparse
 import os
 import subprocess
@@ -46,15 +47,7 @@ RUN_TARGETS = {
 
 
 def cells():
-    """
-    Yield every model/quantizer cell in the paper grid.
-
-    Inputs:
-        - None
-
-    Outputs:
-        - pairs (Iterator[tuple[str, str]]): (model_alias, quantizer) tuples
-    """
+    """Yield every model/quantizer cell in the paper grid."""
     for m in MODELS:
         for q in QUANTS:
             if m == "qwen7b" and q == "aqlm2":
@@ -63,29 +56,12 @@ def cells():
 
 
 def M(mod, *args):
-    """
-    Build a python -m command list for subprocess.
-
-    Inputs:
-        - mod (str): Dotted module name
-        - args: CLI flags and values
-
-    Outputs:
-        - cmd (list[str]): argv for subprocess.run
-    """
+    """Build a python -m command list for subprocess."""
     return [sys.executable, "-u", "-m", mod, *map(str, args)]
 
 
 def parse_flags(argv):
-    """
-    Parse `--key value` tokens from a command argv tail.
-
-    Inputs:
-        - argv (list[str]): Tokens after the module name
-
-    Outputs:
-        - flags (dict[str, str]): Flag name (no dashes) to value
-    """
+    """Parse `--key value` tokens from a command argv tail."""
     flags = {}
     i = 0
     while i < len(argv):
@@ -104,15 +80,7 @@ def parse_flags(argv):
 
 
 def cfg_from_cmd(cmd):
-    """
-    Map a planned subprocess command to a RunConfig for output-path lookup.
-
-    Inputs:
-        - cmd (list[str]): Full argv from M()
-
-    Outputs:
-        - cfg (RunConfig | None): Manifest config, or None if unmapped
-    """
+    """Map a planned subprocess command to a RunConfig for output-path lookup."""
     mod = cmd[3]
     if mod not in MOD_SCRIPT:
         return None
@@ -152,15 +120,7 @@ def cfg_from_cmd(cmd):
 
 
 def output_exists(cmd):
-    """
-    Return True when the expected result JSON for cmd already exists.
-
-    Inputs:
-        - cmd (list[str]): Full argv from M()
-
-    Outputs:
-        - exists (bool): Whether a non-empty output file is on disk
-    """
+    """Return True when the expected result JSON for cmd already exists."""
     mod = cmd[3]
     rel = MOD_SCRIPT.get(mod)
     cfg = cfg_from_cmd(cmd)
@@ -171,15 +131,7 @@ def output_exists(cmd):
 
 
 def table1_cmds():
-    """
-    Commands for tab:geometry (signal geometry over the full 19-cell grid).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:geometry (signal geometry over the full 19-cell grid)."""
     cmds = []
     for exp in ("direction_drift", "probe_accuracy", "probe_rotation"):
         for m, q in cells():
@@ -189,15 +141,7 @@ def table1_cmds():
 
 
 def table2_cmds():
-    """
-    Commands for tab:regime and tab:ppl (restoration sweep + WikiText-2 PPL).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:regime and tab:ppl (restoration sweep + WikiText-2 PPL)."""
     cmds = []
     for m, q in cells():
         cmds.append(M("experiments.regime_sweep.restoration_sweep",
@@ -209,15 +153,7 @@ def table2_cmds():
 
 
 def table3_cmds():
-    """
-    Commands for tab:f3a_proj (per-projection localization, Llama + Phi-3).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:f3a_proj (per-projection localization, Llama + Phi-3)."""
     cmds = []
     for m in ("llama7b", "phi3"):
         cmds.append(M("experiments.localization.per_projection",
@@ -228,15 +164,7 @@ def table3_cmds():
 
 
 def table4_cmds():
-    """
-    Commands for tab:f3a_range (depth-band localization, read + write sides).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:f3a_range (depth-band localization, read + write sides)."""
     cmds = []
     for m in ("llama7b", "phi3"):
         for side in ("read", "write"):
@@ -247,15 +175,7 @@ def table4_cmds():
 
 
 def table5_cmds():
-    """
-    Commands for tab:f3a, tab:stats, and tab:dequant (headline + GPTQ-4 replacement).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:f3a, tab:stats, and tab:dequant (headline + GPTQ-4 replacement)."""
     cmds = []
     for m in ("llama7b", "phi3"):
         cmds.append(M("experiments.headline.headline_eval",
@@ -278,15 +198,7 @@ def table5_cmds():
 
 
 def table6_cmds():
-    """
-    Commands for tab:controls (localization controls).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:controls (localization controls)."""
     cmds = []
     for m in ("llama7b", "phi3"):
         cmds.append(M("experiments.regime_sweep.param_matched_restore",
@@ -300,15 +212,7 @@ def table6_cmds():
 
 
 def table7_cmds():
-    """
-    Commands for tab:trained_repair and tab:lrqat (Q-Resafe + LR-QAT).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for tab:trained_repair and tab:lrqat (Q-Resafe + LR-QAT)."""
     cmds = [M("experiments.trained_repair.qresafe_pairs",
               "--model", "llama7b", "--quantizer", "aqlm2",
               "--n_prompts", 400)]
@@ -330,15 +234,7 @@ def table7_cmds():
 
 
 def behavioral_cmds():
-    """
-    Commands for RQ1 behavioral ablation (Arditi direction on Llama).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Commands for RQ1 behavioral ablation (Arditi direction on Llama)."""
     cmds = []
     for q in ("aqlm2", "fp32"):
         cmds.append(M("experiments.behavioral_direction.arditi_repro",
@@ -347,15 +243,7 @@ def behavioral_cmds():
 
 
 def cmds_for_target(name):
-    """
-    Resolve a run target name to its command list.
-
-    Inputs:
-        - name (str): Key in RUN_TARGETS (e.g. "table1", "full")
-
-    Outputs:
-        - cmds (list[list[str]]): Subprocess argv lists
-    """
+    """Resolve a run target name to its command list."""
     if name == "table1":
         return table1_cmds()
     if name == "table2":
@@ -382,16 +270,7 @@ def cmds_for_target(name):
 
 
 def run_pipeline(targets, *, force):
-    """
-    Execute experiment modules for the requested paper-table targets.
-
-    Inputs:
-        - targets (list[str]): Run target keys
-        - force (bool): Rerun even when output JSON already exists
-
-    Outputs:
-        - failed (int): Number of subprocesses that exited non-zero
-    """
+    """Execute experiment modules for the requested paper-table targets."""
     cmds = []
     labels = []
     for t in targets:
@@ -422,15 +301,7 @@ def run_pipeline(targets, *, force):
 
 
 def rebuild_results(md = False):
-    """
-    Regenerate PAPER_RESULTS.md and paper_values.json from outputs/.
-
-    Inputs:
-        - md (bool): Unused; markdown is always written to PAPER_RESULTS.md
-
-    Outputs:
-        - None (writes files at repo root)
-    """
+    """Regenerate PAPER_RESULTS.md and paper_values.json from outputs/."""
     results_path = ROOT / "PAPER_RESULTS.md"
     json_path = ROOT / "paper_values.json"
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
@@ -450,18 +321,17 @@ def main():
     ap = argparse.ArgumentParser(
         description = "SafeQuant: run paper tables or rebuild result files from outputs/.",
         formatter_class = argparse.RawDescriptionHelpFormatter,
-        epilog = f"""
-Run targets (--run):
+        epilog = f"""Run targets (--run):
 {target_help}
 
 Examples:
-  python run_pipeline.py --run full
-  python run_pipeline.py --run table1
-  python run_pipeline.py --run table2 table5
-  python run_pipeline.py --results --md
+python run_pipeline.py --run full
+python run_pipeline.py --run table1
+python run_pipeline.py --run table2 table5
+python run_pipeline.py --results --md
 
 Steps with an existing output JSON are skipped unless you pass --force.
-        """,
+""",
     )
     mode = ap.add_mutually_exclusive_group(required = True)
     mode.add_argument("--run", nargs = "+", metavar = "TARGET",

@@ -1,5 +1,6 @@
 # Model / tokenizer loaders for FP32 and common quantization backends.
 
+#Front Matter
 import os
 
 # Force gptqmodel to use pure-pytorch backend (no triton/exllama kernel issues)
@@ -32,45 +33,19 @@ except ImportError:
 
 
 def _resolve_model_path(model_name):
-    """
-    Resolve a model alias to a HuggingFace model path.
-
-    Inputs:
-        - model_name (str): Short alias or HF model id
-
-    Outputs:
-        - model_path (str): Resolved HF path / id
-    """
+    """Resolve a model alias to a HuggingFace model path."""
     return MODELS.get(model_name, model_name)
 
 
 def _use_remote_code(model_path):
-    """
-    Decide trust_remote_code; Phi-3 uses transformers-native modeling code.
-
-    Inputs:
-        - model_path (str): HF model path / id
-
-    Outputs:
-        - use_remote_code (bool): Whether to set trust_remote_code = True
-    """
+    """Decide trust_remote_code, Phi-3 uses transformers-native modeling code."""
     # Phi-3 remote modeling is incompatible with newer transformers DynamicCache
     p = str(model_path).lower()
     return "phi-3" not in p and "phi3" not in p
 
 
 def load_fp32(model_name, device = None):
-    """
-    Load model in FP32 precision.
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer
-    """
+    """Load model in FP32 precision."""
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -105,17 +80,7 @@ def load_fp32(model_name, device = None):
 
 
 def load_nf4(model_name, device = None):
-    """
-    Load model in NF4 quantization (bitsandbytes 4-bit NormalFloat).
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer
-    """
+    """Load model in NF4 quantization (bitsandbytes 4-bit NormalFloat)."""
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -148,17 +113,7 @@ def load_nf4(model_name, device = None):
 
 
 def load_int8(model_name, device = None):
-    """
-    Load model in INT8 quantization (bitsandbytes 8-bit).
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer
-    """
+    """Load model in INT8 quantization (bitsandbytes 8-bit)."""
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -183,18 +138,7 @@ def load_int8(model_name, device = None):
 
 
 def load_quantized(model_name, quantizer = "nf4", device = None):
-    """
-    Unified loader that dispatches to the right quantizer backend.
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - quantizer (str): Quantizer key (fp32, nf4, int8, awq, gptq*, aqlm*, quip*)
-        - device (str | None): Device map target (default: DEVICE)
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer
-    """
+    """Unified loader that dispatches to the right quantizer backend."""
     quantizer = quantizer.lower()
 
     if quantizer == "fp32":
@@ -226,17 +170,7 @@ def load_quantized(model_name, quantizer = "nf4", device = None):
 
 
 def _load_awq(model_name, device = None):
-    """
-    Load a pre-quantized AWQ model via transformers native AWQ support.
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer
-    """
+    """Load a pre-quantized AWQ model via transformers native AWQ support."""
     if device is None:
         device = DEVICE
 
@@ -266,18 +200,7 @@ def _load_awq(model_name, device = None):
 
 
 def _load_aqlm(model_name, device = None, bits = 2):
-    """
-    Load an AQLM-quantized model (SOTA for 2-bit).
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-        - bits (int): AQLM bitwidth
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer (from base model)
-    """
+    """Load an AQLM-quantized model (SOTA for 2-bit)."""
     if device is None:
         device = DEVICE
 
@@ -302,7 +225,7 @@ def _load_aqlm(model_name, device = None, bits = 2):
         else:
             raise ValueError(
                 f"No pre-quantized AQLM checkpoint for ({model_name}, {bit_suffix}). "
-                f"AQLM requires pre-quantized checkpoints -- on-the-fly quantization "
+                f"AQLM requires pre-quantized checkpoints, on-the-fly quantization "
                 f"takes hours. Add the checkpoint to config.QUANTIZED_CHECKPOINTS."
             )
 
@@ -326,18 +249,7 @@ def _load_aqlm(model_name, device = None, bits = 2):
 
 
 def _load_quip(model_name, device = None, bits = 4):
-    """
-    Load a pre-quantized QuIP# model.
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-        - bits (int): QuIP# bitwidth
-
-    Outputs:
-        - model (torch.nn.Module): Loaded model
-        - tokenizer (Tokenizer): Matching tokenizer (from base model)
-    """
+    """Load a pre-quantized QuIP# model."""
     if device is None:
         device = DEVICE
 
@@ -369,30 +281,16 @@ def _load_quip(model_name, device = None, bits = 4):
 
 
 def _load_gptq(model_name, device = None, bits = 4):
-    """
-    Load a GPTQ-quantized model (pre-quantized or on-the-fly).
-
-    Inputs:
-        - model_name (str): Model alias or HF id
-        - device (str | None): Device map target (default: DEVICE)
-        - bits (int): Quantization bits (2, 3, 4, or 8)
-
-    Outputs:
-        - model (torch.nn.Module): Loaded / quantized model
-        - tokenizer (Tokenizer): Matching tokenizer
-    """
+    """Load a GPTQ-quantized model (pre-quantized or on-the-fly)."""
     if device is None:
         device = DEVICE
 
-    # --- optimum 2.2.0 / gptqmodel 7.1.0 load shim (act-order checkpoints) ---
-    # optimum's GPTQQuantizer defaults act_group_aware = True and passes it
-    # EXPLICITLY into gptqmodel's QuantizeConfig, which rejects act_group_aware = True
-    # together with desc_act = True -- i.e. every standard act-order GPTQ checkpoint.
-    # transformers' GPTQConfig.to_dict_optimum() drops the field, so it cannot be
-    # overridden through the config. Force it False here. act_group_aware is a
-    # quantization-TIME knob (it controls how groups are ORDERED while quantizing);
-    # the already-quantized weights load identically, so this changes no results.
-    # Idempotent; load-path only.
+    # optimum 2.2.0 / gptqmodel 7.1.0 load shim (act-order checkpoints).
+    # optimum's GPTQQuantizer defaults act_group_aware = True and passes it EXPLICITLY into gptqmodel's QuantizeConfig, which rejects act_group_aware = True together with desc_act = True, i.e. every standard act-order GPTQ checkpoint.
+    # transformers' GPTQConfig.to_dict_optimum() drops the field, so it cannot be overridden through the config.
+    # Force it False here.
+    # act_group_aware is a quantization-TIME knob (it controls how groups are ORDERED while quantizing), the already-quantized weights load identically, so this changes no results.
+    # Idempotent, load-path only.
     if _oq is not None and not getattr(_oq.GPTQQuantizer, "_safequant_agaw_patch", False):
         _orig_gptq_init = _oq.GPTQQuantizer.__init__
 
@@ -528,23 +426,14 @@ def _load_gptq(model_name, device = None, bits = 4):
 
 
 def get_weight(module, as_dtype = torch.float32):
-    """
-    Extract weight from a module, handling regular and quantized layouts.
-
-    Inputs:
-        - module (nn.Module): Linear or quantized linear module
-        - as_dtype (torch.dtype): Target dtype for the returned weight
-
-    Outputs:
-        - weight (torch.Tensor): Dense (out_features, in_features) weight
-    """
+    """Extract weight from a module, handling regular and quantized layouts."""
     # Dimension attrs differ across quantizer wrappers
     in_f = getattr(module, "in_features", None) or getattr(module, "infeatures", None)
     out_f = getattr(module, "out_features", None) or getattr(
         module, "outfeatures", None
     )
 
-    # auto_gptq QuantLinear -- dequantize via identity forward
+    # auto_gptq QuantLinear: dequantize via identity forward
     if hasattr(module, "qweight"):
         device = module.qweight.device
         identity = torch.eye(in_f, device = device, dtype = torch.float16)
@@ -552,7 +441,7 @@ def get_weight(module, as_dtype = torch.float32):
             weight = module(identity).T.float()
         return weight.to(as_dtype)
 
-    # Unknown non-Linear module -- identity forward fall-back
+    # Unknown non-Linear module: identity forward fall-back
     if not isinstance(module, nn.Linear):
         device = next(module.parameters()).device
         identity = torch.eye(in_f, device = device, dtype = torch.float16)

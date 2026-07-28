@@ -1,4 +1,5 @@
 # Mediation test: cosmed after read/write/both restoration vs FP32 direction.
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -19,21 +20,7 @@ _SCRIPT = Path(__file__)
 
 
 def directions(model, tokenizer, harmful, harmless, layers, device, token_pos):
-    """
-    Per-layer unit diff-in-means refusal direction for one model state.
-
-    Inputs:
-        - model (nn.Module): Model under test
-        - tokenizer: HuggingFace tokenizer
-        - harmful (list): Harmful calibration prompts
-        - harmless (list): Harmless calibration prompts
-        - layers (list[int]): Layer indices to extract
-        - device (str): Torch device
-        - token_pos (int): Residual token position
-
-    Outputs:
-        - vecs (dict): Layer index -> unit direction tensor
-    """
+    """Per-layer unit diff-in-means refusal direction for one model state."""
     h = extract_last_token_residuals(
         model, tokenizer, harmful, layers, device, token_pos = token_pos
     )
@@ -44,17 +31,7 @@ def directions(model, tokenizer, harmful, harmless, layers, device, token_pos):
 
 
 def cosmed_vs(fp32_dirs, cond_dirs, layers):
-    """
-    Per-layer cosine of a condition's directions against FP32 reference.
-
-    Inputs:
-        - fp32_dirs (dict): Layer -> FP32 unit direction
-        - cond_dirs (dict): Layer -> condition unit direction
-        - layers (list[int]): Layer indices to compare
-
-    Outputs:
-        - summary (dict): Median/min/max cosines and per-layer map
-    """
+    """Per-layer cosine of a condition's directions against FP32 reference."""
     cos = [cos_sim(fp32_dirs[L], cond_dirs[L]) for L in layers]
     return {
         "cos_median": float(np.median(cos)),
@@ -91,7 +68,7 @@ def main():
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Quant baseline, then read/write/both restored -- recompute directions each.
+    # Quant baseline, then read/write/both restored, recompute directions each.
     results = {}
     conditions = [("quant", None), ("read_restored", "restore_read"),
                   ("write_restored", "restore_write"),

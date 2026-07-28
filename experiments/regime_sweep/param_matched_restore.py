@@ -1,4 +1,5 @@
 # Parameter-matched read restoration control (volume vs role).
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -23,16 +24,7 @@ _SCRIPT = Path(__file__)
 
 
 def proj_params(weights, projs):
-    """
-    Total parameter count over all layers for the given projection paths.
-
-    Inputs:
-        - weights (dict): Layer -> projection -> weight tensor
-        - projs (list[str]): Projection dotted paths
-
-    Outputs:
-        - total (int): Sum of out * in across layers and projections
-    """
+    """Total parameter count over all layers for the given projection paths."""
     total = 0
     for L in weights:
         for p in projs:
@@ -42,18 +34,7 @@ def proj_params(weights, projs):
 
 
 def select_whole_subset(weights, read_projs, budget):
-    """
-    Greedily pick whole read projections whose total params fit the write budget.
-
-    Inputs:
-        - weights (dict): Layer -> projection -> weight tensor
-        - read_projs (list[str]): Candidate read-side projections
-        - budget (int): Target parameter budget (write-side volume)
-
-    Outputs:
-        - chosen (list[str]): Selected projection paths
-        - total (int): Total params in the chosen set
-    """
+    """Greedily pick whole read projections whose total params fit the write budget."""
     n_layers = len(weights)
     L0 = next(iter(weights))
     per = {p: weights[L0][p].shape[0] * weights[L0][p].shape[1] * n_layers
@@ -67,19 +48,7 @@ def select_whole_subset(weights, read_projs, budget):
 
 
 def restore_read_rows(model, fp32_read_weights, read_projs, frac, rng):
-    """
-    Restore a random fraction of each read projection's output rows to FP32.
-
-    Inputs:
-        - model (torch.nn.Module): Quantized model to patch in place
-        - fp32_read_weights (dict): FP32 read weights by layer and projection
-        - read_projs (list[str]): Read-side projection paths
-        - frac (float): Fraction of output rows to restore per projection
-        - rng (torch.Generator): RNG for row selection
-
-    Outputs:
-        - None (mutates model weights in place)
-    """
+    """Restore a random fraction of each read projection's output rows to FP32."""
     inner = get_inner(model)
     device = next(model.parameters()).device
     act_dtype = inner.norm.weight.dtype
@@ -117,7 +86,7 @@ def main():
     behaviors = [_extract_behavior(it) for it in items]
     arc_items = load_arc_challenge(n_samples = args.n_reasoning)
 
-    # FP32 baseline; cache read/write weights and compute the param budget.
+    # FP32 baseline, cache read/write weights and compute the param budget.
     fp32_model, tokenizer = load_fp32(args.model)
     read_projs, write_projs = get_proj_sets(fp32_model)
     read_w = extract_fp32_weights(fp32_model, read_projs)
@@ -131,8 +100,8 @@ def main():
           f"frac = {frac:.3f}  whole_subset = {whole_subset} ({whole_total:,})")
 
     # Scope audit: how many matrices and params each restore condition TOUCHES.
-    # Full write must be len(write_projs) x n_layers matrices (Llama: 2 x 32 = 64);
-    # a middle-band scope bug would show ~22. Persisted so the JSON is self-auditing.
+    # Full write must be len(write_projs) x n_layers matrices (Llama: 2 x 32 = 64), a middle-band scope bug would show ~22.
+    # Persisted so the JSON is self-auditing.
     n_layers = len(read_w)
     scope = {
         "n_layers": n_layers,
@@ -157,16 +126,7 @@ def main():
     torch.cuda.empty_cache()
 
     def eval_condition(name, restore_fn):
-        """
-        Evaluate one restoration condition on the quantized model.
-
-        Inputs:
-            - name (str): Condition label for result keys
-            - restore_fn (callable | None): In-place restore hook, or None for raw quant
-
-        Outputs:
-            - None (writes into all_resp and all_arc)
-        """
+        """Evaluate one restoration condition on the quantized model."""
         m, _ = load_quantized(args.model, quantizer = args.quantizer)
         if restore_fn is not None:
             restore_fn(m)

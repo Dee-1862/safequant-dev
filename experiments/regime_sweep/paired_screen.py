@@ -1,15 +1,6 @@
 # Paired ΔASR significance screen across the 19 regime cells.
-#
-# Replaces the point-threshold "ΔASR > 5" selection rule with a per-cell paired
-# significance test (McNemar-correct SE), because the SE is different in every
-# cell (it depends on b + c, the disagreement between fp and quant). A cell enters
-# the studiable set on SIGNIFICANCE, not on a single numeric cutoff. Holm-adjusts
-# across the tested cells. The coherence (ARC) and refusal (FP-baseline) gates are
-# applied separately; this script owns only the paired-increase criterion.
-#
-# Labels come from flags_by_cond in the result JSON (headline for the two AQLM
-# studiable cells; the flag-augmented restoration_sweep for the other 17).
 
+#Front Matter
 import argparse
 import json
 from pathlib import Path
@@ -19,9 +10,8 @@ from core.stats import paired_delta_asr, holm_bonferroni
 
 MODELS = ["llama", "qwen", "mistral", "phi3"]
 QUANTS = ["awq", "gptq4", "aqlm2", "gptq3", "gptq2"]
-# No cell is structurally excluded from the PAIRED BASELINE screen: it needs only
-# fp32 + quant flags. phi3/awq loads fine (only its RESTORATION is arch-NA), and
-# qwen/aqlm2 (no AQLM checkpoint) drops out automatically via missing labels.
+# No cell is structurally excluded from the PAIRED BASELINE screen: it needs only fp32 + quant flags.
+# phi3/awq loads fine (only its RESTORATION is arch-NA), and qwen/aqlm2 (no AQLM checkpoint) drops out automatically via missing labels.
 NA_CELLS = set()
 
 RESTORE_SCRIPT = Path("experiments/regime_sweep/restoration_sweep.py")
@@ -30,17 +20,7 @@ STUDIABLE_HEADLINE = {("llama", "aqlm2"), ("phi3", "aqlm2")}
 
 
 def load_labels(path, quant_key):
-    """
-    Extract paired fp32/quant compliance flags from a result JSON.
-
-    Inputs:
-        - path (str | Path): Result JSON with flags_by_cond
-        - quant_key (str): Quantized condition key (e.g. "aqlm2")
-
-    Outputs:
-        - fp_flags (list[int]): Full-precision flags
-        - quant_flags (list[int]): Quantized flags (same prompt order)
-    """
+    """Extract paired fp32/quant compliance flags from a result JSON."""
     d = json.loads(Path(path).read_text(encoding = "utf-8"))
     fbc = d.get("flags_by_cond")
     if not fbc:
@@ -74,16 +54,7 @@ def _find_cell_json(model, quantizer):
 
 
 def sweep(cells, alpha = 0.05):
-    """
-    Run paired ΔASR screen with Holm adjustment across cells.
-
-    Inputs:
-        - cells (list[tuple[str, str]]): (model, quantizer) pairs
-        - alpha (float): Significance level for reporting
-
-    Outputs:
-        - results (list[dict]): Per-cell stats and significance flags
-    """
+    """Run paired ΔASR screen with Holm adjustment across cells."""
     results, pvals = [], []
     for model, quantizer in cells:
         row = {"model": model, "quant": quantizer}

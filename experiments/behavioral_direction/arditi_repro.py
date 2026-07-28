@@ -1,5 +1,6 @@
 # Exact reproduction of Arditi et al. behavioral-direction selection.
 
+#Front Matter
 import argparse
 from pathlib import Path
 
@@ -25,7 +26,7 @@ K_POSITIONS = 5      # last K post-instruction token positions (Arditi uses len(
 N_TRAIN = 128        # diff-in-means construction set (Chhabra uses 128)
 N_SELECT = 32        # held-out selection/validation set (Chhabra uses 32)
 N_EVAL = 200         # final HarmBench eval, matches your 62.5 baseline
-KL_MAX = 0.10        # Chhabra App. B threshold; TUNE on a few dirs first
+KL_MAX = 0.10        # Chhabra App. B threshold, TUNE on a few dirs first
 KL_SUBSET = 16       # harmless prompts used for the KL estimate (cost control)
 LAYER_FRAC = 0.80    # restrict source layer to l < 0.8L (Chhabra App. B)
 SEED = set_global_seed(DEFAULT_SEED)
@@ -34,18 +35,7 @@ _hook_handles = []
 
 
 def load_model(name, quantizer):
-    """
-    Load FP32 or quantized model and report hidden-layer count.
-
-    Inputs:
-        - name (str): Model alias
-        - quantizer (str): Quantizer id, or "fp32"
-
-    Outputs:
-        - model (nn.Module): Loaded model
-        - tok (PreTrainedTokenizer): Tokenizer
-        - n_layers (int): Number of hidden layers
-    """
+    """Load FP32 or quantized model and report hidden-layer count."""
     # Dispatch to FP32 vs quantized loader
     if quantizer == "fp32":
         model, tok = load_fp32(name)
@@ -56,45 +46,19 @@ def load_model(name, quantizer):
 
 
 def load_harmful_train(n):
-    """
-    Load WildJailbreak train prompts for direction construction.
-
-    Inputs:
-        - n (int): Number of prompts
-
-    Outputs:
-        - prompts (list): Prompt items
-    """
+    """Load WildJailbreak train prompts for direction construction."""
     # Train split for diff-in-means construction
     return load_wildjailbreak_prompts(n_samples = n, config = "train")
 
 
 def load_harmful_eval(n):
-    """
-    Load WildJailbreak eval prompts for final ASR.
-
-    Inputs:
-        - n (int): Number of prompts
-
-    Outputs:
-        - prompts (list): Prompt items
-    """
+    """Load WildJailbreak eval prompts for final ASR."""
     # Eval split for HarmBench ASR
     return load_wildjailbreak_prompts(n_samples = n, config = "eval")
 
 
 def harmbench_asr(model, tok, prompts):
-    """
-    Compute HarmBench attack success rate for a prompt set.
-
-    Inputs:
-        - model (nn.Module): Model under evaluation
-        - tok (PreTrainedTokenizer): Tokenizer matched to model
-        - prompts (list): Eval prompt items
-
-    Outputs:
-        - asr (float): Fraction of prompts judged harmful
-    """
+    """Compute HarmBench attack success rate for a prompt set."""
     # Generate, classify, and average success flags
     behaviors = [_extract_behavior(item) for item in prompts]
     responses = generate_only(model, tok, prompts, desc = "HarmBench ASR")
@@ -103,35 +67,14 @@ def harmbench_asr(model, tok, prompts):
 
 
 def install_direction_hook(model, direction, layer = None, mode = "ablate"):
-    """
-    Install ablation or addition hooks along a behavioral direction.
-
-    Inputs:
-        - model (nn.Module): Model to hook
-        - direction (array-like): Direction vector
-        - layer (int | None): Layer for "add"; None ablates all layers
-        - mode (str): "ablate" or "add"
-
-    Outputs:
-        - None
-    """
+    """Install ablation or addition hooks along a behavioral direction."""
     # Materialize the direction on the model device/dtype
     layers = get_inner(model).layers
     d = torch.as_tensor(direction, dtype = model.dtype, device = model.device)
 
     if mode == "ablate":
         def hook(module, inputs, output):
-            """
-            Subtract the projection onto the direction from residual states.
-
-            Inputs:
-                - module (nn.Module): Hooked module
-                - inputs (tuple): Forward inputs (unused)
-                - output (Tensor | tuple): Layer output
-
-            Outputs:
-                - output (Tensor | tuple): Ablated output
-            """
+            """Subtract the projection onto the direction from residual states."""
             # Remove proj * d from each residual position
             is_tuple = isinstance(output, tuple)
             h = output[0] if is_tuple else output
@@ -147,17 +90,7 @@ def install_direction_hook(model, direction, layer = None, mode = "ablate"):
 
     elif mode == "add":
         def hook(module, inputs, output):
-            """
-            Add the direction vector to residual states at one layer.
-
-            Inputs:
-                - module (nn.Module): Hooked module
-                - inputs (tuple): Forward inputs (unused)
-                - output (Tensor | tuple): Layer output
-
-            Outputs:
-                - output (Tensor | tuple): Induced output
-            """
+            """Add the direction vector to residual states at one layer."""
             # Add d on sequence residual positions
             is_tuple = isinstance(output, tuple)
             h = output[0] if is_tuple else output
@@ -169,15 +102,7 @@ def install_direction_hook(model, direction, layer = None, mode = "ablate"):
 
 
 def clear_hooks(_model = None):
-    """
-    Remove every registered direction hook.
-
-    Inputs:
-        - _model (nn.Module | None): Unused; kept for call-site compatibility
-
-    Outputs:
-        - None
-    """
+    """Remove every registered direction hook."""
     # Drop handles and clear the global list
     global _hook_handles
     for h in _hook_handles:
@@ -186,17 +111,7 @@ def clear_hooks(_model = None):
 
 
 def model_forward_hidden_states(model, tok, p):
-    """
-    Return stacked hidden states for one prompt, including the embedding layer.
-
-    Inputs:
-        - model (nn.Module): Model to forward
-        - tok (PreTrainedTokenizer): Tokenizer matched to model
-        - p (str | dict): Prompt item
-
-    Outputs:
-        - hs (ndarray): Array shaped [L+1, seq_len, d_model]
-    """
+    """Return stacked hidden states for one prompt, including the embedding layer."""
     # Tokenize and request all hidden states
     inputs = tok(
         prompt_text(p, tok),
@@ -211,18 +126,7 @@ def model_forward_hidden_states(model, tok, p):
 
 
 def mean_kl_clean_vs_ablated(model, tok, rhat_layer, harmless_val):
-    """
-    Mean last-token KL between clean and direction-ablated logits on harmless prompts.
-
-    Inputs:
-        - model (nn.Module): Model under evaluation
-        - tok (PreTrainedTokenizer): Tokenizer matched to model
-        - rhat_layer (array-like): Unit direction for ablation
-        - harmless_val (list): Harmless validation prompts
-
-    Outputs:
-        - mean_kl (float): Mean KL over the KL_SUBSET prompts
-    """
+    """Mean last-token KL between clean and direction-ablated logits on harmless prompts."""
     # Compare clean vs ablated final-token distributions
     kls = []
     for p in harmless_val[:KL_SUBSET]:
@@ -243,17 +147,7 @@ def mean_kl_clean_vs_ablated(model, tok, rhat_layer, harmless_val):
 
 
 def extract_residuals(model, tok, prompts):
-    """
-    Stack last-K post-instruction residuals across layers for a prompt set.
-
-    Inputs:
-        - model (nn.Module): Model to forward
-        - tok (PreTrainedTokenizer): Tokenizer matched to model
-        - prompts (list): Prompt items
-
-    Outputs:
-        - feats (ndarray): Array shaped [N, L, K, d]
-    """
+    """Stack last-K post-instruction residuals across layers for a prompt set."""
     # Drop the embedding layer and keep the last K positions
     feats = []
     for p in prompts:
@@ -263,17 +157,7 @@ def extract_residuals(model, tok, prompts):
 
 
 def diff_in_means_candidates(acts_harmful, acts_harmless):
-    """
-    Build raw and unit-normalized diff-in-means candidates over layer x position.
-
-    Inputs:
-        - acts_harmful (ndarray): Harmful residuals [N, L, K, d]
-        - acts_harmless (ndarray): Harmless residuals [N, L, K, d]
-
-    Outputs:
-        - r (ndarray): Raw diff-in-means [L, K, d]
-        - rhat (ndarray): Unit-normalized directions [L, K, d]
-    """
+    """Build raw and unit-normalized diff-in-means candidates over layer x position."""
     # Mean difference then unit-normalize along the feature axis
     mu = acts_harmful.mean(axis = 0)       # [L, K, d]
     nu = acts_harmless.mean(axis = 0)      # [L, K, d]
@@ -284,31 +168,13 @@ def diff_in_means_candidates(acts_harmful, acts_harmless):
 
 def score_candidate(model, tok, r_layer, rhat_layer, layer, harmful_val, harmless_val,
                     refusal_toks):
-    """
-    Score one (layer, position) candidate with bypass, induce, and KL metrics.
-
-    Inputs:
-        - model (nn.Module): Model under evaluation
-        - tok (PreTrainedTokenizer): Tokenizer matched to model
-        - r_layer (ndarray): Raw direction at this layer/position
-        - rhat_layer (ndarray): Unit direction at this layer/position
-        - layer (int): Source layer index for induce
-        - harmful_val (list): Harmful validation prompts
-        - harmless_val (list): Harmless validation prompts
-        - refusal_toks (list[int]): Refusal token ids
-
-    Outputs:
-        - bypass (float): Residual refusal under multilayer ablation
-        - induce (float): Refusal induction score on harmless prompts
-        - kl (float): Clean-vs-ablated KL on harmless prompts
-    """
-    # Bypass: ablate everywhere; lower residual refusal on harmful = better
+    """Score one (layer, position) candidate with bypass, induce, and KL metrics."""
+    # Bypass: ablate everywhere, lower residual refusal on harmful = better
     install_direction_hook(model, rhat_layer, layer = None, mode = "ablate")
     bypass = refusal_score_logit(model, tok, harmful_val, refusal_toks)
     clear_hooks(model)
 
-    # Induce: add at this layer; higher refusal log-odds = more induced refusal
-    # (feasibility compares this against the no-direction harmless baseline).
+    # Induce: add at this layer, higher refusal log-odds = more induced refusal (feasibility compares this against the no-direction harmless baseline).
     install_direction_hook(model, r_layer, layer = layer, mode = "add")
     induce = refusal_score_logit(model, tok, harmless_val, refusal_toks)
     clear_hooks(model)
@@ -320,34 +186,14 @@ def score_candidate(model, tok, r_layer, rhat_layer, layer, harmful_val, harmles
 
 def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
                      refusal_toks):
-    """
-    Grid-search layer x position candidates under Arditi feasibility filters.
-
-    Inputs:
-        - model (nn.Module): Model under evaluation
-        - tok (PreTrainedTokenizer): Tokenizer matched to model
-        - r (ndarray): Raw candidates [L, K, d]
-        - rhat (ndarray): Unit candidates [L, K, d]
-        - harmful_val (list): Harmful validation prompts
-        - harmless_val (list): Harmless validation prompts
-        - n_layers (int): Total hidden layers
-        - refusal_toks (list[int]): Refusal token ids
-
-    Outputs:
-        - layer (int | None): Selected layer, or None if no feasible candidate
-        - pos_idx (int | None): Selected position index, or None
-        - rows (list[tuple]): All scored candidate rows
-    """
+    """Grid-search layer x position candidates under Arditi feasibility filters."""
     # Restrict to early layers per Chhabra App. B
     max_layer = int(LAYER_FRAC * n_layers)
     rows = []
 
-    # Under the logit metric `induce` is a refusal LOG-ODDS, so the feasibility
-    # test is "adding the direction RAISES refusal above the harmless baseline"
-    # (a floor). The old `induce > 0.0` meant log-odds>0 <=> P(refuse)>0.5 -- a
-    # ceiling nothing clears, so every cell wrongly reported operative = False
-    # (incl. FP32, where Arditi's method demonstrably works). Baseline = harmless
-    # refusal score with NO direction added.
+    # Under the logit metric `induce` is a refusal LOG-ODDS, so the feasibility test is "adding the direction RAISES refusal above the harmless baseline" (a floor).
+    # The old `induce > 0.0` meant log-odds>0 <=> P(refuse)>0.5, a ceiling nothing clears, so every cell wrongly reported operative = False (incl. FP32, where Arditi's method demonstrably works).
+    # Baseline = harmless refusal score with NO direction added.
     induce_baseline = float(
         refusal_score_logit(model, tok, harmless_val, refusal_toks)
     )
@@ -368,8 +214,7 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
             rows.append((l, pos_idx, b, i, k))
             print(f"  bypass = {b:.3f}  induce = {i:.3f}  kl = {k:.3f}")
 
-    # Feasible: direction INDUCES refusal (score above the harmless baseline)
-    # and KL under threshold; pick min bypass.
+    # Feasible: direction INDUCES refusal (score above the harmless baseline) and KL under threshold, pick min bypass.
     feasible = [row for row in rows
                 if row[3] > induce_baseline and row[4] < KL_MAX]
     if not feasible:
@@ -383,16 +228,7 @@ def select_direction(model, tok, r, rhat, harmful_val, harmless_val, n_layers,
 
 
 def run_cell(name, quantizer):
-    """
-    Run direction selection and HarmBench ASR for one model/quantizer cell.
-
-    Inputs:
-        - name (str): Model alias
-        - quantizer (str): Quantizer id, or "fp32"
-
-    Outputs:
-        - data (dict): Baseline/ablated ASR and selection metadata
-    """
+    """Run direction selection and HarmBench ASR for one model/quantizer cell."""
     # Re-seed each cell so multi-model loops stay comparable
     set_global_seed(SEED)
     model, tok, n_layers = load_model(name, quantizer)
@@ -415,7 +251,7 @@ def run_cell(name, quantizer):
         model, tok, r, rhat, harmful_val, harmless_val, n_layers, refusal_toks
     )
 
-    # Baseline ASR; optional multilayer ablation if a direction was selected
+    # Baseline ASR, optional multilayer ablation if a direction was selected
     baseline = harmbench_asr(model, tok, harmful_eval) * 100
     if layer is None:
         print(f"[{name}/{quantizer}] baseline ASR {baseline:.1f}%, "

@@ -1,5 +1,6 @@
 # Reproducible GPTQ quantization via AutoGPTQ (Bridges-2 helper).
 
+#Front Matter
 import argparse
 import random
 import sys
@@ -24,15 +25,7 @@ from core.datasets import load_dataset
 
 
 def _register_phi3_autogptq():
-    """
-    Register Phi-3 fused layout for auto-gptq 0.7.1 (no-op on other archs).
-
-    Inputs:
-        - None
-
-    Outputs:
-        - None (registers Phi3GPTQForCausalLM when auto-gptq is available)
-    """
+    """Register Phi-3 fused layout for auto-gptq 0.7.1 (no-op on other archs)."""
     if BaseGPTQForCausalLM is None:
         return
     try:
@@ -55,33 +48,12 @@ def _register_phi3_autogptq():
 
 
 def default_output_dir(model, bits, group_size):
-    """
-    Ocean path for a self-quantized GPTQ checkpoint (never under $HOME).
-
-    Inputs:
-        - model (str): Model alias from config.MODELS
-        - bits (int): Quantization bit width
-        - group_size (int): GPTQ group size
-
-    Outputs:
-        - out_dir (Path): Target directory for saved weights
-    """
+    """Ocean path for a self-quantized GPTQ checkpoint (never under $HOME)."""
     return Path(QM_ROOT) / "gptq" / f"{model}-gptq{bits}bit-g{group_size}"
 
 
 def build_calibration(tokenizer, n_samples, seqlen, seed):
-    """
-    WikiText-2 calibration windows for AutoGPTQ (hugging-quants recipe).
-
-    Inputs:
-        - tokenizer: HuggingFace tokenizer
-        - n_samples (int): Number of windows
-        - seqlen (int): Tokens per window
-        - seed (int): RNG seed for window starts
-
-    Outputs:
-        - samples (list): Dicts with input_ids and attention_mask
-    """
+    """WikiText-2 calibration windows for AutoGPTQ (hugging-quants recipe)."""
     # Load pinned WikiText-2-raw train split
     ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split = "train")
     enc = tokenizer("\n\n".join(ds["text"]), return_tensors = "pt")

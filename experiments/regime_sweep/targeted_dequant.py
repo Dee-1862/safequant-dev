@@ -1,4 +1,5 @@
 # Targeted mixed-precision repair: restore AQLM read-side from AWQ-4 source.
+#Front Matter
 import argparse
 import gc
 from pathlib import Path
@@ -45,19 +46,7 @@ def _param_count(layer, proj_path):
 
 
 def effective_bits(model, role_projs, layer_range, base_q, src_q):
-    """
-    Effective weight bit-width after mixed-precision read-side repair.
-
-    Inputs:
-        - model (torch.nn.Module): Model architecture for param counting
-        - role_projs (list[str]): Restored projection paths
-        - layer_range (tuple | None): (lo, hi) layer band, or None for all layers
-        - base_q (str): Baseline quantizer key (e.g. "aqlm2")
-        - src_q (str): Source quantizer key for restored weights (e.g. "awq")
-
-    Outputs:
-        - stats (dict): Param counts, restored fraction, and effective_bits
-    """
+    """Effective weight bit-width after mixed-precision read-side repair."""
     read, write = get_proj_sets(model)
     all_projs = read + write
     n_layers = model.config.num_hidden_layers

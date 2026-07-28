@@ -1,5 +1,6 @@
 # Q-Resafe DPO train + fold: masked LoRA on a quantized model.
 
+#Front Matter
 import argparse
 import json
 from pathlib import Path
@@ -23,19 +24,7 @@ except ImportError:
 
 
 def _tokenize_pair(tok, prompt, completion, device):
-    """
-    Build chat-templated input ids for one (prompt, completion) pair.
-
-    Inputs:
-        - tok (PreTrainedTokenizer): Tokenizer with chat template
-        - prompt (str): User instruction
-        - completion (str): Assistant completion
-        - device (str | torch.device): Target device
-
-    Outputs:
-        - input_ids (Tensor): Batch-1 token ids
-        - n_prompt (int): Number of prompt tokens before the completion
-    """
+    """Build chat-templated input ids for one (prompt, completion) pair."""
     # Concatenate chat-templated prompt with raw completion tokens
     msgs = [{"role": "user", "content": prompt}]
     p_ids = tok.apply_chat_template(msgs, add_generation_prompt = True, return_tensors = "pt")[0]
@@ -46,17 +35,7 @@ def _tokenize_pair(tok, prompt, completion, device):
 
 
 def seq_logp(model, input_ids, n_prompt):
-    """
-    Sum of completion token log-probs (positions >= n_prompt).
-
-    Inputs:
-        - model (nn.Module): Model scoring the sequence
-        - input_ids (Tensor): Batch-1 token ids
-        - n_prompt (int): Prompt length in tokens
-
-    Outputs:
-        - logp (Tensor): Scalar sum of completion log-probs
-    """
+    """Sum of completion token log-probs (positions >= n_prompt)."""
     # Teacher-force log-probs and sum only completion positions
     logits = model(input_ids = input_ids).logits[0]            # [T, V]
     logp = F.log_softmax(logits[:-1].float(), dim = -1)        # predict token t+1
@@ -66,19 +45,7 @@ def seq_logp(model, input_ids, n_prompt):
 
 
 def dpo_loss(lp_w_pol, lp_l_pol, lp_w_ref, lp_l_ref, beta):
-    """
-    Standard DPO loss: -log sigmoid(beta * [(pol_w-ref_w) - (pol_l-ref_l)]).
-
-    Inputs:
-        - lp_w_pol (Tensor): Policy logp of preferred completion
-        - lp_l_pol (Tensor): Policy logp of dispreferred completion
-        - lp_w_ref (Tensor): Reference logp of preferred completion
-        - lp_l_ref (Tensor): Reference logp of dispreferred completion
-        - beta (float): DPO temperature
-
-    Outputs:
-        - loss (Tensor): Scalar DPO loss
-    """
+    """Standard DPO loss: -log sigmoid(beta * [(pol_w-ref_w) - (pol_l-ref_l)])."""
     # Preference margin under the reference-normalized policy
     logits = beta * ((lp_w_pol - lp_w_ref) - (lp_l_pol - lp_l_ref))
     return -F.logsigmoid(logits)
@@ -86,18 +53,7 @@ def dpo_loss(lp_w_pol, lp_l_pol, lp_w_ref, lp_l_ref, beta):
 
 @torch.no_grad()
 def precompute_ref(model, tok, pairs, device):
-    """
-    Precompute reference (base, no LoRA) log-probs for every pair.
-
-    Inputs:
-        - model (nn.Module): Model with LoRA attached
-        - tok (PreTrainedTokenizer): Tokenizer
-        - pairs (list[dict]): Displacement pairs with instruction/yw/yl
-        - device (str | torch.device): Device for forwards
-
-    Outputs:
-        - ref (list[tuple[float, float]]): (lp_w, lp_l) per pair
-    """
+    """Precompute reference (base, no LoRA) log-probs for every pair."""
     # Disable adapters so the reference is the frozen base
     set_lora_enabled(model, False)
     ref = []
@@ -111,25 +67,7 @@ def precompute_ref(model, tok, pairs, device):
 
 def train_dpo(model, tok, pairs, ref, lora_params, beta, lr, epochs, device, log_every = 50,
               opt8bit = False):
-    """
-    Train LoRA parameters with pairwise DPO on displacement pairs.
-
-    Inputs:
-        - model (nn.Module): Policy model with LoRA enabled
-        - tok (PreTrainedTokenizer): Tokenizer
-        - pairs (list[dict]): Displacement pairs
-        - ref (list[tuple]): Precomputed reference log-probs
-        - lora_params (list[Parameter]): Trainable LoRA parameters
-        - beta (float): DPO temperature
-        - lr (float): AdamW learning rate
-        - epochs (int): Number of epochs
-        - device (str | torch.device): Training device
-        - log_every (int): Steps between loss logs
-        - opt8bit (bool): Use bitsandbytes AdamW8bit when True
-
-    Outputs:
-        - None
-    """
+    """Train LoRA parameters with pairwise DPO on displacement pairs."""
     # Prefer 8-bit AdamW at large rank to fit optimizer state
     if opt8bit:
         if bnb is None:
@@ -161,18 +99,7 @@ def train_dpo(model, tok, pairs, ref, lora_params, beta, lr, epochs, device, log
 
 
 def fold_all(model, wrapped_names, cfg, beam_size = 5):
-    """
-    Fold each LoRALinear delta into base codes, then unwrap adapters.
-
-    Inputs:
-        - model (nn.Module): Model with LoRA wrappers
-        - wrapped_names (list[str]): Wrapped module names
-        - cfg (dict): AQLM quantization config
-        - beam_size (int): Beam width for code updates
-
-    Outputs:
-        - changed (dict[str, float]): Per-module codes-changed fraction
-    """
+    """Fold each LoRALinear delta into base codes, then unwrap adapters."""
     # Fold then unwrap so the model is pure quantized with no FP adapter
     mods = dict(model.named_modules())
     changed = {}
@@ -188,19 +115,7 @@ def fold_all(model, wrapped_names, cfg, beam_size = 5):
 
 
 def eval_model(model, tok, n_eval, n_arc, label):
-    """
-    Evaluate ASR, ARC, and XSTest false-refusal for one model state.
-
-    Inputs:
-        - model (nn.Module): Model under evaluation
-        - tok (PreTrainedTokenizer): Tokenizer
-        - n_eval (int): WildJailbreak eval count
-        - n_arc (int): ARC item count
-        - label (str): Progress-bar prefix
-
-    Outputs:
-        - metrics (dict): asr, arc, xstest_fr
-    """
+    """Evaluate ASR, ARC, and XSTest false-refusal for one model state."""
     # ASR on WildJailbreak, then ARC and XSTest
     wj = load_wildjailbreak_prompts(n_samples = n_eval, config = "eval")
     beh = [_extract_behavior(it) for it in wj]
@@ -222,8 +137,8 @@ def main():
     ap.add_argument("--r", type = int, default = 128)
     ap.add_argument("--alpha", type = float, default = 128.0, help = "LoRA alpha (official 128; our earlier runs used 256 = 2x scaling)")
     ap.add_argument("--beta", type = float, default = 0.01)
-    ap.add_argument("--lr", type = float, default = 5e-7) #help = "DPO learning rate (official 5e-7; our earlier runs used 5e-6 = 10x)")
-    ap.add_argument("--epochs", type = int, default = 1) #help = "DPO epochs (official 1; our earlier runs used 3)")
+    ap.add_argument("--lr", type = float, default = 5e-7) #help = "DPO learning rate (official 5e-7, our earlier runs used 5e-6 = 10x)")
+    ap.add_argument("--epochs", type = int, default = 1) #help = "DPO epochs (official 1, our earlier runs used 3)")
     ap.add_argument("--n_eval", type = int, default = 400)
     ap.add_argument("--n_arc", type = int, default = 100)
     ap.add_argument("--pairs_file", default = None, help = "displacement pairs JSON (default: qresafe_pairs_<model>_<quant>_wj.json)")

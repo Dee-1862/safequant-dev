@@ -1,31 +1,14 @@
 # Forward hooks that ablate a direction from residual-stream layer outputs.
 
+#Front Matter
 from core.residuals import get_inner
 
 
 def make_ablation_hook(r_hat_cpu):
-    """
-    Build a forward hook that projects r_hat out of the residual stream.
-
-    Inputs:
-        - r_hat_cpu (torch.Tensor): Pre-normalized direction on CPU
-
-    Outputs:
-        - hook (callable): Forward hook applying h <- h - (h @ r) * r
-    """
-    # Closure over the CPU direction; move to activation device/dtype on the fly
+    """Build a forward hook that projects r_hat out of the residual stream."""
+    # Closure over the CPU direction, move to activation device/dtype on the fly
     def hook(module, inputs, output):
-        """
-        Ablate r_hat from a layer's residual-stream output.
-
-        Inputs:
-            - module (nn.Module): Hooked module (unused)
-            - inputs (tuple): Forward inputs (unused)
-            - output (Tensor | tuple): Layer output or (hidden, ...)
-
-        Outputs:
-            - output (Tensor | tuple): Ablated output matching the input layout
-        """
+        """Ablate r_hat from a layer's residual-stream output."""
         # Preserve tuple vs tensor return layout
         is_tuple = isinstance(output, tuple)
         h = output[0] if is_tuple else output
@@ -44,17 +27,7 @@ def make_ablation_hook(r_hat_cpu):
 
 
 def install_ablation(model, r_hat_cpu, layers):
-    """
-    Register ablation hooks on the listed residual-stream layers.
-
-    Inputs:
-        - model (torch.nn.Module): Model (possibly wrapped)
-        - r_hat_cpu (torch.Tensor): Pre-normalized direction on CPU
-        - layers (list): Layer indices to ablate
-
-    Outputs:
-        - handles (list): Forward-hook handles for later removal
-    """
+    """Register ablation hooks on the listed residual-stream layers."""
     # Resolve inner transformer that owns .layers
     inner = get_inner(model)
     handles = []
@@ -68,15 +41,7 @@ def install_ablation(model, r_hat_cpu, layers):
 
 
 def remove_handles(handles):
-    """
-    Remove a list of forward-hook handles.
-
-    Inputs:
-        - handles (list): Hook handles from install_ablation
-
-    Outputs:
-        - None
-    """
+    """Remove a list of forward-hook handles."""
     # Detach every registered hook
     for h in handles:
         h.remove()
