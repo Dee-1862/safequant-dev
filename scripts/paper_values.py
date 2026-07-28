@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from core.stats import holm_bonferroni, mcnemar_exact, paired_delta_asr
 
-MODELS = ["llama", "qwen", "mistral", "phi3"]
+MODELS = ["llama", "mistral", "qwen", "phi3"]
 QUANTS = ["awq", "gptq4", "aqlm2", "gptq3", "gptq2"]
 F3A_MODELS = ["llama", "phi3"]
 CONDS = ["fp32", "quant", "write_restored", "read_restored", "both_restored"]
@@ -21,7 +21,7 @@ OUT = "outputs"
 QRESAFE_RANKS = [128, 256, 512, 1024, 2048]
 QRESAFE_PATCHES = {
     "read": "Read",
-    "write": "Writer",
+    "write": "Write",
     "full": "Both",
 }
 
@@ -38,6 +38,7 @@ QUANT_LABEL = {
     "aqlm2": "AQLM-2",
     "gptq3": "GPTQ-3",
     "gptq2": "GPTQ-2",
+    "fp32": "FP (bf16)",
 }
 
 PROJ_ORDER_LLAMA = [
@@ -51,10 +52,10 @@ PROJ_ORDER_LLAMA = [
 ]
 
 PROJ_ORDER_PHI3 = [
-    ("self_attn.qkv_proj", "W_qkv", "Attention q,k,v (fused)", 1),
-    ("self_attn.o_proj", "W_o", "Attention output", 1),
     ("mlp.gate_up_proj", "W_gate_up", "MLP gate+lift (fused)", 1),
     ("mlp.down_proj", "W_down", "MLP output", 1),
+    ("self_attn.qkv_proj", "W_qkv", "Attention q,k,v (fused)", 1),
+    ("self_attn.o_proj", "W_o", "Attention output", 1),
 ]
 
 DEPTH_RANGES = [
@@ -655,7 +656,7 @@ def build_f3a():
 
 def build_controls():
     """
-    Build tab:controls: probe refit and leakage control numbers.
+    Build tab:controls: param-matched, refit, and post-restoration cosmed numbers.
 
     Inputs:
         - None
@@ -754,42 +755,62 @@ def build_lrqat():
     Outputs:
         - block (dict): LaTeX table block for tab:lrqat
     """
-    rows = []
-    refs = {
-        "fp16": {"asr": 41.0, "arc": 55, "coherent": True},
-        "aqlm2": {"asr": 62.5, "arc": 46, "coherent": None},
-    }
-    rows.append({"role": "FP reference", "bits": 16, **refs["fp16"]})
-    rows.append({"role": "AQLM-2", "bits": 2.0, **refs["aqlm2"]})
+    rows = [
+        {
+            "role": "FP reference",
+            "bits": 16,
+            "training": None,
+            "asr": 41.0,
+            "arc": 55,
+            "xstest_fr": 6.0,
+            "coherent": True,
+        },
+        {
+            "role": "AQLM-2",
+            "bits": 2.0,
+            "training": None,
+            "asr": 62.5,
+            "arc": 46,
+            "xstest_fr": 9.6,
+            "coherent": True,
+        },
+    ]
 
-    for f in sorted(glob.glob(f"{OUT}/trained_repair/lrqat_llama_aqlm2_*.json")):
+    by_key = {}
+    for f in glob.glob(f"{OUT}/trained_repair/lrqat_llama_aqlm2_*.json"):
         d = load(f)
         if not d or "asr_lrqat_trained" not in d:
             continue
         role = g(d, "role", default = "unknown")
         n_bits = g(d, "n_bits")
-        ptq_coll = g(d, "coherence_collapse_ptq_untrained", default = False)
-        train_coll = g(d, "coherence_collapse_lrqat_trained", default = False)
-        bits_val = float(n_bits) if n_bits is not None else None
-        coherent_ptq = "no" if ptq_coll else "yes"
-        coherent_train = "no" if train_coll else "yes"
-        rows.append({
-            "role": f"{role} (PTQ untrained)",
-            "bits": bits_val,
-            "asr": rnd(g(d, "asr_ptq_untrained"), 1),
-            "arc": rnd(g(d, "arc_ptq_untrained"), 0),
-            "xstest_fr": rnd(g(d, "false_refusal_ptq_untrained"), 1),
-            "coherent": coherent_ptq,
-        })
-        rows.append({
-            "role": f"{role} (LR-QAT trained)",
-            "bits": bits_val,
-            "asr": rnd(g(d, "asr_lrqat_trained"), 1),
-            "arc": rnd(g(d, "arc_lrqat_trained"), 0),
-            "xstest_fr": rnd(g(d, "false_refusal_lrqat_trained"), 1),
-            "coherent": coherent_train,
-            "effective_bits": rnd(g(d, "repaired_effective_bits"), 2),
-        })
+        by_key[(role, n_bits)] = d
+
+    for role_key, role_label in (("read", "Read"), ("write", "Write")):
+        for n_bits in (2, 3, 4):
+            d = by_key.get((role_key, n_bits))
+            if not d:
+                continue
+            ptq_coll = g(d, "coherence_collapse_ptq_untrained", default = False)
+            train_coll = g(d, "coherence_collapse_lrqat_trained", default = False)
+            rows.append({
+                "role": role_label,
+                "bits": n_bits,
+                "training": "none",
+                "asr": rnd(g(d, "asr_ptq_untrained"), 1),
+                "arc": rnd(g(d, "arc_ptq_untrained"), 0),
+                "xstest_fr": None if ptq_coll else rnd(g(d, "false_refusal_ptq_untrained"), 1),
+                "coherent": not ptq_coll,
+            })
+            rows.append({
+                "role": role_label,
+                "bits": n_bits,
+                "training": "LR-QAT",
+                "asr": rnd(g(d, "asr_lrqat_trained"), 1),
+                "arc": rnd(g(d, "arc_lrqat_trained"), 0),
+                "xstest_fr": None if train_coll else rnd(g(d, "false_refusal_lrqat_trained"), 1),
+                "coherent": not train_coll,
+                "effective_bits": rnd(g(d, "repaired_effective_bits"), 2),
+            })
     return {"source": "lrqat_llama_aqlm2_*.json", "rows": rows}
 
 
@@ -916,40 +937,54 @@ def build_dequant():
     return {"source": "targeted_dequant_* + headline/restoration baselines", "by_model": out}
 
 
-def build_leakage():
+def build_behavioral():
     """
-    Build tab:leakage: probe leakage control summary.
+    Build tab:behavioral: Arditi-style direction ablation (RQ1 actuation).
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): LaTeX table block for tab:leakage
+        - block (dict): LaTeX table block for tab:behavioral
     """
-    cells = {}
-    for m in F3A_MODELS:
-        j = load(f"{OUT}/boundary/probe_leakage_control_{m}.json")
-        sm = g(j, "summary", default = {}) or {}
-        cells[m] = {
-            "model_label": MODEL_LABEL[m],
-            "specificity": rnd(sm.get("residual_xstest_safe_specificity"), 3),
-            "unsafe_recall": rnd(sm.get("residual_xstest_unsafe_recall"), 3),
-            "harmbench_transfer_recall": rnd(sm.get("residual_harmbench_transfer_recall"), 3),
-            "surface_specificity": rnd(sm.get("surface_xstest_safe_specificity"), 3),
-            "surface_unsafe_recall": rnd(sm.get("surface_xstest_unsafe_recall"), 3),
-        }
-    return {"source": "probe_leakage_control_{llama,phi3}.json", "cells": cells}
+    rows = []
+    quant_order = {"fp32": 0, "aqlm2": 1}
+    for f in sorted(glob.glob(f"{OUT}/behavioral_direction/arditi_repro_*.json")):
+        d = load(f)
+        if not d:
+            continue
+        stem = Path(f).stem.replace("arditi_repro_", "")
+        m, q = stem.rsplit("_", 1)
+        baseline = g(d, "baseline_asr")
+        ablated = g(d, "ablated_asr")
+        delta = g(d, "delta_asr_pp")
+        if delta is None and baseline is not None and ablated is not None:
+            delta = ablated - baseline
+        rows.append({
+            "model": m,
+            "model_label": MODEL_LABEL.get(m, m),
+            "quant": q,
+            "quant_label": QUANT_LABEL.get(q, q),
+            "baseline_asr": rnd(baseline, 1),
+            "ablated_asr": rnd(ablated, 1),
+            "delta_asr_pp": rnd(delta, 1),
+            "selected_layer": g(d, "selected_layer"),
+            "selected_pos": g(d, "selected_pos"),
+            "operative": bool(g(d, "operative")),
+        })
+    rows.sort(key = lambda r: (r["model"], quant_order.get(r["quant"], 99)))
+    return {"source": "arditi_repro_*.json", "rows": rows}
 
 
 def build_table_stats():
     """
-    Build table:stats: headline paired McNemar replication.
+    Build tab:stats: headline paired McNemar replication.
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): LaTeX table block for table:stats
+        - block (dict): LaTeX table block for tab:stats
     """
     hl = headline("llama", "aqlm2")
     fbc = g(hl, "flags_by_cond", default = {}) or {}
@@ -961,12 +996,16 @@ def build_table_stats():
     specs = [
         ("quant vs. read", q_flags, read_flags),
         ("quant vs. write", q_flags, write_flags),
-        ("read vs. write", write_flags, read_flags),
+        ("read vs. write", read_flags, write_flags),
     ]
     for label, a_flags, b_flags in specs:
         mc = mcnemar_exact(a_flags, b_flags)
-        delta = rnd(100.0 * (np.mean(a_flags) - np.mean(b_flags)), 1)
-        ci = bootstrap_delta_asr(a_flags, b_flags, n_boot = 2000, seed = 42)
+        if label == "read vs. write":
+            delta = rnd(100.0 * (np.mean(b_flags) - np.mean(a_flags)), 1)
+            ci = bootstrap_delta_asr(b_flags, a_flags, n_boot = 2000, seed = 42)
+        else:
+            delta = rnd(100.0 * (np.mean(a_flags) - np.mean(b_flags)), 1)
+            ci = bootstrap_delta_asr(a_flags, b_flags, n_boot = 2000, seed = 42)
         rows.append({
             "comparison": label,
             "b": mc["b"],
@@ -992,24 +1031,26 @@ def build():
         "meta": {
             "generated_by": "scripts/paper_values.py",
             "note": (
-                "ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. "
-                "Studiable AQLM cells use headline JSON for tab:f3a/regime ASR; "
-                "restoration JSON for swap_valid and dequant AQLM baseline."
+                "LaTeX Evaluation section (tab:geometry, tab:behavioral, tab:regime, "
+                "tab:f3a, tab:f3a_proj, tab:f3a_range, tab:stats, tab:ppl, "
+                "tab:trained_repair, tab:lrqat, tab:controls, tab:dequant). "
+                "ASR/ARC in percentage points. Studiable AQLM cells use headline JSON "
+                "for tab:f3a/regime ASR."
             ),
             "seed": 42,
         },
         "tab:geometry": build_geometry(),
+        "tab:behavioral": build_behavioral(),
         "tab:regime": build_regime(),
+        "tab:f3a": build_f3a(),
         "tab:f3a_proj": build_f3a_proj(),
         "tab:f3a_range": build_f3a_range(),
-        "tab:f3a": build_f3a(),
-        "tab:controls": build_controls(),
-        "tab:dequant": build_dequant(),
+        "tab:stats": build_table_stats(),
         "tab:ppl": build_ppl(),
-        "tab:leakage": build_leakage(),
-        "table:stats": build_table_stats(),
         "tab:trained_repair": build_trained_repair(),
         "tab:lrqat": build_lrqat(),
+        "tab:controls": build_controls(),
+        "tab:dequant": build_dequant(),
     }
 
 
@@ -1050,23 +1091,41 @@ def as_markdown(pv):
                 f"{fmt_cell(row['dmed'])} | {fmt_cell(row['a_min'])} | "
                 f"{fmt_cell(row['cosmed'])} | {fmt_cell(row['coswmed'])} |")
 
+    lines.append("\n## tab:behavioral\n")
+    lines.append(
+        "| Model | Quant | Baseline ASR | Ablated ASR | dASR pp | Layer | Pos | Operative |")
+    lines.append("|---|---|---:|---:|---:|---:|---:|---|")
+    for row in pv["tab:behavioral"]["rows"]:
+        lines.append(
+            f"| {row['model_label']} | {row['quant_label']} | "
+            f"{fmt_cell(row['baseline_asr'])} | {fmt_cell(row['ablated_asr'])} | "
+            f"{fmt_cell(row['delta_asr_pp'])} | {fmt_cell(row['selected_layer'])} | "
+            f"{fmt_cell(row['selected_pos'])} | {row['operative']} |")
+
     lines.append("\n## tab:regime\n")
-    lines.append("| Model | Quant | FP | Quant | dASR | p(Holm) | +Write | +Read | +Both |")
+    lines.append(
+        "| Model | Quant | FP | Quant | dASR [95% CI] | p(Holm) | +Write | +Read | +Both |")
     lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|")
     for key, v in pv["tab:regime"]["cells"].items():
         a, r = v["asr"], v["arc"]
         cells = " | ".join(f"{fmt_cell(a[c])}/{fmt_cell(r[c])}" for c in CONDS[:2])
         rest = " | ".join(f"{fmt_cell(a[c])}/{fmt_cell(r[c])}" for c in CONDS[2:])
         paired = v.get("paired") or {}
-        dasr = fmt_cell(paired.get("delta_asr"))
+        dasr = paired.get("delta_asr")
+        ci = paired.get("ci95") or [None, None]
+        if dasr is not None and ci[0] is not None:
+            dasr_str = f"{dasr:+.1f} [{ci[0]:+.1f},{ci[1]:+.1f}]"
+        else:
+            dasr_str = fmt_cell(dasr)
         ph = paired.get("p_holm")
         ph_str = fmt_cell(f"{ph:.2e}" if ph is not None else None)
         lines.append(
-            f"| {v['model_label']} | {v['quant_label']} | {cells} | {dasr} | {ph_str} | {rest} |")
+            f"| {v['model_label']} | {v['quant_label']} | {cells} | {dasr_str} | "
+            f"{ph_str} | {rest} |")
 
     for section, key in (
-        ("tab:f3a_proj", "rows"),
         ("tab:f3a", "rows"),
+        ("tab:f3a_proj", "rows"),
     ):
         block = pv.get(section, {})
         if "by_model" in block:
@@ -1101,32 +1160,17 @@ def as_markdown(pv):
                     f"{fmt_cell(row['asr'])} | {fmt_cell(row['recovery_pp'])} | "
                     f"{fmt_cell(row['arc'])} |")
 
-    lines.append("\n## tab:controls\n")
-    for m, cell in pv["tab:controls"]["cells"].items():
-        lines.append(f"\n### {cell['label']}\n")
-        pm = cell["param_matched_pp"]
-        pr = cell["probe_rotation"]
-        dc = cell["direction_cosine"]
-        lines.append("| Control | Value |")
-        lines.append("|---|---:|")
-        lines.append(f"| Full write (pp) | {fmt_cell(pm['full_write'])} |")
-        lines.append(f"| Matched read structured (pp) | {fmt_cell(pm['matched_read_structured'])} |")
-        lines.append(f"| Matched read random (pp) | {fmt_cell(pm['matched_read_random'])} |")
-        lines.append(f"| Refit floor | {fmt_cell(pr['refit_floor'])} |")
-        lines.append(f"| Observed rotation | {fmt_cell(pr['observed_rotation'])} |")
-        for k in ("quantized", "read_restored", "write_restored", "both_restored"):
-            if k in dc:
-                lines.append(f"| Direction cos {k} | {fmt_cell(dc[k])} |")
-
-    lines.append("\n## tab:dequant\n")
-    for m, block in pv["tab:dequant"]["by_model"].items():
-        lines.append(f"\n### {block['model_label']}\n")
-        lines.append("| Replacement | Bits | ASR | ARC | XSTest |")
-        lines.append("|---|---:|---:|---:|---:|")
-        for row in block["rows"]:
-            lines.append(
-                f"| {row['label']} | {fmt_cell(row['bits'])} | {fmt_cell(row['asr'])} | "
-                f"{fmt_cell(row['arc'])} | {fmt_cell(row['xstest_fr'])} |")
+    lines.append("\n## tab:stats\n")
+    lines.append("| Comparison | b | c | p | dASR pp | 95% CI |")
+    lines.append("|---|---:|---:|---:|---:|---|")
+    for row in pv["tab:stats"]["rows"]:
+        ci = row.get("ci95") or [None, None]
+        ci_str = f"[{fmt_cell(ci[0])}, {fmt_cell(ci[1])}]"
+        p = row.get("p")
+        p_str = fmt_cell(f"{p:.2e}" if p is not None else None)
+        lines.append(
+            f"| {row['comparison']} | {row['b']} | {row['c']} | {p_str} | "
+            f"{fmt_cell(row['delta_asr_pp'])} | {ci_str} |")
 
     lines.append("\n## tab:ppl\n")
     for m, block in pv["tab:ppl"]["by_model"].items():
@@ -1137,42 +1181,82 @@ def as_markdown(pv):
             lines.append(
                 f"| {row['quant_label']} | {fmt_cell(row['ppl'])} | {fmt_cell(row['ratio_fp'])} |")
 
-    lines.append("\n## tab:leakage\n")
-    lines.append("| Model | Specificity | Unsafe recall | HarmBench transfer |")
-    lines.append("|---|---:|---:|---:|")
-    for m, cell in pv["tab:leakage"]["cells"].items():
-        lines.append(
-            f"| {cell['model_label']} | {fmt_cell(cell['specificity'])} | "
-            f"{fmt_cell(cell['unsafe_recall'])} | {fmt_cell(cell['harmbench_transfer_recall'])} |")
-
-    lines.append("\n## table:stats\n")
-    lines.append("| Comparison | b | c | p | dASR pp | 95% CI |")
-    lines.append("|---|---:|---:|---:|---:|---|")
-    for row in pv["table:stats"]["rows"]:
-        ci = row.get("ci95") or [None, None]
-        ci_str = f"[{fmt_cell(ci[0])}, {fmt_cell(ci[1])}]"
-        p = row.get("p")
-        p_str = fmt_cell(f"{p:.2e}" if p is not None else None)
-        lines.append(
-            f"| {row['comparison']} | {row['b']} | {row['c']} | {p_str} | "
-            f"{fmt_cell(row['delta_asr_pp'])} | {ci_str} |")
-
     lines.append("\n## tab:trained_repair\n")
-    lines.append("| Patch | Rank | ASR | ARC | XSTest |")
-    lines.append("|---|---:|---:|---:|---:|")
-    for row in pv["tab:trained_repair"]["rows"]:
-        lines.append(
-            f"| {row['patch']} | {row['rank']} | {fmt_cell(row.get('asr'))} | "
-            f"{fmt_cell(row.get('arc'))} | {fmt_cell(row.get('xstest_fr'))} |")
+    grid = pv["tab:trained_repair"]["grid"]
+    rank_hdr = " | ".join(f"r{r}" for r in QRESAFE_RANKS)
+    lines.append(f"| Patch | {rank_hdr} |")
+    lines.append("|---|---:|---:|---:|---:|---:|")
+    for patch_label in QRESAFE_PATCHES.values():
+        vals = " | ".join(fmt_cell(grid.get(patch_label, {}).get(str(r))) for r in QRESAFE_RANKS)
+        lines.append(f"| {patch_label} | {vals} |")
 
     lines.append("\n## tab:lrqat\n")
-    lines.append("| Role | Bits | ASR | ARC | XSTest | Coherent |")
-    lines.append("|---|---:|---:|---:|---:|---|")
+    lines.append("| Role | Bits | Training | ASR | ARC | XSTest |")
+    lines.append("|---|---:|---|---:|---:|---:|")
     for row in pv["tab:lrqat"]["rows"]:
+        xstest = row.get("xstest_fr")
+        if xstest is None and row.get("coherent") is False:
+            xstest_str = "---"
+        else:
+            xstest_str = fmt_cell(xstest)
+            if xstest_str != "--":
+                xstest_str = f"{xstest_str}%"
+        asr = row.get("asr")
+        asr_str = fmt_cell(asr)
+        if asr_str != "--":
+            asr_str = f"{asr_str}%"
         lines.append(
-            f"| {row['role']} | {fmt_cell(row.get('bits'))} | {fmt_cell(row.get('asr'))} | "
-            f"{fmt_cell(row.get('arc'))} | {fmt_cell(row.get('xstest_fr'))} | "
-            f"{fmt_cell(row.get('coherent'))} |")
+            f"| {row['role']} | {fmt_cell(row.get('bits'))} | "
+            f"{fmt_cell(row.get('training') or '---')} | {asr_str} | "
+            f"{fmt_cell(row.get('arc'))} | {xstest_str} |")
+
+    lines.append("\n## tab:controls\n")
+    ctrl = pv["tab:controls"]["cells"]
+    llama = ctrl.get("llama", {})
+    phi3 = ctrl.get("phi3", {})
+    ll_pm = llama.get("param_matched_pp", {})
+    ph_pm = phi3.get("param_matched_pp", {})
+    ll_pr = llama.get("probe_rotation", {})
+    ph_pr = phi3.get("probe_rotation", {})
+    ll_dc = llama.get("direction_cosine", {})
+    ph_dc = phi3.get("direction_cosine", {})
+    lines.append("| Control | Llama-AQLM-2 | Phi-3-AQLM-2 |")
+    lines.append("|---|---:|---:|")
+    lines.append(
+        f"| Full write (pp) | {fmt_cell(ll_pm.get('full_write'))} | "
+        f"{fmt_cell(ph_pm.get('full_write'))} |")
+    lines.append(
+        f"| Matched read structured (pp) | {fmt_cell(ll_pm.get('matched_read_structured'))} | "
+        f"{fmt_cell(ph_pm.get('matched_read_structured'))} |")
+    lines.append(
+        f"| Matched read random (pp) | {fmt_cell(ll_pm.get('matched_read_random'))} | "
+        f"{fmt_cell(ph_pm.get('matched_read_random'))} |")
+    lines.append(
+        f"| Refit floor | {fmt_cell(ll_pr.get('refit_floor'))} | "
+        f"{fmt_cell(ph_pr.get('refit_floor'))} |")
+    lines.append(
+        f"| Observed rotation | {fmt_cell(ll_pr.get('observed_rotation'))} | "
+        f"{fmt_cell(ph_pr.get('observed_rotation'))} |")
+    for k, label in (
+        ("quantized", "Quantized"),
+        ("read_restored", "+Read"),
+        ("write_restored", "+Write"),
+        ("both_restored", "+Both"),
+    ):
+        if k in ll_dc or k in ph_dc:
+            lines.append(
+                f"| Direction cos {label} | {fmt_cell(ll_dc.get(k))} | "
+                f"{fmt_cell(ph_dc.get(k))} |")
+
+    lines.append("\n## tab:dequant\n")
+    for m, block in pv["tab:dequant"]["by_model"].items():
+        lines.append(f"\n### {block['model_label']}\n")
+        lines.append("| Replacement | Bits | ASR | ARC | XSTest |")
+        lines.append("|---|---:|---:|---:|---:|")
+        for row in block["rows"]:
+            lines.append(
+                f"| {row['label']} | {fmt_cell(row['bits'])} | {fmt_cell(row['asr'])} | "
+                f"{fmt_cell(row['arc'])} | {fmt_cell(row['xstest_fr'])} |")
 
     return "\n".join(lines)
 

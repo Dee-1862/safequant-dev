@@ -18,6 +18,8 @@ MOD_SCRIPT = {
     "experiments.signal_geometry.probe_accuracy": "experiments/signal_geometry/probe_accuracy.py",
     "experiments.signal_geometry.probe_rotation": "experiments/signal_geometry/probe_rotation.py",
     "experiments.regime_sweep.restoration_sweep": "experiments/regime_sweep/restoration_sweep.py",
+    "experiments.regime_sweep.wikitext_ppl": "experiments/regime_sweep/wikitext_ppl.py",
+    "experiments.regime_sweep.targeted_dequant": "experiments/regime_sweep/targeted_dequant.py",
     "experiments.localization.per_projection": "experiments/localization/per_projection.py",
     "experiments.localization.depth_bands": "experiments/localization/depth_bands.py",
     "experiments.headline.headline_eval": "experiments/headline/headline_eval.py",
@@ -27,19 +29,18 @@ MOD_SCRIPT = {
     "experiments.trained_repair.qresafe_pairs": "experiments/trained_repair/qresafe_pairs.py",
     "experiments.trained_repair.qresafe_dpo": "experiments/trained_repair/qresafe_dpo.py",
     "experiments.trained_repair.lrqat": "experiments/trained_repair/lrqat.py",
-    "experiments.boundary.probe_leakage_control": "experiments/boundary/probe_leakage_control.py",
     "experiments.behavioral_direction.arditi_repro": "experiments/behavioral_direction/arditi_repro.py",
 }
 
 RUN_TARGETS = {
-    "table1": "Table 1: refusal-direction geometry (signal_geometry grid)",
-    "table2": "Table 2: restoration matrix (regime_sweep)",
-    "table3": "Table 3: per-projection localization (Llama AQLM-2)",
-    "table4": "Table 4: depth-band localization (Llama AQLM-2)",
-    "table5": "Table 5: headline eval (Llama AQLM-2)",
-    "table6": "Table 6: controls (param-matched, refit, cosmed, leakage)",
-    "table7": "Tables 6-7: trained repair (Q-Resafe + LR-QAT)",
-    "behavioral": "Section 5: Arditi behavioral direction (Llama)",
+    "table1": "tab:geometry - signal geometry over 19 cells",
+    "table2": "tab:regime + tab:ppl - restoration sweep and WikiText-2 PPL",
+    "table3": "tab:f3a_proj - per-projection localization (Llama + Phi-3 AQLM-2)",
+    "table4": "tab:f3a_range - depth-band localization (Llama + Phi-3 AQLM-2)",
+    "table5": "tab:f3a + tab:stats + tab:dequant - headline eval and GPTQ-4 replacement",
+    "table6": "tab:controls - param-matched, refit, cosmed",
+    "table7": "tab:trained_repair + tab:lrqat - Q-Resafe and LR-QAT",
+    "behavioral": "tab:behavioral - Arditi direction ablation (Llama fp32 + AQLM-2)",
     "full": "All of the above",
 }
 
@@ -123,7 +124,12 @@ def cfg_from_cmd(cmd):
 
     if mod.endswith("probe_refit_control"):
         omit_quantizer = True
-    if "layer_lo" in f and "layer_hi" in f:
+    if mod.endswith("targeted_dequant"):
+        band = "all"
+        if "layer_lo" in f and "layer_hi" in f:
+            band = f"L{f['layer_lo']}-{f['layer_hi']}"
+        variant = f"{f.get('role', 'read')}_{f.get('source_quant', 'awq')}_{band}"
+    elif "layer_lo" in f and "layer_hi" in f:
         variant = f"L{f['layer_lo']}-{f['layer_hi']}"
     elif "projections" in f:
         variant = f["projections"]
@@ -131,6 +137,9 @@ def cfg_from_cmd(cmd):
         variant = f"{f['mask']}_{f['tag']}" if f.get("tag") else f["mask"]
     elif "role" in f and "n_bits" in f:
         variant = f"{f['role']}_int{f['n_bits']}"
+    elif mod.endswith("wikitext_ppl"):
+        variant = "wikitext2_ppl"
+        quantizer = "fp32"
     elif mod.endswith("qresafe_pairs") and f.get("wj_config", "eval") != "train":
         variant = f.get("wj_config", "eval")
 
@@ -163,7 +172,7 @@ def output_exists(cmd):
 
 def table1_cmds():
     """
-    Commands for Table 1 (signal geometry over the full 19-cell grid).
+    Commands for tab:geometry (signal geometry over the full 19-cell grid).
 
     Inputs:
         - None
@@ -181,7 +190,7 @@ def table1_cmds():
 
 def table2_cmds():
     """
-    Commands for Table 2 (restoration matrix / regime sweep).
+    Commands for tab:regime and tab:ppl (restoration sweep + WikiText-2 PPL).
 
     Inputs:
         - None
@@ -194,12 +203,14 @@ def table2_cmds():
         cmds.append(M("experiments.regime_sweep.restoration_sweep",
                       "--model", m, "--quantizer", q,
                       "--n_eval", 200, "--n_reasoning", 100))
+    for m in MODELS:
+        cmds.append(M("experiments.regime_sweep.wikitext_ppl", "--model", m))
     return cmds
 
 
 def table3_cmds():
     """
-    Commands for Table 3 (per-projection localization, Llama + Phi-3).
+    Commands for tab:f3a_proj (per-projection localization, Llama + Phi-3).
 
     Inputs:
         - None
@@ -218,7 +229,7 @@ def table3_cmds():
 
 def table4_cmds():
     """
-    Commands for Table 4 (depth-band localization, read + write sides).
+    Commands for tab:f3a_range (depth-band localization, read + write sides).
 
     Inputs:
         - None
@@ -237,7 +248,7 @@ def table4_cmds():
 
 def table5_cmds():
     """
-    Commands for Table 5 (headline eval on damaged-coherent AQLM cells).
+    Commands for tab:f3a, tab:stats, and tab:dequant (headline + GPTQ-4 replacement).
 
     Inputs:
         - None
@@ -250,12 +261,25 @@ def table5_cmds():
         cmds.append(M("experiments.headline.headline_eval",
                       "--model", m, "--quantizer", "aqlm2",
                       "--n_eval", 200, "--n_reasoning", 100, "--n_boot", 2000))
+        cmds.append(M("experiments.regime_sweep.targeted_dequant",
+                      "--model", m, "--quantizer", "aqlm2",
+                      "--source_quant", "gptq4", "--role", "read",
+                      "--layer_lo", 11, "--layer_hi", 22,
+                      "--n_eval", 200, "--n_reasoning", 50))
+        cmds.append(M("experiments.regime_sweep.targeted_dequant",
+                      "--model", m, "--quantizer", "aqlm2",
+                      "--source_quant", "gptq4", "--role", "read",
+                      "--n_eval", 200, "--n_reasoning", 50))
+    cmds.append(M("experiments.regime_sweep.targeted_dequant",
+                  "--model", "llama7b", "--quantizer", "aqlm2",
+                  "--source_quant", "awq", "--role", "read",
+                  "--n_eval", 200, "--n_reasoning", 50))
     return cmds
 
 
 def table6_cmds():
     """
-    Commands for Table 6 (localization and leakage controls).
+    Commands for tab:controls (localization controls).
 
     Inputs:
         - None
@@ -272,14 +296,12 @@ def table6_cmds():
                       "--model", m, "--n_calib", 200))
         cmds.append(M("experiments.signal_geometry.cosmed_after_restore",
                       "--model", m, "--quantizer", "aqlm2", "--n_calib", 200))
-        cmds.append(M("experiments.boundary.probe_leakage_control",
-                      "--model", m, "--n_calib", 200, "--n_transfer", 200))
     return cmds
 
 
 def table7_cmds():
     """
-    Commands for Table 7 (Q-Resafe rank sweep + LR-QAT bit sweep).
+    Commands for tab:trained_repair and tab:lrqat (Q-Resafe + LR-QAT).
 
     Inputs:
         - None
@@ -309,7 +331,7 @@ def table7_cmds():
 
 def behavioral_cmds():
     """
-    Commands for Section 5 (Arditi direction ablation on Llama).
+    Commands for RQ1 behavioral ablation (Arditi direction on Llama).
 
     Inputs:
         - None
@@ -404,31 +426,23 @@ def rebuild_results(md = False):
     Regenerate PAPER_RESULTS.md and paper_values.json from outputs/.
 
     Inputs:
-        - md (bool): Also write docs/PAPER_TABLES.md when True
+        - md (bool): Unused; markdown is always written to PAPER_RESULTS.md
 
     Outputs:
-        - None (writes files under docs/ and repo root)
+        - None (writes files at repo root)
     """
-    docs = ROOT / "docs"
-    docs.mkdir(exist_ok = True)
-    results_path = docs / "PAPER_RESULTS.md"
+    results_path = ROOT / "PAPER_RESULTS.md"
     json_path = ROOT / "paper_values.json"
-    tables_path = docs / "PAPER_TABLES.md"
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
-    with open(results_path, "w", encoding = "utf-8") as fh:
-        subprocess.run([sys.executable, str(ROOT / "scripts" / "aggregate_results.py")],
-                         cwd = ROOT, stdout = fh, check = True, env = env)
     with open(json_path, "w", encoding = "utf-8") as fh:
         subprocess.run([sys.executable, str(ROOT / "scripts" / "paper_values.py")],
                          cwd = ROOT, stdout = fh, check = True, env = env)
+    with open(results_path, "w", encoding = "utf-8") as fh:
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "paper_values.py"), "--md"],
+                         cwd = ROOT, stdout = fh, check = True, env = env)
     print(f"Wrote {results_path.relative_to(ROOT)}")
     print(f"Wrote {json_path.relative_to(ROOT)}")
-    if md:
-        with open(tables_path, "w", encoding = "utf-8") as fh:
-            subprocess.run([sys.executable, str(ROOT / "scripts" / "paper_values.py"), "--md"],
-                             cwd = ROOT, stdout = fh, check = True, env = env)
-        print(f"Wrote {tables_path.relative_to(ROOT)}")
 
 
 def main():

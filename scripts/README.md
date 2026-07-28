@@ -24,13 +24,13 @@ scripts/
   setup_env.sh            # one-time login-node bootstrap
   logs/                   # Slurm stdout/stderr
   tests/                  # smoke jobs: run these before the full grid
-  signal_geometry/        # Table 1
-  behavioral_direction/   # Sec. 5 Arditi
-  regime_sweep/           # Table 2
-  localization/           # Tables 3-4
-  headline/               # Table 5
-  trained_repair/         # Tables 6-7
-  boundary/               # Appendix controls
+  signal_geometry/        # tab:geometry
+  behavioral_direction/   # tab:behavioral
+  regime_sweep/           # tab:regime, tab:ppl, tab:dequant
+  localization/           # tab:f3a_proj, tab:f3a_range
+  headline/               # tab:f3a, tab:stats
+  trained_repair/         # tab:trained_repair, tab:lrqat
+  boundary/               # tab:controls (refit)
 ```
 
 ## First-time setup (login node)
