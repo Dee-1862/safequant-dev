@@ -91,7 +91,7 @@ python run_pipeline.py --run table4    # tab:f3a_range
 python run_pipeline.py --run table5    # tab:f3a + tab:stats + tab:dequant
 python run_pipeline.py --run table6    # tab:controls
 python run_pipeline.py --run table7    # tab:trained_repair + tab:lrqat
-python run_pipeline.py --run behavioral   # tab:behavioral (Arditi direction ablation)
+python run_pipeline.py --run behavioral   # direction ablation and addition (RQ1)
 python run_pipeline.py --run full      # everything above
 ```
 
@@ -102,7 +102,7 @@ Model aliases (example: `llama7b`, `phi3`) and checkpoint paths are in `config.p
 ## Layout
 
 ```
-safequant/
+Q-SafeDiag/
   run_pipeline.py           --run tableN / full, or --results [--md]
   config.py                 model aliases, HF_HOME, QM_ROOT
   core/                     shared library
