@@ -1,8 +1,6 @@
 # The Refusal Signal Survives Quantization but Goes Unconsumed
 
-Mechanistic study of how quantization affects LLM safety. Paper-facing code lives in `core/` + `experiments/`.
-
-Randomness is pinned to seed **42**.
+Mechanistic study of how quantization affects LLM safety. Paper-facing code lives in `core/` + `experiments/`. All runs use seed 42 for reproducibility (`core/seeds.py`).
 
 ## Included results
 
