@@ -1,0 +1,49 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "variant": "read_awq_all",
+    "extra": {
+      "source_quant": "awq",
+      "role": "read",
+      "band": "all",
+      "n_eval": 200,
+      "n_reasoning": 100,
+      "seed": 42
+    },
+    "source_quant": "awq",
+    "role": "read",
+    "band": "all",
+    "n_eval": 200,
+    "n_reasoning": 100,
+    "seed": 42
+  },
+  "fp32_asr": 41.0,
+  "quantized_asr": 64.0,
+  "damage_pp": 23.0,
+  "role": "read",
+  "layer_range": null,
+  "asr_per_condition": {
+    "fp32": 41.0,
+    "aqlm2": 64.0,
+    "awq4_restore": 3.0,
+    "fp32_restore": 44.5
+  },
+  "arc_per_condition": {
+    "fp32": 55.0,
+    "aqlm2": 46.0,
+    "awq4_restore": 21.0,
+    "fp32_restore": 52.0
+  },
+  "recovery_pp_4bit": 61.0,
+  "recovery_pp_fp32": 19.5,
+  "frac_of_fp32_recovery": 3.128205128205128,
+  "effective_bits": {
+    "base_bits": 2,
+    "source_bits": 4,
+    "restored_params": 4563402752,
+    "total_quant_params": 6979321856,
+    "restored_fraction": 0.6538,
+    "effective_bits": 3.308
+  }
+}

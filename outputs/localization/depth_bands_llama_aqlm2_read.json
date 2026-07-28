@@ -1,0 +1,66 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "variant": "read",
+    "extra": {
+      "n_eval": 200,
+      "projections": "read",
+      "ranges": {
+        "early": [
+          0,
+          10
+        ],
+        "middle": [
+          10,
+          21
+        ],
+        "late": [
+          21,
+          32
+        ]
+      },
+      "seed": 42
+    },
+    "n_eval": 200,
+    "projections": "read",
+    "ranges": {
+      "early": [
+        0,
+        10
+      ],
+      "middle": [
+        10,
+        21
+      ],
+      "late": [
+        21,
+        32
+      ]
+    },
+    "seed": 42
+  },
+  "n_layers": 32,
+  "fp32_asr": 41.0,
+  "quantized_asr": 64.0,
+  "damage_pp": 23.0,
+  "asr_per_condition": {
+    "fp32": 41.0,
+    "aqlm2": 64.0,
+    "layers_early": 52.0,
+    "layers_middle": 47.5,
+    "layers_late": 55.5
+  },
+  "arc_per_condition": {
+    "fp32": 55.0,
+    "aqlm2": 46.0,
+    "layers_early": 52.0,
+    "layers_middle": 46.0,
+    "layers_late": 47.0
+  },
+  "recovery_pp_per_range": {
+    "early": 12.0,
+    "middle": 16.5,
+    "late": 8.5
+  }
+}
