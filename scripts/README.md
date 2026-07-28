@@ -20,8 +20,9 @@ Copy `.env.example` to `.env` in the repo root and edit paths before running or 
 
 ```
 scripts/
-  _env.sh                 # shared Bridges-2 env (sourced by every job)
-  setup_env.sh            # one-time login-node bootstrap
+  load_env.sh             # loads .env (used by fetch + sbatch jobs)
+  _env.sh                 # shared Slurm env (sourced by every job)
+  fetch_checkpoints.sh    # download AWQ/AQLM into QM_ROOT
   logs/                   # Slurm stdout/stderr
   tests/                  # smoke jobs: run these before the full grid
   signal_geometry/        # tab:geometry
@@ -36,7 +37,10 @@ scripts/
 ## First-time setup (login node)
 
 ```bash
-bash scripts/setup_env.sh
+cp .env.example .env   # edit HF_HOME, QM_ROOT
+pip install -r requirements.txt
+huggingface-cli login
+bash scripts/fetch_checkpoints.sh
 ```
 
 ## Python CLI

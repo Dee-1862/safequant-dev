@@ -21,41 +21,30 @@ That writes `paper_values.json` and `PAPER_RESULTS.md` (LaTeX Evaluation tables 
 
 ## Setup (any machine)
 
-### 1. Clone and install Python deps
+### 1. Clone and install
 
 ```bash
-git clone <ANONYMIZED_REPOSITORY_URL>
-cd <repository>
+git clone https://github.com/Dee-1862/Q-SafeDiag.git
+cd Q-SafeDiag
 cp .gitignore.example .gitignore
+cp .env.example .env
+# edit .env: set HF_HOME and QM_ROOT to large local disks
+
 python -m venv .venv && source .venv/bin/activate   # or use conda
 pip install -r requirements.txt
 ```
 
-On Bridges-2 (after `.env` is configured):
-
-```bash
-bash scripts/setup_env.sh
-```
-
 ### 2. Configure paths (`.env`)
 
-Copy the template and edit paths for your machine. Python and shell scripts load `.env` from the repo root automatically.
-
-```bash
-cp .env.example .env
-# edit .env
-```
+Python and Slurm jobs load `.env` from the repo root automatically (`config.py`, `scripts/load_env.sh`).
 
 | Variable | What it is |
 |----------|------------|
-| `HF_HOME` | Where HuggingFace downloads models (~200 GB for the paper grid) |
-| `QM_ROOT` | Where checkpoints live (`base/`, `awq/`, `aqlm/`, `gptq/` subdirs) |
-| `OCEAN_ALLOCATION` | Bridges only: folder name under `/ocean/projects/` (from `accounts`) |
-| `SLURM_ACCOUNT` | Bridges only: your Slurm account for `sbatch` |
+| `HF_HOME` | HuggingFace model cache (~200 GB for the paper grid) |
+| `QM_ROOT` | AWQ/AQLM/GPTQ checkpoints (`awq/`, `aqlm/`, `gptq/` subdirs) |
+| `SLURM_ACCOUNT` | Optional: Slurm account for `scripts/*.sbatch` |
 
-**Local machine:** set `REPO_ROOT`, `HF_HOME`, and `QM_ROOT` to directories on a large disk (see commented block in `.env.example`).
-
-**Bridges-2:** on a login node, run `accounts` for `SLURM_ACCOUNT` and your Ocean allocation folder name, then set `OCEAN_ALLOCATION` and the paths in `.env.example`'s Bridges block. **Do not commit `.env`.**
+Do not commit `.env`.
 
 ### 3. Download checkpoints (one-time)
 
@@ -64,7 +53,7 @@ huggingface-cli login
 bash scripts/fetch_checkpoints.sh
 ```
 
-This fills `$QM_ROOT/base/`, `awq/`, and `aqlm/` from HuggingFace. GPTQ checkpoints are self-generated:
+This fills `$QM_ROOT/awq/` and `$QM_ROOT/aqlm/` from HuggingFace. FP32 bases cache under `HF_HOME` on first model load. GPTQ is self-generated:
 
 ```bash
 python scripts/quantize_gptq.py --model llama7b --bits 4
