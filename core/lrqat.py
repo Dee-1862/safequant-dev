@@ -292,11 +292,9 @@ def closed_form_all(injected, get_teacher_weight, rank = None, verbose = True):
 
 
 @torch.no_grad()
-def activation_aware_fill(injected, student, teacher, calib_blocks, device,
-                          ridge = 1e-2, verbose = True):
-    """Training-free OUTPUT-matching repair (the fix for weight-SVD's failure).
-    For each injected role projection, accumulate over calibration blocks the second moment of the student's quantized INPUT activations (A = sum x x^T) and their cross moment with the teacher's FP OUTPUT (B = sum y x^T), then set the projection to the ridge least-squares weight W* = B (A + lam I)^-1, the weight that best maps the quantized inputs to the FP outputs, and requantize W* into the INT grid.
-    Because W* is a COMPENSATORY target (matches outputs, not weights), it differs from W_fp by integer-level amounts and survives the grid rounding that zeroes out the sub-step weight-SVD correction."""
+def collect_activation_moments(injected, student, teacher, calib_blocks, device,
+                               verbose = True):
+    """Accumulate per-projection input second moments A and teacher-output cross moments B on C4 blocks."""
     t_inner = get_inner(teacher)
 
     def _teacher_mod(m):
@@ -305,20 +303,16 @@ def activation_aware_fill(injected, student, teacher, calib_blocks, device,
             sub = getattr(sub, part)
         return sub
 
-    # Pair each teacher projection module with its injected student counterpart.
     tmod_to_inj = {_teacher_mod(m): m for m in injected}
-
-    A = {id(m): None for m in injected}   # in x in  (student input second moment)
-    B = {id(m): None for m in injected}   # out x in (teacher-output x student-input)
-    xcache = {}                           # id(inj) -> this block's flattened input
+    A = {id(m): None for m in injected}
+    B = {id(m): None for m in injected}
+    xcache = {}
 
     def s_pre_hook(mod, args):
-        """Cache flattened student input activations for one injected projection."""
         x = args[0]
         xcache[id(mod)] = x.detach().reshape(-1, x.shape[-1]).float()
 
     def t_out_hook(mod, args, out):
-        """Accumulate second-moment statistics from teacher outputs vs student inputs."""
         inj = tmod_to_inj[mod]
         if id(inj) not in xcache:
             return
@@ -337,17 +331,24 @@ def activation_aware_fill(injected, student, teacher, calib_blocks, device,
     for i in range(nb):
         xb = calib_blocks[i:i + 1].to(device)
         xcache.clear()
-        student(input_ids = xb)   # fills xcache via student pre-hooks
-        teacher(input_ids = xb)   # accumulates A / B via teacher output hooks
+        student(input_ids = xb)
+        teacher(input_ids = xb)
         if verbose and (i + 1) % 8 == 0:
             print(f"    calib block {i + 1}/{nb}")
     for h in s_handles + t_handles:
         h.remove()
+    return {id(m): (A[id(m)], B[id(m)]) for m in injected}
 
-    # Solve the ridge least-squares per projection and requantize into the grid.
+
+@torch.no_grad()
+def apply_moment_fill(injected, moments, ridge):
+    """Solve ridge LS W* = B (A + lam I)^-1 per projection and requantize into the INT grid."""
     for m in injected:
-        a, b = A[id(m)], B[id(m)]
-        if a is None:
+        pair = moments.get(id(m))
+        if pair is None:
+            continue
+        a, b = pair
+        if a is None or b is None:
             continue
         lam = ridge * (a.diagonal().mean().item() + 1e-8)
         eye = torch.eye(a.shape[0], device = a.device, dtype = a.dtype)
@@ -357,12 +358,71 @@ def activation_aware_fill(injected, student, teacher, calib_blocks, device,
         m.W_int.copy_(W_int_new.to(m.W_int.dtype))
         m.lora_A.data.zero_()
         m.merged = True
-        A[id(m)] = B[id(m)] = None
-        del a, b, eye, Wstar, W_int_new
-        torch.cuda.empty_cache()
+
+
+def _val_kl(student, teacher, val_blocks, device, max_batches = 8, temperature = 1.0):
+    """Mean forward KL on held-out blocks (for ridge selection only)."""
+    student.eval()
+    total, n = 0.0, 0
+    t = temperature
+    for i in range(min(max_batches, val_blocks.size(0))):
+        x = val_blocks[i:i + 1].to(device)
+        with torch.no_grad():
+            s_logp = torch.nn.functional.log_softmax(
+                student(input_ids = x).logits / t, dim = -1)
+            t_prob = torch.nn.functional.softmax(
+                teacher(input_ids = x).logits / t, dim = -1)
+            total += torch.nn.functional.kl_div(
+                s_logp, t_prob, reduction = "batchmean").item() * (t * t)
+            n += 1
+    return total / max(n, 1)
+
+
+@torch.no_grad()
+def select_ridge_lambda(injected, moments, student, teacher, val_blocks, device,
+                        ridge_grid = None, max_val_batches = 8, verbose = True):
+    """Pick ridge by minimizing held-out C4 KL to the FP teacher (training-free model selection)."""
+    if ridge_grid is None:
+        ridge_grid = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
+    saved_int = {id(m): m.W_int.clone() for m in injected}
+    saved_merged = {id(m): m.merged for m in injected}
+    best_ridge, best_kl = ridge_grid[0], float("inf")
+    scores = []
+    for ridge in ridge_grid:
+        for m in injected:
+            m.W_int.copy_(saved_int[id(m)])
+            m.merged = saved_merged[id(m)]
+            m.lora_A.data.zero_()
+        apply_moment_fill(injected, moments, ridge)
+        kl = _val_kl(student, teacher, val_blocks, device, max_batches = max_val_batches)
+        scores.append({"ridge": ridge, "val_kl": kl})
+        if kl < best_kl - 1e-5:
+            best_kl = kl
+            best_ridge = ridge
+        if verbose:
+            print(f"    ridge = {ridge:g} -> val_KL {kl:.4f}")
+    for m in injected:
+        m.W_int.copy_(saved_int[id(m)])
+        m.merged = saved_merged[id(m)]
+        m.lora_A.data.zero_()
+    apply_moment_fill(injected, moments, best_ridge)
+    if verbose:
+        print(f"  Selected ridge = {best_ridge:g} (val_KL = {best_kl:.4f})")
+    return best_ridge, best_kl, scores
+
+
+@torch.no_grad()
+def activation_aware_fill(injected, student, teacher, calib_blocks, device,
+                          ridge = 1e-2, verbose = True):
+    """Training-free OUTPUT-matching repair (the fix for weight-SVD's failure).
+    For each injected role projection, accumulate over calibration blocks the second moment of the student's quantized INPUT activations (A = sum x x^T) and their cross moment with the teacher's FP OUTPUT (B = sum y x^T), then set the projection to the ridge least-squares weight W* = B (A + lam I)^-1, the weight that best maps the quantized inputs to the FP outputs, and requantize W* into the INT grid.
+    Because W* is a COMPENSATORY target (matches outputs, not weights), it differs from W_fp by integer-level amounts and survives the grid rounding that zeroes out the sub-step weight-SVD correction."""
+    moments = collect_activation_moments(
+        injected, student, teacher, calib_blocks, device, verbose = verbose)
+    apply_moment_fill(injected, moments, ridge)
     if verbose:
         print(f"  Activation-aware filled {len(injected)} projections "
-              f"(ridge LS output-matching, requantized into INT-{injected[0].n_bits} grid)")
+              f"(ridge = {ridge:g}, requantized into INT-{injected[0].n_bits} grid)")
 
 
 def injected_effective_bits(injected):

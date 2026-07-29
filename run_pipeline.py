@@ -30,6 +30,7 @@ MOD_SCRIPT = {
     "experiments.trained_repair.qresafe_pairs": "experiments/trained_repair/qresafe_pairs.py",
     "experiments.trained_repair.qresafe_dpo": "experiments/trained_repair/qresafe_dpo.py",
     "experiments.trained_repair.lrqat": "experiments/trained_repair/lrqat.py",
+    "experiments.trained_repair.stat_lrqat": "experiments/trained_repair/stat_lrqat.py",
     "experiments.behavioral_direction.arditi_repro": "experiments/behavioral_direction/arditi_repro.py",
 }
 
@@ -230,6 +231,17 @@ def table7_cmds():
             cmds.append(M("experiments.trained_repair.lrqat",
                           "--model", "llama7b", "--quantizer", "aqlm2",
                           "--role", role, "--n_bits", b, *budget))
+    stat_budget = ["--seq_len", 512, "--n_calib_docs", 2000, "--group_size", 128,
+                   "--n_eval", 200, "--n_reasoning", 50, "--n_xstest", 50]
+    for role in ("read", "write"):
+        cmds.append(M("experiments.trained_repair.stat_lrqat",
+                      "--model", "llama7b", "--quantizer", "aqlm2",
+                      "--role", role, "--n_bits", 2, *stat_budget))
+        cmds.append(M("experiments.trained_repair.stat_lrqat",
+                      "--model", "llama7b", "--quantizer", "aqlm2",
+                      "--role", role, "--n_bits", 2,
+                      "--read_restore_first", "--read_restore_band", 11, 22,
+                      *stat_budget))
     return cmds
 
 
