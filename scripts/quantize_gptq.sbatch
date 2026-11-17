@@ -34,7 +34,10 @@ export MKL_NUM_THREADS="${MKL_NUM_THREADS:-${OMP_NUM_THREADS}}"
 echo "  threads: OMP_NUM_THREADS=${OMP_NUM_THREADS} (cpus-per-task=${SLURM_CPUS_PER_TASK:-unset})  GPTQ_FAST_PACK=${GPTQ_FAST_PACK:-1}"
 
 echo "=== GPTQ quantize ${MODEL} (bits=${BITS}, group=${GROUP}, backend=${GPTQ_BACKEND}) | $(date) ==="
+# GPTQ_OUTPUT_DIR: build into another folder (e.g. an unmodified-packing reference);
+# default is the pipeline path $QM_ROOT/gptq/<model>-gptq<bits>bit-g<group>.
+OUT_ARGS=(); [[ -n "${GPTQ_OUTPUT_DIR:-}" ]] && OUT_ARGS=(--output_dir "${GPTQ_OUTPUT_DIR}")
 python -u scripts/quantize_gptq.py \
   --model "${MODEL}" --bits "${BITS}" --group_size "${GROUP}" \
-  --n_calib 128 --seqlen 2048 --seed 42 --backend "${GPTQ_BACKEND}"
+  --n_calib 128 --seqlen 2048 --seed 42 --backend "${GPTQ_BACKEND}" "${OUT_ARGS[@]}"
 echo "=== done ${MODEL} | $(date) ==="

@@ -250,11 +250,27 @@ def quantize_autogptq(args, model_path, revision, calib, tmp_dir):
         if _mod.__class__.__name__.endswith("RotaryEmbedding"):
             _mod.register_forward_pre_hook(_pin_rotary)
 
+    # Time packing separately: wrap the pack_model that quantize() calls
     import time
+    import auto_gptq.modeling._base as _agb
+    _orig_pack_model = _agb.pack_model
+
+    def _timed_pack_model(*a, **kw):
+        tp = time.time()
+        out = _orig_pack_model(*a, **kw)
+        PACK_INFO["pack_seconds"] = round(time.time() - tp, 1)
+        return out
+
+    _agb.pack_model = _timed_pack_model
     t0 = time.time()
     model.quantize(calib)
-    PACK_INFO["quantize_and_pack_seconds"] = round(time.time() - t0, 1)
-    print(f"  quantize + pack took {PACK_INFO['quantize_and_pack_seconds']} s")
+    total = time.time() - t0
+    _agb.pack_model = _orig_pack_model
+    PACK_INFO["quantize_and_pack_seconds"] = round(total, 1)
+    if "pack_seconds" in PACK_INFO:
+        PACK_INFO["quantize_seconds"] = round(total - PACK_INFO["pack_seconds"], 1)
+    print(f"  quantize {PACK_INFO.get('quantize_seconds')} s + pack {PACK_INFO.get('pack_seconds')} s"
+          f"  (total {PACK_INFO['quantize_and_pack_seconds']} s)")
     print(f"\n[3/3] saving to {tmp_dir} ...")
     model.save_quantized(str(tmp_dir), use_safetensors = True)
 
