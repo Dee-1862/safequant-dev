@@ -1,4 +1,4 @@
-# Summaries for the reviewer-item runs (X1, held-out AQLM-2, X3, X4, X5).
+# Summaries for the reviewer-item runs (X1, X2, held-out AQLM-2, X3, X4, X5).
 #
 # Reads ONLY the new result names, never the paper's existing artifacts:
 #   X1        outputs/headline/headline_llama_gptq4_x1_n200.json
@@ -6,6 +6,7 @@
 #   X3        outputs/signal_geometry/probe_accuracy_<model>_<quant>_shuffled.json
 #   X4        outputs/boundary/probe_refit_control_<model>_splits100.json
 #   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
+#   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
 # Every entry reports status "missing" (with the expected path) until its JSON exists.
 # Used by scripts/report_all.py (section 5) and scripts/paper_values.py ("reviewer_runs").
 import json
@@ -25,6 +26,14 @@ X4_MODELS = ("llama", "phi3")
 X5_CELLS = ("llama", "phi3")          # the two significant AQLM-2 cells
 X5_SEEDS = (1, 2, 3, 4, 5)
 CONDS = ("fp32", "QUANT", "write_restored", "read_restored", "both_restored")
+# X2: the 14 coherent Table 2 cells (quantized ARC >= 40); filename model tokens.
+# Keep in sync with scripts/boundary/probe_leakage_control_quant.sbatch.
+X2_CELLS = (
+    ("llama", "awq"), ("llama", "gptq4"), ("llama", "gptq3"), ("llama", "aqlm2"),
+    ("qwen", "awq"), ("qwen", "gptq4"), ("qwen", "gptq3"),
+    ("mistral", "awq"), ("mistral", "gptq4"), ("mistral", "aqlm2"),
+    ("phi3", "awq"), ("phi3", "gptq4"), ("phi3", "gptq3"), ("phi3", "aqlm2"),
+)
 
 
 def _load(path):
@@ -198,9 +207,29 @@ def x5():
     return out
 
 
+def x2():
+    out = {}
+    for model, quant in X2_CELLS:
+        path = OUT / "boundary" / f"probe_leakage_control_{model}_{quant}.json"
+        d = _load(path)
+        if d is None:
+            out[f"{model}/{quant}"] = _missing(path)
+            continue
+        sm = d.get("summary", {})
+        out[f"{model}/{quant}"] = {
+            "status": "ok", "source": _rel(path),
+            "best_layer": sm.get("best_layer"),
+            "residual_xstest_safe_specificity": _r(sm.get("residual_xstest_safe_specificity"), 3),
+            "residual_xstest_unsafe_recall": _r(sm.get("residual_xstest_unsafe_recall"), 3),
+            "residual_harmbench_transfer_recall": _r(sm.get("residual_harmbench_transfer_recall"), 3),
+            "surface_xstest_unsafe_recall": _r(sm.get("surface_xstest_unsafe_recall"), 3),
+        }
+    return out
+
+
 def collect():
     """All reviewer-run summaries in one dict (statuses say what is missing)."""
-    return {"x1": x1(), "heldout": heldout(), "x3": x3(), "x4": x4(), "x5": x5()}
+    return {"x1": x1(), "x2": x2(), "heldout": heldout(), "x3": x3(), "x4": x4(), "x5": x5()}
 
 
 # ---------------------------------------------------------------- rendering --
@@ -214,7 +243,7 @@ def _ci(x):
 
 def to_markdown(rv):
     """Markdown block for PAPER_TABLES.md. Missing runs show as 'missing'."""
-    L = ["\n## reviewer runs (X1, held-out, X3, X4, X5)\n",
+    L = ["\n## reviewer runs (X1, X2, held-out, X3, X4, X5)\n",
          "Read only from the new result names; 'missing' until the GPU job lands.\n"]
 
     L.append("\n### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)\n")
@@ -226,6 +255,19 @@ def to_markdown(rv):
         L.append("|---|---:|---:|---:|---|")
         for c, v in r["xstest_false_refusal"].items():
             L.append(f"| {c} | {_f(r['asr'][c])} | {_f(r['arc'][c])} | {_f(v['rate'])} | {_ci(v['ci95'])} |")
+
+    L.append("\n### X2: surface-feature control on the 14 coherent quantized cells\n")
+    L.append("| Cell | best layer | residual spec (XSTest-safe) | residual recall (XSTest-unsafe) "
+             "| HarmBench transfer | surface recall (XSTest-unsafe) |")
+    L.append("|---|---:|---:|---:|---:|---:|")
+    for k, r in rv["x2"].items():
+        if r["status"] != "ok":
+            L.append(f"| {k} | missing | `{r['expected']}` | | | |")
+            continue
+        L.append(f"| {k} | {_f(r['best_layer'])} | {_f(r['residual_xstest_safe_specificity'])} | "
+                 f"{_f(r['residual_xstest_unsafe_recall'])} | "
+                 f"{_f(r['residual_harmbench_transfer_recall'])} | "
+                 f"{_f(r['surface_xstest_unsafe_recall'])} |")
 
     L.append("\n### Held-out AQLM-2 screen\n")
     L.append("| Model | FP ASR/ARC | Quant ASR/ARC | dASR | 95% CI | p (McNemar) | Source |")
