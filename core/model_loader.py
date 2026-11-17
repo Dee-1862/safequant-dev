@@ -242,6 +242,12 @@ def _load_awq(model_name, device = None):
         model_path, cache_dir = HF_HOME,
         trust_remote_code = _use_remote_code(model_path)
     )
+    # transformers 4.57 renamed PytorchGELUTanh -> GELUTanh (same function:
+    # gelu(approximate="tanh")); autoawq 0.2.x still imports the old name at package
+    # import, which transformers' AWQ loading triggers. Alias only when missing.
+    import transformers.activations as _act
+    if not hasattr(_act, "PytorchGELUTanh") and hasattr(_act, "GELUTanh"):
+        _act.PytorchGELUTanh = _act.GELUTanh  # renamed in transformers 4.57; autoawq 0.2.x still imports the old name
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map = device,

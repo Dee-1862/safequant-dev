@@ -71,3 +71,23 @@ kernels, no Triton/ExLlama build needed). It also patches optimum's
 `act_group_aware` default, which gptqmodel rejects for act-order checkpoints.
 Recorded versions in `sq_clean`: transformers 4.57, optimum 2.2.0, gptqmodel 7.1.0.
 `scripts/delta_make_envs.sh` installs exactly these.
+
+## AWQ loading with transformers 4.57 (Delta / DeltaAI)
+
+transformers loads AWQ checkpoints through autoawq. autoawq 0.2.x (0.2.9 is the last,
+deprecated release) imports `transformers.activations.PytorchGELUTanh` when the package is
+imported, and every transformers 4.57.x release renamed that class to `GELUTanh`, so with
+transformers 4.57 every AWQ cell fails at load time; no version pin fixes it.
+`core/model_loader.py` (`_load_awq`) therefore aliases the old name to the new one, only when
+the old name is missing (older transformers are untouched). The two classes compute the same
+function: 4.56.2 `PytorchGELUTanh.forward` and 4.57 `GELUTanh` (default) both return
+`nn.functional.gelu(x, approximate="tanh")`. autoawq uses the class only in an `isinstance`
+list in `awq/quantize/scale.py` (quantization time, GELU models); Llama, Qwen, Mistral and
+Phi-3 use SiLU, so for these models the alias only lets the import succeed.
+
+Kernels: autoawq's CUDA kernels (`autoawq-kernels`, module `awq_ext`) publish x86_64 and
+Windows wheels only. On aarch64 (DeltaAI GH200) `WQLinear_GEMM` uses autoawq's Triton path
+instead (Triton dequantize + fp16 matmul for >= 1024 tokens per batch, Triton GEMM below
+that). Bridges used `awq_ext`, so AWQ numerics can differ slightly; the reviewer runs check
+each AWQ cell's WikiText-2 PPL against the paper (`scripts/delta_queue.sh --awq-ppl`,
+tag `delta`), warning above 2%.
