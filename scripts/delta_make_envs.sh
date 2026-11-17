@@ -23,6 +23,19 @@
 # Every pip install runs under a constraints file, so a dependency can never move torch,
 # transformers or numpy. Each env ends with an import + version check that fails loudly,
 # and `pip freeze` is saved to scripts/logs/env_<name>_freeze.txt.
+#
+# CUDA: the version check runs on the login node, where torch.cuda.is_available() is
+# False, so it cannot prove the GPU stack works. The smoke test
+# (bash scripts/delta_queue.sh --smoke) is the real check. If smoke fails with a
+# "driver too old" / CUDA driver error, reinstall torch for sq_clean from an older-CUDA
+# wheel index:
+#   TORCH_INDEX=https://download.pytorch.org/whl/cu126 bash scripts/delta_make_envs.sh clean
+# TORCH_INDEX     wheel index for torch in sq_clean (default: PyPI, whose 2.9 wheels are
+#                 CUDA 12.8). Setting it force-reinstalls torch from that index.
+# TORCH_VERSION   torch pin for sq_clean (default 2.9.*). torch 2.9 wheels exist for cu126,
+#                 cu128, cu130 only; the cu124 index stops at torch 2.6 (cu121 at 2.5), so
+#                 TORCH_INDEX=.../cu124 also needs TORCH_VERSION=2.6.* (outside the
+#                 recorded stack; check transformers 4.57 / gptqmodel still import).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -76,16 +89,23 @@ make_clean() {
   echo "=== sq_clean -> ${CONDA_ENV} | $(date) ==="
   make_prefix "${CONDA_ENV}" 3.10
   conda activate "${CONDA_ENV}"
+  local TV="${TORCH_VERSION:-2.9.*}"
   local C="${TMPDIR}/sq_clean_constraints.txt"
-  cat > "$C" <<'EOF'
-torch==2.9.*
-transformers==4.57.*
-numpy==2.2.*
-EOF
-  # torch first (PyPI wheels bundle CUDA 12.x runtime; works with Delta's driver)
-  python -m pip install -c "$C" "torch==2.9.*"
-  # main stack from requirements.txt, constrained so nothing moves torch/transformers/numpy
-  python -m pip install -c "$C" -r requirements.txt
+  printf 'torch==%s\ntransformers==4.57.*\nnumpy==2.2.*\n' "$TV" > "$C"
+  # torch first. Default: PyPI (2.9 wheels bundle the CUDA 12.8 runtime).
+  # TORCH_INDEX: a download.pytorch.org/whl/cuXXX index, force-reinstalled so it replaces
+  # an existing torch build (the driver-error fix; see header).
+  if [[ -n "${TORCH_INDEX:-}" ]]; then
+    echo "  torch==${TV} from ${TORCH_INDEX} (force-reinstall)"
+    python -m pip install -c "$C" --force-reinstall "torch==${TV}" \
+      --index-url "${TORCH_INDEX}" --extra-index-url https://pypi.org/simple
+  else
+    python -m pip install -c "$C" "torch==${TV}"
+  fi
+  # main stack from requirements.txt minus its torch line (torch is pinned above via $C),
+  # constrained so nothing moves torch/transformers/numpy
+  grep -v '^torch==' requirements.txt > "${TMPDIR}/sq_clean_requirements.txt"
+  python -m pip install -c "$C" -r "${TMPDIR}/sq_clean_requirements.txt"
   # GPTQ loading backend used by core/model_loader.py via transformers GPTQConfig ->
   # optimum -> gptqmodel. GPTQMODEL_FORCE_BACKEND=torch is set there, so the CUDA
   # extensions are not needed: skip compiling them.
@@ -95,9 +115,9 @@ EOF
   # would downgrade transformers/torch, so install it without dependencies.
   python -m pip install --no-deps "autoawq==0.2.*"
 
-  python - <<'PY'
-import importlib, sys
-want = {"torch": "2.9", "transformers": "4.57", "bitsandbytes": "0.49",
+  SQ_TORCH_WANT="${TV%.\*}" python - <<'PY'
+import importlib, os, sys
+want = {"torch": os.environ["SQ_TORCH_WANT"], "transformers": "4.57", "bitsandbytes": "0.49",
         "optimum": "2.2.0", "gptqmodel": "7.1.0"}
 bad = []
 for mod in ["torch", "transformers", "accelerate", "bitsandbytes", "datasets", "optimum",
@@ -116,10 +136,26 @@ print(f"  torch CUDA build: {torch.version.cuda}  (cuda available here: {torch.c
       f" False is expected on a login node)")
 if bad:
     print("SQ_CLEAN CHECK FAILED:\n  " + "\n  ".join(bad)); sys.exit(1)
-print("sq_clean OK")
+print("sq_clean OK (imports + versions)")
 PY
+  cuda_note
   freeze sq_clean
   conda deactivate
+}
+
+cuda_note() {  # driver info if visible; CUDA itself is only proven by the smoke test
+  echo "  --- NVIDIA driver ---"
+  if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+    nvidia-smi --query-gpu=name,driver_version --format=csv,noheader | sed 's/^/  /' || true
+    nvidia-smi | grep -o "CUDA Version: [0-9.]*" | head -1 | sed 's/^/  driver supports /' || true
+  else
+    echo "  nvidia-smi not available here (normal on a login node)."
+  fi
+  echo "  NOTE: CUDA is NOT verified by this script (login nodes have no GPU). The smoke test"
+  echo "        (bash scripts/delta_queue.sh --smoke) is the real check. If it fails with a"
+  echo "        driver error, rerun:  TORCH_INDEX=https://download.pytorch.org/whl/cu126 \\"
+  echo "                              bash scripts/delta_make_envs.sh clean"
+  echo "        (cu124/cu121 indexes have no torch 2.9; they also need TORCH_VERSION=2.6.*)"
 }
 
 # --- sq_autogptq ----------------------------------------------------------------

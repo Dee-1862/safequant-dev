@@ -48,9 +48,11 @@ case "${STEP}" in
     CKPT="${QM_ROOT}/gptq/llama7b-gptq4bit-g128"
     if [[ ! -f "${CKPT}/config.json" ]]; then
       echo "SKIP x1 smoke: GPTQ-4 checkpoint not built yet (${CKPT})." >&2
-      echo "  Build: MODELS=llama7b BITS=4 bash scripts/quantize_gptq_all.sh" >&2
+      echo "  Build it first: bash scripts/delta_queue.sh --gptq-only" >&2
       exit 1
     fi
+    # Same idempotent AutoGPTQ -> transformers patch the real X1 job runs
+    python -u scripts/fix_autogptq_checkpoints.py "${CKPT}"
     ${HL} --model llama7b --quantizer gptq4 ${N} --n_boot 200 --n_xstest 8 \
       --tag "x1_n200_${T}"
     ;;
@@ -69,7 +71,7 @@ case "${STEP}" in
     ;;
   rep)
     ${HL} --model llama7b --quantizer aqlm2 ${N} --n_boot 200 --n_xstest 8 \
-      --tag "rep2_${T}"
+      --tag "rep1_${T}"
     ;;
   x5)
     ${HL} --model llama7b --quantizer aqlm2 ${N} --n_boot 200 --n_xstest 8 \

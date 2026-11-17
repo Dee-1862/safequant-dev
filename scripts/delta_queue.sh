@@ -4,20 +4,28 @@
 #   bash scripts/delta_queue.sh                # full runs
 #   bash scripts/delta_queue.sh --smoke        # tiny dry run of every job (~1 h)
 #   bash scripts/delta_queue.sh --dry-run      # print the sbatch commands, submit nothing
+#   bash scripts/delta_queue.sh --gptq-only    # submit only the GPTQ-4 build (llama7b)
 #   options: --skip-setup  (checkpoints already downloaded)
 #            --skip-gptq   (GPTQ-4 checkpoint already built; auto-detected too)
+#
+# Run order on Delta (README): envs -> setup -> --gptq-only -> --smoke ->
+#   bash scripts/delta_queue.sh --skip-setup --skip-gptq
 #
 # Graph (full):   delta_setup ──┬─> X3, X4, X2, held-out, Task 3 (x3 jobs), Task 4, X5
 #                               └─> GPTQ-4 build ──> X1
 # Submission order (the queue may not drain before Nov 20, so priority = order):
 #   X3, X4, X2, held-out, [GPTQ-4 build], X1, Task 3, Task 4, X5
 # Headline-type jobs are split one per cell/seed/rep (their sbatch files take CELLS /
-# SEEDS / REPS) with --time=12:00:00, because 10 or 4 headline evals do not fit in a
+# SEEDS / REPS) with --time=12:00:00, because 10 or 6 headline evals do not fit in a
 # single job. Every job gets --kill-on-invalid-dep=yes: if setup fails, dependants are
 # cancelled instead of pending forever.
 #
-# --smoke: skips setup and the GPTQ build (run the smoke test after setup has
-# finished once), submits scripts/tests/smoke_reviewer.sbatch per step with
+# --gptq-only: submits MODELS=llama7b BITS=4 quantize_gptq_all.sh and nothing else (no
+# dependency; run it after setup has finished). Exits without submitting if the
+# checkpoint already exists. Lets the smoke test exercise X1.
+#
+# --smoke: skips setup and the GPTQ build (run it after setup and --gptq-only have
+# finished), submits scripts/tests/smoke_reviewer.sbatch per step with
 # --n_eval 8 --n_reasoning 8 and the tag suffix _smoke (SMOKE_TAG overrides), first
 # cell/seed only. X1's smoke step fails fast if the GPTQ-4 checkpoint is missing.
 #
@@ -33,18 +41,23 @@ cd "$ROOT"
 # shellcheck disable=SC1091
 source scripts/load_env.sh
 
-SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0
+SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0; GPTQ_ONLY=0
 for a in "$@"; do
   case "$a" in
     --smoke) SMOKE=1 ;;
     --dry-run) DRY=1 ;;
     --skip-setup) SKIP_SETUP=1 ;;
     --skip-gptq) SKIP_GPTQ=1 ;;
-    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
+    --gptq-only) GPTQ_ONLY=1 ;;
+    -h|--help) sed -n '2,/^set -euo pipefail/{/^set -euo/!p}' "$0"; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
   esac
 done
-if [[ $SMOKE -eq 1 ]]; then SKIP_SETUP=1; SKIP_GPTQ=1; fi
+if [[ $GPTQ_ONLY -eq 1 && $SMOKE -eq 1 ]]; then
+  echo "ERROR: --gptq-only and --smoke are separate steps; run --gptq-only first." >&2; exit 2
+fi
+if [[ $SMOKE -eq 1 || $GPTQ_ONLY -eq 1 ]]; then SKIP_SETUP=1; fi
+if [[ $SMOKE -eq 1 ]]; then SKIP_GPTQ=1; fi
 if [[ $DRY -eq 0 && -z "${SLURM_ACCOUNT:-}" ]]; then
   echo "ERROR: set SLURM_ACCOUNT in .env (see .env.example)." >&2; exit 1
 fi
@@ -59,6 +72,28 @@ fi
 
 LIST=()     # "<id>  <label>  <log>" rows for the summary
 DRY_N=0
+GPTQ_CKPT="${QM_ROOT:-$HOME/quantized_models}/gptq/llama7b-gptq4bit-g128"
+
+# --- --gptq-only: just the GPTQ-4 build, then stop ----------------------------------
+if [[ $GPTQ_ONLY -eq 1 ]]; then
+  if [[ -f "${GPTQ_CKPT}/config.json" ]]; then
+    echo "GPTQ-4 checkpoint already present: ${GPTQ_CKPT} (nothing submitted)"
+    exit 0
+  fi
+  if [[ $DRY -eq 1 ]]; then
+    echo "[dry-run] MODELS=llama7b BITS=4 bash scripts/quantize_gptq_all.sh" >&2
+    GID="DRY1"
+  else
+    GOUT=$(MODELS=llama7b BITS=4 bash scripts/quantize_gptq_all.sh)
+    echo "$GOUT" >&2
+    GID=$(echo "$GOUT" | sed -n 's/^JOBIDS: //p' | awk '{print $1}')
+  fi
+  echo ""
+  echo "job id     job                                log"
+  printf '%-10s %-34s %s\n' "$GID" "GPTQ-4 build llama7b" "scripts/logs/quantize_gptq_${GID}.out"
+  echo "output -> ${GPTQ_CKPT}   (then: bash scripts/delta_queue.sh --smoke)"
+  exit 0
+fi
 
 # log path from the job file's --output line (or an --output override), %j -> id
 _log() {  # _log <job.sbatch> <id> [override]
@@ -131,6 +166,11 @@ else
     LIST+=("$(printf '%-10s %-34s %s' "$GPTQ" "GPTQ-4 build llama7b" "scripts/logs/quantize_gptq_${GPTQ}.out")")
   else
     echo "GPTQ-4 checkpoint present or --skip-gptq: not building (${CKPT})" >&2
+    if [[ ! -f "${CKPT}/config.json" ]]; then
+      echo "WARNING: ${CKPT} does not exist yet and X1 gets no dependency on a build." >&2
+      echo "         If a --gptq-only job is still running, X1 will fail its checkpoint check;" >&2
+      echo "         wait for it, or re-submit X1 after it finishes." >&2
+    fi
   fi
   X1DEP="$(dep "${GPTQ:-$SETUP}")"
   sub "X1 XSTest llama gptq4"      scripts/headline/headline_eval_llama_gptq4_xstest.sbatch $X1DEP $H12
@@ -141,7 +181,7 @@ else
   done
 
   for m in llama7b phi3; do
-    for rep in rep2 rep3; do
+    for rep in rep1 rep2 rep3; do
       sub "Task 4 X6 ${m} ${rep}" scripts/headline/headline_repeats_aqlm2.sbatch $D $H12 \
         --export="ALL,CELLS=${m},REPS=${rep}"
     done
