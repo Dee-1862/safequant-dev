@@ -67,10 +67,14 @@ def main():
     # X4: number of independent random half-splits. Default 1 = the original
     # single-split control (identical numbers); e.g. --n_splits 100 for the 95th-percentile floor.
     ap.add_argument("--n_splits", type = int, default = 1)
+    # Opt-in output suffix (e.g. smoke runs: --tag smoke -> ..._splits100_smoke.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
 
     # Multi-split runs get their own filename and never overwrite the single-split result
     variant = f"splits{args.n_splits}" if args.n_splits != 1 else None
+    if args.tag:
+        variant = f"{variant}_{args.tag}" if variant else args.tag
     if variant:
         assert_new_result(
             _SCRIPT, RunConfig(model = args.model, omit_quantizer = True, variant = variant)

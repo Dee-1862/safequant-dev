@@ -8,9 +8,12 @@
 # Override any axis via env vars, e.g. redo just one model / bit-width:
 #   MODELS="qwen7b" BITS="4" bash scripts/quantize_gptq_all.sh
 #   MODELS="mistral7b-v02 phi3" bash scripts/quantize_gptq_all.sh
+# Optional Slurm dependency for every submitted job (used by scripts/delta_queue.sh):
+#   DEPENDENCY=afterok:123456 MODELS=llama7b BITS=4 bash scripts/quantize_gptq_all.sh
+# The last line printed is "JOBIDS: <id> ..." for scripts that chain on these jobs.
 
 
-# Each job writes <ocean>/quantized_models/<model>-gptq<bits>bit-g<group>, and prints the config.QUANTIZED_CHECKPOINTS line to register.
+# Each job writes $QM_ROOT/gptq/<model>-gptq<bits>bit-g<group> (where config.py reads it) and prints the config.QUANTIZED_CHECKPOINTS line.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -40,15 +43,24 @@ echo "env    = $AGENV"
 echo "models = $MODELS"
 echo "bits   = $BITS    group = $GROUP"
 echo "-----------------------------------------------------"
+DEP_ARGS=()
+if [[ -n "${DEPENDENCY:-}" ]]; then
+  DEP_ARGS=(--dependency="${DEPENDENCY}")
+  echo "dependency = ${DEPENDENCY}"
+fi
 n=0
+JOBIDS=""
 for m in $MODELS; do
   for b in $BITS; do
-    jid=$(bash scripts/submit.sh scripts/quantize_gptq.sbatch --parsable \
+    jid=$(bash scripts/submit.sh scripts/quantize_gptq.sbatch --parsable "${DEP_ARGS[@]}" \
           --export=ALL,CONDA_ENV="$AGENV" -- "$m" "$b" "$GROUP")
+    jid="${jid%%;*}"   # --parsable may print "<id>;<cluster>"
     printf "  %-16s gptq%s  -> job %s\n" "$m" "$b" "$jid"
+    JOBIDS="${JOBIDS:+${JOBIDS} }${jid}"
     n=$((n + 1))
   done
 done
 echo "-----------------------------------------------------"
 echo "submitted $n jobs.  watch: squeue -u \$USER"
-echo "outputs -> <ocean>/quantized_models/<model>-gptq<bits>bit-g${GROUP}"
+echo "outputs -> \$QM_ROOT/gptq/<model>-gptq<bits>bit-g${GROUP}"
+echo "JOBIDS: ${JOBIDS}"

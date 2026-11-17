@@ -27,12 +27,17 @@ def main():
     ap.add_argument("--probe_type", default = "linear", choices = ["linear", "mlp"])
     # X3 control: permute harmful/harmless labels (seed 42) before fitting. Expect ~50%.
     ap.add_argument("--shuffle_labels", action = "store_true")
+    # Opt-in output suffix (e.g. smoke runs: --tag smoke -> ..._shuffled_smoke.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
 
     # Shuffled-label runs get their own filename (never overwrite the real probe JSON)
     variant = None if args.probe_type == "linear" else args.probe_type
     if args.shuffle_labels:
         variant = "shuffled" if variant is None else f"{variant}_shuffled"
+    if args.tag:
+        variant = f"{variant}_{args.tag}" if variant else args.tag
+    if args.shuffle_labels or args.tag:
         assert_new_result(
             _SCRIPT, RunConfig(model = args.model, quantizer = args.quantizer, variant = variant)
         )

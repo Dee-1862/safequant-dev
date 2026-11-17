@@ -11,7 +11,7 @@ from transformers import AutoTokenizer
 
 # Repo root must be on path when invoked as scripts/quantize_gptq.py
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import MODELS, MODEL_REVISIONS, HF_HOME  # noqa: E402
+from config import MODELS, MODEL_REVISIONS, HF_HOME, QM_ROOT  # noqa: E402
 from core.datasets import load_dataset
 
 
@@ -27,9 +27,10 @@ def default_output_dir(model, bits, group_size):
     Outputs:
         - out_dir (Path): Target directory for saved weights
     """
-    # Parent of HF cache lives on Ocean project storage
-    base = Path(HF_HOME).parent.parent
-    return base / "quantized_models" / "gptq" / f"{model}-gptq{bits}bit-g{group_size}"
+    # Write where config.QUANTIZED_CHECKPOINTS reads: <QM_ROOT>/gptq/<model>-gptq<b>bit-g<g>.
+    # (Was HF_HOME/../../quantized_models, which equals QM_ROOT only for the Bridges-2
+    # layout; on Delta HF_HOME and QM_ROOT are set independently in .env.)
+    return Path(QM_ROOT) / "gptq" / f"{model}-gptq{bits}bit-g{group_size}"
 
 
 def build_calibration(tokenizer, n_samples, seqlen, seed):
