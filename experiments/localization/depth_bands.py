@@ -7,7 +7,7 @@ import torch
 
 from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
 from core.evaluation import _extract_behavior, classify_batch, generate_only
-from core.manifest import RunConfig, save_result
+from core.manifest import RunConfig, assert_new_result, save_result
 from core.model_loader import load_fp32, load_quantized
 from core.restoration import (
     extract_fp32_weights,
@@ -32,18 +32,25 @@ def main():
     ap.add_argument("--n_layers", type = int, default = None)
     ap.add_argument("--early_end", type = int, default = None)
     ap.add_argument("--mid_end", type = int, default = None)
+    # Opt-in output suffix for reruns (e.g. --tag flags -> ..._read_flags.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
 
     # Resolve quantizer label and device
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # Tagged reruns get their own filename; refuse before any model load if it exists
+    variant = None if args.projections == "all" else args.projections
+    if args.tag:
+        variant = f"{variant}_{args.tag}" if variant else args.tag
+        assert_new_result(_SCRIPT, RunConfig(model = args.model, quantizer = qtz, variant = variant))
+
     # Load FP32 to discover projection sets for this architecture
     fp32_model, tokenizer = load_fp32(args.model)
     read_projs, write_projs = get_proj_sets(fp32_model)
     all_projs = read_projs + write_projs
     proj_set = {"read": read_projs, "write": write_projs, "all": all_projs}[args.projections]
-    variant = None if args.projections == "all" else args.projections
 
     # Load eval prompts and behaviors
     items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
@@ -95,6 +102,10 @@ def main():
     flags = classify_batch(flat_b, flat_r, device = device)
     n = args.n_eval
     asr_results = {cond: 100.0 * sum(flags[i * n : (i + 1) * n]) / n for i, cond in enumerate(conditions)}
+    # Per-prompt labels (same format as restoration_sweep) for paired intervals
+    flags_by_cond = {
+        cond: [int(bool(x)) for x in flags[i * n : (i + 1) * n]] for i, cond in enumerate(conditions)
+    }
     fp32_asr, q_asr = asr_results["fp32"], asr_results[qtz]
     damage = q_asr - fp32_asr
 
@@ -117,6 +128,7 @@ def main():
         "damage_pp": damage,
         "asr_per_condition": asr_results,
         "arc_per_condition": all_arc,
+        "flags_by_cond": flags_by_cond,
         "recovery_pp_per_range": {
             name: q_asr - asr_results[f"layers_{name}"] for name in ranges
         },

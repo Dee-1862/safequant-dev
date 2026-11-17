@@ -7,7 +7,7 @@ import torch
 
 from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
 from core.evaluation import _extract_behavior, classify_batch, generate_only
-from core.manifest import RunConfig, save_result
+from core.manifest import RunConfig, assert_new_result, save_result
 from core.model_loader import load_fp32, load_quantized
 from core.restoration import (
     extract_fp32_weights,
@@ -49,6 +49,8 @@ def main():
     ap.add_argument("--n_reasoning", type = int, default = 50)
     ap.add_argument("--layer_lo", type = int, default = None)
     ap.add_argument("--layer_hi", type = int, default = None)
+    # Opt-in output suffix for reruns (e.g. --tag flags -> ..._L11-22_flags.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
 
     # Resolve runtime device and optional middle-layer band
@@ -59,6 +61,9 @@ def main():
     if args.layer_lo is not None and args.layer_hi is not None:
         layer_range = (args.layer_lo, args.layer_hi)
         variant = f"L{args.layer_lo}-{args.layer_hi}"
+    if args.tag:
+        variant = f"{variant}_{args.tag}" if variant else args.tag
+        assert_new_result(_SCRIPT, RunConfig(model = args.model, quantizer = qtz, variant = variant))
 
     # Load eval prompts and extract HarmBench behaviors
     items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
@@ -108,6 +113,10 @@ def main():
     flags = classify_batch(flat_b, flat_r, device = device)
     n = args.n_eval
     asr_results = {cond: 100.0 * sum(flags[i * n : (i + 1) * n]) / n for i, cond in enumerate(conditions)}
+    # Per-prompt labels (same format as restoration_sweep) for paired intervals
+    flags_by_cond = {
+        cond: [int(bool(x)) for x in flags[i * n : (i + 1) * n]] for i, cond in enumerate(conditions)
+    }
 
     # Damage relative to FP32 and per-projection recovery
     fp32_asr = asr_results["fp32"]
@@ -127,6 +136,7 @@ def main():
         "damage_pp": damage,
         "asr_per_condition": asr_results,
         "arc_per_condition": all_arc,
+        "flags_by_cond": flags_by_cond,
         "layer_range": list(layer_range) if layer_range else None,
         "recovery_pp_per_projection": {
             p: q_asr - asr_results[f"only_{p.replace('.', '_')}{'_middle' if layer_range else ''}"]
