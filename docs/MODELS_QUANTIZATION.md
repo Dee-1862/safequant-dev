@@ -69,8 +69,22 @@ desc_act, sym, damp_percent) into `config.json`.
 gptqmodel as the backend. The loader sets `GPTQMODEL_FORCE_BACKEND=torch` (pure-PyTorch
 kernels, no Triton/ExLlama build needed). It also patches optimum's
 `act_group_aware` default, which gptqmodel rejects for act-order checkpoints.
-Recorded versions in `sq_clean`: transformers 4.57, optimum 2.2.0, gptqmodel 7.1.0.
-`scripts/delta_make_envs.sh` installs exactly these.
+Recorded versions in the Bridges-2 `sq_clean` (the paper runs): transformers 4.57,
+optimum 2.2.0, gptqmodel 7.1.0.
+
+**Delta / DeltaAI `sq_clean` uses gptqmodel 5.7.0, not 7.1.0.** gptqmodel 6.0 and later
+(7.1.0 included) declare `transformers>=5.4`, which conflicts with the transformers 4.57
+pin the whole evaluation stack is recorded on; the Bridges env presumably got 7.1.0 in
+without its dependency check. 5.7.0 is the newest release whose requirements accept
+transformers 4.57.* (`transformers>=4.57.1`; 5.8.0 already needs `>=5.2`), so
+`scripts/delta_make_envs.sh` installs it with its dependencies under a constraints file
+built from `requirements.txt` (nothing pinned can move; a conflict fails the install).
+gptqmodel here only *loads* already-quantized GPTQ checkpoints through optimum with the
+pure-PyTorch backend, so the version should not change results; the reviewer runs record
+it in `scripts/logs/env_sq_clean_freeze.txt`. Override with `GPTQMODEL_VERSION`.
+The paper's GPTQ checkpoints themselves are built with auto-gptq 0.7.1 (`sq_autogptq`);
+`GPTQ_BACKEND=gptqmodel` (fallback builder) would use this 5.7.0 and is recorded in each
+checkpoint's `sq_build_info.json`.
 
 ## AWQ loading with transformers 4.57 (Delta / DeltaAI)
 
