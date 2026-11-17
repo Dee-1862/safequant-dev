@@ -26,6 +26,12 @@ MODEL="${1:-llama7b}"
 BITS="${2:-4}"
 GROUP="${3:-128}"
 export GPTQ_BACKEND="${GPTQ_BACKEND:-autogptq}"
+# Size CPU thread pools to the allocation. Unset, torch/OpenMP start a pool for the
+# whole node (phi3 test: 298 threads on 1 allowed CPU), and auto-gptq's CPU packing
+# slowed from ~2 min to over an hour. Affects speed only.
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-1}}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-${OMP_NUM_THREADS}}"
+echo "  threads: OMP_NUM_THREADS=${OMP_NUM_THREADS} (cpus-per-task=${SLURM_CPUS_PER_TASK:-unset})  GPTQ_FAST_PACK=${GPTQ_FAST_PACK:-1}"
 
 echo "=== GPTQ quantize ${MODEL} (bits=${BITS}, group=${GROUP}, backend=${GPTQ_BACKEND}) | $(date) ==="
 python -u scripts/quantize_gptq.py \

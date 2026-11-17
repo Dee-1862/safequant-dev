@@ -40,6 +40,7 @@
 # (PPL_TAG overrides) and prints it next to the paper value, warning above 2%.
 # Each model's gptq4 PPL job also measures fp32 (environment control).
 # GPTQ_BACKEND=autogptq (default, $AGENV) | gptqmodel ($CONDA_ENV) picks the builder.
+# Builds get --cpus-per-task=${GPTQ_CPUS:-8} (auto-gptq packs on the CPU).
 # X1 then depends on the llama7b gptq4 build + PPL jobs, and X2 is split in two: the
 # non-GPTQ cells (depend on setup only) and the GPTQ cells (depend on every build + PPL).
 # With --gptq-only, only the build + PPL jobs are submitted.
@@ -196,7 +197,7 @@ gptq_all_submit() {  # gptq_all_submit <dependency id or empty>
       continue
     fi
     sub "GPTQ build ${m} gptq${b} [${GPTQ_BACKEND}]" scripts/quantize_gptq.sbatch $(dep "$up") \
-      --time=2:00:00 --job-name="sq_gptq_${m}_${b}" \
+      --time=2:00:00 --cpus-per-task="${GPTQ_CPUS:-8}" --job-name="sq_gptq_${m}_${b}" \
       --export="ALL,CONDA_ENV=${GPTQ_ENV},GPTQ_BACKEND=${GPTQ_BACKEND}" -- "$m" "$b" 128
     bid="$SUB_ID"
     sub "PPL check ${m} gptq${b} vs paper" scripts/regime_sweep/wikitext_ppl_rebuilt.sbatch \
