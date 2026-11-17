@@ -151,6 +151,9 @@ Do these in order, from the repo root on a Delta login node, after filling in `.
    checkpoint, each followed by a WikiText-2 PPL check against the paper value (tag
    `rebuilt`, warns above 2%); X1 and the GPTQ half of X2 wait for them.
    `GPTQ_BACKEND=gptqmodel` switches the builder, `GPTQ_CELLS="phi3:4"` narrows the list.
+   `--awq-ppl` adds a WikiText-2 PPL check per AWQ cell (public checkpoints, tag `delta`,
+   paper 7.55 / 7.85 / 6.07 / 6.77) and makes X2's AWQ cells wait for it: on aarch64
+   autoawq runs its Triton kernels instead of Bridges' `awq_ext`.
    On aarch64, `delta_make_envs.sh autogptq` builds auto-gptq 0.7.1 from source on
    torch 2.7.1+cu128; every checkpoint records its backend and versions in
    `sq_build_info.json`.

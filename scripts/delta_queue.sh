@@ -7,6 +7,7 @@
 #   bash scripts/delta_queue.sh --gptq-only    # submit only the GPTQ-4 build (llama7b)
 #   bash scripts/delta_queue.sh --gptq-all     # full queue, rebuilding every GPTQ cell
 #   bash scripts/delta_queue.sh --gptq-only --gptq-all   # only the GPTQ build + PPL jobs
+#   bash scripts/delta_queue.sh --awq-ppl      # full queue + AWQ PPL checks gating X2's AWQ cells
 #   options: --skip-setup  (checkpoints already downloaded)
 #            --skip-gptq   (GPTQ-4 checkpoint already built; auto-detected too)
 #
@@ -43,6 +44,13 @@
 # non-GPTQ cells (depend on setup only) and the GPTQ cells (depend on every build + PPL).
 # With --gptq-only, only the build + PPL jobs are submitted.
 #
+# --awq-ppl: one WikiText-2 PPL job per AWQ cell (llama7b, qwen7b, mistral7b-v02, phi3;
+# public checkpoints) after setup, tag delta (AWQ_PPL_TAG overrides), printed next to
+# the paper value with a warning above 2%; each also measures fp32 under that tag.
+# Reason: on aarch64 autoawq runs its Triton kernels (no awq_ext wheels), Bridges ran
+# awq_ext. X2's AWQ cells then run as their own job after these four. Combine with
+# --gptq-only --gptq-all to submit only the GPTQ build/PPL and AWQ PPL jobs.
+#
 # Needs .env: SLURM_ACCOUNT + SLURM_PARTITION (GPU jobs), QM_ROOT, HF_HOME, AGENV (GPTQ
 # build). Optional: SLURM_CPU_PARTITION + SLURM_CPU_ACCOUNT -> the setup job runs on the
 # CPU partition under the CPU account (Delta CPU and GPU allocations are separate
@@ -55,7 +63,7 @@ cd "$ROOT"
 # shellcheck disable=SC1091
 source scripts/load_env.sh
 
-SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0; GPTQ_ONLY=0; GPTQ_ALL=0
+SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0; GPTQ_ONLY=0; GPTQ_ALL=0; AWQ_PPL=0
 for a in "$@"; do
   case "$a" in
     --smoke) SMOKE=1 ;;
@@ -63,6 +71,7 @@ for a in "$@"; do
     --skip-setup) SKIP_SETUP=1 ;;
     --skip-gptq) SKIP_GPTQ=1 ;;
     --gptq-all) GPTQ_ALL=1 ;;
+    --awq-ppl) AWQ_PPL=1 ;;
     --gptq-only) GPTQ_ONLY=1 ;;
     -h|--help) sed -n '2,/^set -euo pipefail/{/^set -euo/!p}' "$0"; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
@@ -70,6 +79,12 @@ for a in "$@"; do
 done
 if [[ $GPTQ_ONLY -eq 1 && $SMOKE -eq 1 ]]; then
   echo "ERROR: --gptq-only and --smoke are separate steps; run --gptq-only first." >&2; exit 2
+fi
+if [[ $AWQ_PPL -eq 1 && $SMOKE -eq 1 ]]; then
+  echo "ERROR: --awq-ppl cannot be combined with --smoke." >&2; exit 2
+fi
+if [[ $AWQ_PPL -eq 1 && $GPTQ_ONLY -eq 1 && $GPTQ_ALL -eq 0 ]]; then
+  echo "ERROR: --awq-ppl with --gptq-only needs --gptq-all too." >&2; exit 2
 fi
 if [[ $GPTQ_ALL -eq 1 && ( $SMOKE -eq 1 || $SKIP_GPTQ -eq 1 ) ]]; then
   echo "ERROR: --gptq-all cannot be combined with --smoke or --skip-gptq." >&2; exit 2
@@ -155,6 +170,18 @@ depall() {
   [[ ${#ids[@]} -gt 0 ]] && echo "--dependency=afterok:$(IFS=:; echo "${ids[*]}")" || true
 }
 
+# --- --awq-ppl: one PPL check per AWQ cell (public checkpoints, Delta stack) ---------
+AWQGATE=""
+awq_ppl_submit() {  # awq_ppl_submit <dependency id or empty>
+  local up="$1" m
+  for m in llama7b qwen7b mistral7b-v02 phi3; do
+    sub "AWQ PPL ${m} vs paper" scripts/regime_sweep/wikitext_ppl_rebuilt.sbatch $(dep "$up") \
+      --job-name="sq_ppl_${m}_awq" \
+      --export="ALL,EXP_MODEL=${m},EXP_QUANT=awq,PPL_TAG=${AWQ_PPL_TAG:-delta},WTPPL_FP32=1"
+    AWQGATE="${AWQGATE:+${AWQGATE} }${SUB_ID}"
+  done
+}
+
 # --- --gptq-all: one build + one PPL check per missing GPTQ checkpoint --------------
 # Fills GATE["model:bits"]="<build id> <ppl id>" for the cells it submits.
 declare -A GATE=()
@@ -194,6 +221,7 @@ D="$(dep "$SETUP")"
 
 if [[ $GPTQ_ONLY -eq 1 && $GPTQ_ALL -eq 1 ]]; then
   gptq_all_submit "$SETUP"
+  if [[ $AWQ_PPL -eq 1 ]]; then awq_ppl_submit "$SETUP"; fi
   echo ""
   echo "job id     job                                log"
   [[ ${#LIST[@]} -gt 0 ]] && printf '%s\n' "${LIST[@]}" || echo "(nothing to submit: every checkpoint is present)"
@@ -217,14 +245,27 @@ else
   sub "X3 shuffled-label probe"    scripts/signal_geometry/probe_accuracy_shuffled_llama.sbatch $D
   sub "X4 refit floor, 100 splits" scripts/boundary/probe_refit_control_splits100_llama.sbatch $D
   X2_GPTQ_CELLS="llama7b:gptq4 llama7b:gptq3 qwen7b:gptq4 qwen7b:gptq3 mistral7b-v02:gptq4 phi3:gptq4 phi3:gptq3"
-  if [[ $GPTQ_ALL -eq 1 ]]; then
-    # split: non-GPTQ cells now; GPTQ cells after their rebuild + PPL (below)
-    sub "X2 leakage, 7 non-GPTQ cells" scripts/boundary/probe_leakage_control_quant.sbatch $D \
-      "--export=ALL,CELLS=llama7b:awq llama7b:aqlm2 qwen7b:awq mistral7b-v02:awq mistral7b-v02:aqlm2 phi3:awq phi3:aqlm2"
+  X2_AWQ_CELLS="llama7b:awq qwen7b:awq mistral7b-v02:awq phi3:awq"
+  X2_AQLM_CELLS="llama7b:aqlm2 mistral7b-v02:aqlm2 phi3:aqlm2"
+  if [[ $GPTQ_ALL -eq 1 || $AWQ_PPL -eq 1 ]]; then
+    # split X2: cells without a gate run now; AWQ cells after the AWQ PPL checks and
+    # GPTQ cells after their rebuild + PPL (both below)
+    X2_NOW="${X2_AQLM_CELLS}"
+    [[ $AWQ_PPL -eq 1 ]] || X2_NOW="${X2_NOW} ${X2_AWQ_CELLS}"
+    [[ $GPTQ_ALL -eq 1 ]] || X2_NOW="${X2_NOW} ${X2_GPTQ_CELLS}"
+    sub "X2 leakage, $(echo ${X2_NOW} | wc -w) ungated cells" scripts/boundary/probe_leakage_control_quant.sbatch $D \
+      "--export=ALL,CELLS=${X2_NOW}"
   else
     sub "X2 leakage, 14 quant cells" scripts/boundary/probe_leakage_control_quant.sbatch $D
   fi
   sub "held-out llama3-8b aqlm2"   scripts/headline/headline_eval_llama3_8b_aqlm2_heldout.sbatch $D $H12
+
+  if [[ $AWQ_PPL -eq 1 ]]; then
+    awq_ppl_submit "$SETUP"
+    # shellcheck disable=SC2086
+    sub "X2 leakage, 4 AWQ cells"    scripts/boundary/probe_leakage_control_quant.sbatch \
+      "$(depall "$SETUP" ${AWQGATE})" "--export=ALL,CELLS=${X2_AWQ_CELLS}"
+  fi
 
   # GPTQ-4 build (skipped if the checkpoint already exists), then X1 after it
   GPTQ=""
