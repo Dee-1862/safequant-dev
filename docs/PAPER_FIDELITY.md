@@ -126,5 +126,5 @@ LR-QAT reparam, STE, merge, zero-init). No Critical/High math anomaly.
   BEFORE aligning the default, or a rerun silently trains on different data.
 
 ### DEFERRED
-- **M1-Q** hardcoded `AQLM_REPO = /jet/home/bhoomire/...` — works on Bridges-2 (where the fold
+- **M1-Q** hardcoded `AQLM_REPO = <home>/...` — works on Bridges-2 (where the fold
   runs). Wire to env/config when setting up the fold elsewhere; not biting now.

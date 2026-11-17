@@ -128,7 +128,7 @@ purpose.
 ## How to regenerate the table
 
 ```bash
-cd /jet/home/bhoomire/projects/safequant_v2
+cd $REPO_ROOT
 python diagnostics/three_criteria_analysis.py
 # -> outputs/f3a_three_criteria.json
 # -> docs/F3A_three_criteria_table.md

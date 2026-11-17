@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=sq_refit
-#SBATCH --account=cis250287p
+#SBATCH --account=YOUR_ALLOCATION
 #SBATCH --partition=GPU-shared
 #SBATCH --gpus=h100-80:1
 #SBATCH -N 1

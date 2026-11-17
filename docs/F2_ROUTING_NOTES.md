@@ -85,7 +85,7 @@ quantitatively load-bearing.
 
 ```bash
 # After routing_random_control_*.sbatch jobs complete:
-cd /jet/home/bhoomire/projects/safequant_v2
+cd $REPO_ROOT
 python diagnostics/build_routing_table.py \
     --write_to docs/F2_routing_table.md
 ```

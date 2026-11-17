@@ -13,7 +13,7 @@ pipeline that produces each table.
     python run_pipeline.py --results               # (re)build the aggregate result files
 
 Prerequisites (not run here): quantized checkpoints must already exist under
-$QUANTIZED_MODELS (base + AWQ/AQLM downloads via scripts/fetch_checkpoints.sh;
+$QM_ROOT (base + AWQ/AQLM downloads via scripts/fetch_checkpoints.sh;
 self-generated GPTQ via scripts/quantize_gptq_all.sh in the sq_autogptq env).
 Everything below runs in the eval env (conda 'sq_clean').
 """
@@ -173,7 +173,7 @@ def main():
             print(f"[{k}] {title}")
             print(f"      {len(build())} command(s). Run: python run_pipeline.py "
                   f"--table {k} --dry-run\n")
-        print("Prereqs: quantized checkpoints under $QUANTIZED_MODELS. Env: sq_clean.")
+        print("Prereqs: quantized checkpoints under $QM_ROOT. Env: sq_clean.")
         print("Results:  python run_pipeline.py --results")
         return
 

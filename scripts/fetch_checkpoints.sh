@@ -1,26 +1,23 @@
 #!/bin/bash
 # scripts/fetch_checkpoints.sh
-#
-# Download every reputable base + AWQ + AQLM checkpoint into ONE consolidated
-# tree on Ocean, with per-method subfolders -- so no cell depends on a scattered
-# HF hub cache. GPTQ cells are self-generated separately by quantize_gptq.py into
-# <root>/<alias>-gptq<bits>bit-g128/.
-#
-# Layout created under $QM_ROOT:
-#   base/<alias>/   unquantized
-#   awq/<alias>/    AWQ-4bit
-#   aqlm/<alias>/   AQLM-2bit
-#
+
+# Download every reputable base + AWQ + AQLM checkpoint into ONE consolidated tree on Ocean, with per-method subfolders.
+
 # Run on a LOGIN node (needs internet + a HF token for gated repos: `huggingface-cli login`).
 #   bash scripts/fetch_checkpoints.sh
 # Skips anything already fully downloaded (huggingface-cli is resumable/idempotent).
-set -uo pipefail   # NOT -e: one failed (e.g. gated) repo must not abort the rest
 
-QM_ROOT="${QM_ROOT:-/ocean/projects/cis240116p/bhoomire/quantized_models}"
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+source "${ROOT}/scripts/load_env.sh"
+
+QM_ROOT="${QM_ROOT:-${HOME}/quantized_models}"
+export HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}"
 FAILED=""
 
-# Use HF's Rust-accelerated transfer when the package is installed (much faster
-# for big safetensors). Harmless if absent. Install with: pip install --user hf_transfer
+# Use HF's Rust-accelerated transfer when the package is installed (much faster for big safetensors). Harmless if absent. Install with: pip install --user hf_transfer
 if python -c "import hf_transfer" 2>/dev/null; then
   export HF_HUB_ENABLE_HF_TRANSFER=1
   echo "hf_transfer: ENABLED (fast downloads)"

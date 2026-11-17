@@ -9,25 +9,49 @@ PHASE1_DIR = os.path.join(PROJECT_ROOT, "phase1_problem")
 DATA_DIR = os.path.join(PHASE1_DIR, "data", "prompts")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
-# -- HuggingFace cache ---------------------------------------------------------
-# Set HF_HOME / QUANTIZED_MODELS in the environment (see .env.example and
-# scripts/_env.sh). Defaults suit a single-machine checkout.
-HF_HOME = (
-    os.environ.get("HF_HOME")
-    or os.environ.get("OCEAN_CACHE")
-    or os.path.expanduser("~/.cache/huggingface")
+# -- .env + paths -------------------------------------------------------------
+def _load_dotenv():
+    """Load .env from the repo root (never overrides variables already set in the shell)."""
+    path = os.path.join(PROJECT_ROOT, ".env")
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("export "):
+                line = line[7:].strip()
+            if "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = os.path.expandvars(val.strip().strip('"').strip("'"))
+            if key:
+                os.environ.setdefault(key, val)
+
+
+_load_dotenv()
+
+# Set HF_HOME and QM_ROOT in .env (see .env.example). Laptop defaults if unset.
+HF_HOME = os.environ.get("HF_HOME") or os.path.expanduser("~/.cache/huggingface")
+# QUANTIZED_MODELS is the legacy name for QM_ROOT; still honoured.
+QM_ROOT = (
+    os.environ.get("QM_ROOT")
+    or os.environ.get("QUANTIZED_MODELS")
+    or os.path.join(os.path.expanduser("~"), "quantized_models")
 )
 # Tell HuggingFace libraries where to cache -- must be set before any import
 os.environ.setdefault("HF_HOME", HF_HOME)
 os.environ.setdefault("TRANSFORMERS_CACHE", HF_HOME)
 os.environ.setdefault("HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets"))
+os.environ.setdefault("QM_ROOT", QM_ROOT)
 
-# Consolidated local checkpoint tree on Ocean (next to the HF cache):
+# Consolidated local checkpoint tree:
 #   <_QM>/base/<alias>/  <_QM>/awq/<alias>/  <_QM>/aqlm/<alias>/
-#   <_QM>/<alias>-gptq<bits>bit-g128/   (self-generated GPTQ)
+#   <_QM>/gptq/<alias>-gptq<bits>bit-g128/   (self-generated GPTQ)
 # Populated by scripts/fetch_checkpoints.sh + scripts/quantize_gptq.py.
-_QM = os.environ.get("QUANTIZED_MODELS") or os.path.join(
-    os.path.dirname(HF_HOME.rstrip(os.sep)), "quantized_models")
+_QM = QM_ROOT
 
 # -- Models -------------------------------------------------------------------
 # Short aliases -> HuggingFace model IDs.

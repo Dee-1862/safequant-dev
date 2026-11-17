@@ -98,7 +98,7 @@ print(rng.integers(0, 100, size=5).tolist())
 # Expected output: [8, 77, 65, 43, 43]
 ```
 
-If the integers differ, NumPy is not in a known state. Check that you're using the env at `/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean` (NumPy >= 1.21 has stable `Generator` output).
+If the integers differ, NumPy is not in a known state. Check that you're using the env at `$CONDA_ENV` (NumPy >= 1.21 has stable `Generator` output).
 
 To verify that dataset loaders give the same 1000 prompts:
 

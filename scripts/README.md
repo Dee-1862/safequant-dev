@@ -1,15 +1,15 @@
-# Bridges-2 Slurm launchers
+# Slurm launchers
 
 Claim-aligned sbatch jobs for SafeQuant. Paths are resolved from `scripts/_env.sh` using environment variables (no usernames in the repo).
 
 | Resource | Typical setup |
 |----------|----------------|
 | Repo checkout | `$REPO_ROOT` (defaults to directory above `scripts/`) |
-| Conda env | `$CONDA_ENV` (default `${OCEAN_BASE}/conda_envs/sq_clean`) |
-| HF cache | `$HF_HOME` (default `${OCEAN_BASE}/.cache/huggingface`) |
-| Quantized checkpoints | `$QUANTIZED_MODELS` |
+| Conda env | `$CONDA_ENV` (set in `.env`) |
+| HF cache | `$HF_HOME` (default `~/.cache/huggingface`) |
+| Quantized checkpoints | `$QM_ROOT` |
 
-Copy `env.example` to `.env` for local overrides. Never commit `.env`.
+Copy `.env.example` to `.env` for local overrides. Never commit `.env`.
 
 ## Layout
 
@@ -50,7 +50,7 @@ sbatch scripts/regime_sweep/wikitext_ppl.sbatch
 Override paths at submit time:
 
 ```bash
-REPO_ROOT=/path/to/safequant OCEAN_BASE=/ocean/projects/.../you sbatch scripts/headline/headline_eval_llama.sbatch
+sbatch --account="$SLURM_ACCOUNT" scripts/headline/headline_eval_llama.sbatch   # run from the repo root
 ```
 
 ## Notes

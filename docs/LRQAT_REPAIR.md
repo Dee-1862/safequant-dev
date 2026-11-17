@@ -96,7 +96,7 @@ Everything needed is already in the `sq_clean` env (torch 2.9, transformers
 4.57, datasets, bitsandbytes 0.49, peft, aqlm). No pip installs required.
 
 ```bash
-cd /jet/home/bhoomire/projects/safequant_v2
+cd $REPO_ROOT
 sbatch scripts/lrqat_repair_llama_aqlm2.sbatch     # read INT-2, write INT-2, read INT-4 sweep
 ```
 

@@ -5,7 +5,10 @@ import os
 import sys
 from pathlib import Path
 
-DEFAULT_GLOB = "/ocean/projects/cis240116p/bhoomire/quantized_models/gptq/*-gptq*bit-g*"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config  # noqa: E402
+
+DEFAULT_GLOB = str(Path(config.QM_ROOT) / "gptq" / "*-gptq*bit-g*")
 
 
 def fix(d):

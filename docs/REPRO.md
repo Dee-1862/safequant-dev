@@ -2,10 +2,10 @@
 
 This file maps each numerical claim in the paper to the exact command that produces it. All commands assume:
 
-- Working directory: `/jet/home/bhoomire/projects/safequant_v2/`
-- Conda env activated: `/ocean/projects/cis240116p/bhoomire/conda_envs/sq_clean`
-- HF cache pointed at Ocean: `export HF_HOME=/ocean/projects/cis240116p/bhoomire/.cache/huggingface`
-- SLURM account: `cis250287p`
+- Working directory: `$REPO_ROOT/`
+- Conda env activated: `$CONDA_ENV`
+- HF cache pointed at Ocean: `export HF_HOME=$HF_HOME`
+- SLURM account: `$SLURM_ACCOUNT`
 - Seed: 42 (default everywhere; never override unless estimating variance)
 - ASR n: 1000 (was 100 in v1)
 - ARC n: 1000 (was 50 in v1)
