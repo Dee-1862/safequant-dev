@@ -8,6 +8,9 @@
 #   bash scripts/delta_queue.sh --gptq-all     # full queue, rebuilding every GPTQ cell
 #   bash scripts/delta_queue.sh --gptq-only --gptq-all   # only the GPTQ build + PPL jobs
 #   bash scripts/delta_queue.sh --awq-ppl      # full queue + AWQ PPL checks gating X2's AWQ cells
+#   bash scripts/delta_queue.sh --wave1        # X3, X4, X2 non-GPTQ cells, held-out, Tables 5-7
+#   bash scripts/delta_queue.sh --limits       # print expected runtime vs time limit per job
+#   options: --drop-x5  (full queue without X5)
 #   options: --skip-setup  (checkpoints already downloaded)
 #            --skip-gptq   (GPTQ-4 checkpoint already built; auto-detected too)
 #
@@ -19,7 +22,7 @@
 # Submission order (the queue may not drain before Nov 20, so priority = order):
 #   X3, X4, X2, held-out, [GPTQ-4 build], X1, Task 3, Task 4, X5
 # Headline-type jobs are split one per cell/seed/rep (their sbatch files take CELLS /
-# SEEDS / REPS) with --time=12:00:00, because 10 or 6 headline evals do not fit in a
+# SEEDS / REPS) with a per-job time limit (EST table), because 10 or 6 headline evals do not fit in a
 # single job. Every job gets --kill-on-invalid-dep=yes: if setup fails, dependants are
 # cancelled instead of pending forever.
 #
@@ -35,7 +38,7 @@
 # --gptq-all: instead of the single llama7b GPTQ-4 build, submits one build job per
 # MISSING checkpoint among llama7b {4,3}, qwen7b {4,3}, mistral7b-v02 {4}, phi3 {4,3}
 # (GPTQ_CELLS="phi3:4 llama7b:4" narrows the list), each depending on setup with
-# --time=2:00:00, and after each build a PPL job (afterok) that runs
+# a per-job time limit (EST table), and after each build a PPL job (afterok) that runs
 # experiments/regime_sweep/wikitext_ppl on that cell under the tag rebuilt
 # (PPL_TAG overrides) and prints it next to the paper value, warning above 2%.
 # Each model's gptq4 PPL job also measures fp32 (environment control).
@@ -52,6 +55,16 @@
 # awq_ext. X2's AWQ cells then run as their own job after these four. Combine with
 # --gptq-only --gptq-all to submit only the GPTQ build/PPL and AWQ PPL jobs.
 #
+# Time limits: every job gets --time = 1.5 x its expected runtime (rounded up to 15 min,
+# capped at 48 h) from the EST table below, so short jobs can backfill. TIME_SCALE=<x>
+# multiplies every estimate (e.g. TIME_SCALE=1.5 if the smoke test shows Delta is
+# slower). Estimates are guesses unless the table says "measured"; check them against
+# the smoke test and the first real runs. --limits prints the table and exits.
+#
+# --wave1: only X3, X4, X2's non-GPTQ cells (AQLM + AWQ; AWQ waits for its PPL checks
+# with --awq-ppl), held-out, and the Tables 5-7 reruns (Task 3 localization). No GPTQ
+# builds, X1, X2 GPTQ cells, X6 repeats or X5. --drop-x5 removes X5 from the full queue.
+#
 # Needs .env: SLURM_ACCOUNT + SLURM_PARTITION (GPU jobs), QM_ROOT, HF_HOME, AGENV (GPTQ
 # build). Optional: SLURM_CPU_PARTITION + SLURM_CPU_ACCOUNT -> the setup job runs on the
 # CPU partition under the CPU account (Delta CPU and GPU allocations are separate
@@ -65,6 +78,7 @@ cd "$ROOT"
 source scripts/load_env.sh
 
 SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0; GPTQ_ONLY=0; GPTQ_ALL=0; AWQ_PPL=0
+WAVE1=0; DROP_X5=0; LIMITS=0
 for a in "$@"; do
   case "$a" in
     --smoke) SMOKE=1 ;;
@@ -74,10 +88,16 @@ for a in "$@"; do
     --gptq-all) GPTQ_ALL=1 ;;
     --awq-ppl) AWQ_PPL=1 ;;
     --gptq-only) GPTQ_ONLY=1 ;;
+    --wave1) WAVE1=1 ;;
+    --drop-x5) DROP_X5=1 ;;
+    --limits) LIMITS=1 ;;
     -h|--help) sed -n '2,/^set -euo pipefail/{/^set -euo/!p}' "$0"; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
   esac
 done
+if [[ $WAVE1 -eq 1 && ( $SMOKE -eq 1 || $GPTQ_ONLY -eq 1 || $GPTQ_ALL -eq 1 ) ]]; then
+  echo "ERROR: --wave1 is a full-queue subset; not with --smoke, --gptq-only or --gptq-all." >&2; exit 2
+fi
 if [[ $GPTQ_ONLY -eq 1 && $SMOKE -eq 1 ]]; then
   echo "ERROR: --gptq-only and --smoke are separate steps; run --gptq-only first." >&2; exit 2
 fi
@@ -113,6 +133,49 @@ if [[ $SKIP_SETUP -eq 0 && -n "${SLURM_CPU_PARTITION:-}" && -z "${SLURM_CPU_ACCO
   echo "       SLURM_CPU_PARTITION to run setup on the GPU partition. Nothing was submitted." >&2
   exit 1
 fi
+
+# --- expected runtimes (minutes) -> time limits ---------------------------------------
+# "measured" = seen on DeltaAI; "Bridges note" = comment in the job file (H100 runs);
+# everything else is an estimate from the workload. Unit is per job unless noted.
+TIME_SCALE="${TIME_SCALE:-1}"
+declare -A EST=(
+  [setup]=30        [gptq_phi3]=25   [gptq_7b]=45    [ppl]=25
+  [x3]=120          [x4]=150         [x2_cell]=75
+  [heldout]=510     [x1]=450
+  [loc_perproj]=360 [loc_depth]=360  [loc_pm]=480
+  [x6]=450          [x5]=450
+)
+declare -A EST_NOTE=(
+  [setup]="measured 28m44s (job 3619188)"
+  [gptq_phi3]="measured ~12 min quantize (3619267) + pack/save with thread fix"
+  [gptq_7b]="estimate: ~2x phi3 weights"
+  [ppl]="estimate: fp32 + one quant cell, WikiText-2 test, 2048-token windows"
+  [x3]="estimate: llama7b + phi3, one load + residuals + probes each"
+  [x4]="estimate: 2 FP extractions + 100 probe refits (CPU)"
+  [x2_cell]="Bridges note: ~1-1.5 h per cell"
+  [heldout]="Bridges note: headline ~7-8 h, + paired_screen ~1 h"
+  [x1]="Bridges note: headline ~7-8 h"
+  [loc_perproj]="estimate: per_projection, 2 models (24 h cap covered all 3 steps)"
+  [loc_depth]="estimate: depth_bands read+write, 2 models"
+  [loc_pm]="estimate: param_matched, 5 seeds x 2 models"
+  [x6]="Bridges note: ~7-8 h per run"
+  [x5]="estimate: one headline run per subset seed (~7-8 h)"
+)
+limit_min() {  # limit_min <expected minutes>: 1.5 x scale, up to 15 min, <= 48 h
+  awk -v m="$1" -v s="$TIME_SCALE" 'BEGIN { x = m * 1.5 * s; q = int((x + 14.999) / 15) * 15; if (q > 2880) q = 2880; print q }'
+}
+hhmm() { printf '%d:%02d:00' $(( $1 / 60 )) $(( $1 % 60 )); }
+tl() { echo "--time=$(hhmm "$(limit_min "$1")")"; }   # tl <expected minutes>
+print_limits() {
+  printf '%-14s %10s %10s  %s\n' "job" "expected" "limit" "basis   (TIME_SCALE=${TIME_SCALE})"
+  local k
+  for k in setup gptq_phi3 gptq_7b ppl x3 x4 x2_cell heldout x1 loc_perproj loc_depth loc_pm x6 x5; do
+    printf '%-14s %10s %10s  %s\n' "$k" "$(hhmm "${EST[$k]}")" "$(hhmm "$(limit_min "${EST[$k]}")")" "${EST_NOTE[$k]}"
+  done
+  printf '%-14s %10s %10s  %s\n' "x2 (n cells)" "n x 1:15" "1.5 x n x" "e.g. 3 cells -> $(hhmm "$(limit_min $((3 * EST[x2_cell])))"), 4 -> $(hhmm "$(limit_min $((4 * EST[x2_cell])))"), 7 -> $(hhmm "$(limit_min $((7 * EST[x2_cell])))"), 14 -> $(hhmm "$(limit_min $((14 * EST[x2_cell])))")"
+}
+x2_time() { local n; n=$(echo $1 | wc -w); tl $(( n * EST[x2_cell] )); }   # x2_time "<cells>"
+if [[ $LIMITS -eq 1 ]]; then print_limits; exit 0; fi
 
 LIST=()     # "<id>  <label>  <log>" rows for the summary
 DRY_N=0
@@ -177,7 +240,7 @@ awq_ppl_submit() {  # awq_ppl_submit <dependency id or empty>
   local up="$1" m
   for m in llama7b qwen7b mistral7b-v02 phi3; do
     sub "AWQ PPL ${m} vs paper" scripts/regime_sweep/wikitext_ppl_rebuilt.sbatch $(dep "$up") \
-      --job-name="sq_ppl_${m}_awq" \
+      "$(tl "${EST[ppl]}")" --job-name="sq_ppl_${m}_awq" \
       --export="ALL,EXP_MODEL=${m},EXP_QUANT=awq,PPL_TAG=${AWQ_PPL_TAG:-delta},WTPPL_FP32=1"
     AWQGATE="${AWQGATE:+${AWQGATE} }${SUB_ID}"
   done
@@ -197,11 +260,12 @@ gptq_all_submit() {  # gptq_all_submit <dependency id or empty>
       continue
     fi
     sub "GPTQ build ${m} gptq${b} [${GPTQ_BACKEND}]" scripts/quantize_gptq.sbatch $(dep "$up") \
-      --time=2:00:00 --cpus-per-task="${GPTQ_CPUS:-8}" --job-name="sq_gptq_${m}_${b}" \
+      "$(tl "$([[ $m == phi3 ]] && echo "${EST[gptq_phi3]}" || echo "${EST[gptq_7b]}")")" \
+      --cpus-per-task="${GPTQ_CPUS:-8}" --job-name="sq_gptq_${m}_${b}" \
       --export="ALL,CONDA_ENV=${GPTQ_ENV},GPTQ_BACKEND=${GPTQ_BACKEND}" -- "$m" "$b" 128
     bid="$SUB_ID"
     sub "PPL check ${m} gptq${b} vs paper" scripts/regime_sweep/wikitext_ppl_rebuilt.sbatch \
-      "$(dep "$bid")" --job-name="sq_ppl_${m}_${b}" \
+      "$(dep "$bid")" "$(tl "${EST[ppl]}")" --job-name="sq_ppl_${m}_${b}" \
       --export="ALL,EXP_MODEL=${m},EXP_QUANT=gptq${b},PPL_TAG=${PPL_TAG:-rebuilt},WTPPL_FP32=$([[ $b == 4 ]] && echo 1 || echo 0)"
     GATE["${m}:${b}"]="${bid} ${SUB_ID}"
   done
@@ -212,9 +276,9 @@ SETUP=""
 if [[ $SKIP_SETUP -eq 0 ]]; then
   if [[ -n "${SLURM_CPU_PARTITION:-}" ]]; then
     SUB_ENV="SLURM_ACCOUNT=${SLURM_CPU_ACCOUNT} SLURM_PARTITION=${SLURM_CPU_PARTITION} SQ_GPUS_PER_NODE=0 " \
-      sub "delta_setup (cpu)" scripts/tests/delta_setup.sbatch
+      sub "delta_setup (cpu)" scripts/tests/delta_setup.sbatch "$(tl "${EST[setup]}")"
   else
-    sub "delta_setup (gpu partition)" scripts/tests/delta_setup.sbatch
+    sub "delta_setup (gpu partition)" scripts/tests/delta_setup.sbatch "$(tl "${EST[setup]}")"
   fi
   SETUP="$SUB_ID"
 fi
@@ -231,7 +295,6 @@ if [[ $GPTQ_ONLY -eq 1 && $GPTQ_ALL -eq 1 ]]; then
   exit 0
 fi
 
-H12="--time=12:00:00"
 
 if [[ $SMOKE -eq 1 ]]; then
   # --- smoke: one tiny job per step, same order, no dependencies --------------
@@ -243,30 +306,33 @@ if [[ $SMOKE -eq 1 ]]; then
   done
 else
   # --- 2. full queue in priority order ------------------------------------------
-  sub "X3 shuffled-label probe"    scripts/signal_geometry/probe_accuracy_shuffled_llama.sbatch $D
-  sub "X4 refit floor, 100 splits" scripts/boundary/probe_refit_control_splits100_llama.sbatch $D
+  sub "X3 shuffled-label probe"    scripts/signal_geometry/probe_accuracy_shuffled_llama.sbatch $D "$(tl "${EST[x3]}")"
+  sub "X4 refit floor, 100 splits" scripts/boundary/probe_refit_control_splits100_llama.sbatch $D "$(tl "${EST[x4]}")"
   X2_GPTQ_CELLS="llama7b:gptq4 llama7b:gptq3 qwen7b:gptq4 qwen7b:gptq3 mistral7b-v02:gptq4 phi3:gptq4 phi3:gptq3"
   X2_AWQ_CELLS="llama7b:awq qwen7b:awq mistral7b-v02:awq phi3:awq"
   X2_AQLM_CELLS="llama7b:aqlm2 mistral7b-v02:aqlm2 phi3:aqlm2"
-  if [[ $GPTQ_ALL -eq 1 || $AWQ_PPL -eq 1 ]]; then
+  if [[ $GPTQ_ALL -eq 1 || $AWQ_PPL -eq 1 || $WAVE1 -eq 1 ]]; then
     # split X2: cells without a gate run now; AWQ cells after the AWQ PPL checks and
-    # GPTQ cells after their rebuild + PPL (both below)
+    # GPTQ cells after their rebuild + PPL (both below). --wave1 leaves GPTQ cells out.
     X2_NOW="${X2_AQLM_CELLS}"
     [[ $AWQ_PPL -eq 1 ]] || X2_NOW="${X2_NOW} ${X2_AWQ_CELLS}"
-    [[ $GPTQ_ALL -eq 1 ]] || X2_NOW="${X2_NOW} ${X2_GPTQ_CELLS}"
+    [[ $GPTQ_ALL -eq 1 || $WAVE1 -eq 1 ]] || X2_NOW="${X2_NOW} ${X2_GPTQ_CELLS}"
     sub "X2 leakage, $(echo ${X2_NOW} | wc -w) ungated cells" scripts/boundary/probe_leakage_control_quant.sbatch $D \
-      "--export=ALL,CELLS=${X2_NOW}"
+      "$(x2_time "${X2_NOW}")" "--export=ALL,CELLS=${X2_NOW}"
   else
-    sub "X2 leakage, 14 quant cells" scripts/boundary/probe_leakage_control_quant.sbatch $D
+    sub "X2 leakage, 14 quant cells" scripts/boundary/probe_leakage_control_quant.sbatch $D \
+      "$(x2_time "${X2_AQLM_CELLS} ${X2_AWQ_CELLS} ${X2_GPTQ_CELLS}")"
   fi
-  sub "held-out llama3-8b aqlm2"   scripts/headline/headline_eval_llama3_8b_aqlm2_heldout.sbatch $D $H12
+  sub "held-out llama3-8b aqlm2"   scripts/headline/headline_eval_llama3_8b_aqlm2_heldout.sbatch $D "$(tl "${EST[heldout]}")"
 
   if [[ $AWQ_PPL -eq 1 ]]; then
     awq_ppl_submit "$SETUP"
     # shellcheck disable=SC2086
     sub "X2 leakage, 4 AWQ cells"    scripts/boundary/probe_leakage_control_quant.sbatch \
-      "$(depall "$SETUP" ${AWQGATE})" "--export=ALL,CELLS=${X2_AWQ_CELLS}"
+      "$(depall "$SETUP" ${AWQGATE})" "$(x2_time "${X2_AWQ_CELLS}")" "--export=ALL,CELLS=${X2_AWQ_CELLS}"
   fi
+
+  if [[ $WAVE1 -eq 0 ]]; then
 
   # GPTQ-4 build (skipped if the checkpoint already exists), then X1 after it
   GPTQ=""
@@ -297,33 +363,38 @@ else
   else
     X1DEP="$(dep "${GPTQ:-$SETUP}")"
   fi
-  sub "X1 XSTest llama gptq4"      scripts/headline/headline_eval_llama_gptq4_xstest.sbatch $X1DEP $H12
+  sub "X1 XSTest llama gptq4"      scripts/headline/headline_eval_llama_gptq4_xstest.sbatch $X1DEP "$(tl "${EST[x1]}")"
 
   if [[ $GPTQ_ALL -eq 1 ]]; then
     # shellcheck disable=SC2086
     X2DEP="$(depall "$SETUP" ${GATE[*]:-})"
     sub "X2 leakage, 7 GPTQ cells"   scripts/boundary/probe_leakage_control_quant.sbatch $X2DEP \
-      "--export=ALL,CELLS=${X2_GPTQ_CELLS}"
+      "$(x2_time "${X2_GPTQ_CELLS}")" "--export=ALL,CELLS=${X2_GPTQ_CELLS}"
   fi
+  fi   # WAVE1 -eq 0 (GPTQ builds, X1, X2 GPTQ cells)
 
   for step in perproj depth pm; do
     sub "Task 3 localization ${step}" scripts/localization/localization_with_flags.sbatch $D \
-      --export="ALL,STEPS=${step}"
+      "$(tl "${EST[loc_${step}]}")" --export="ALL,STEPS=${step}"
   done
 
+  if [[ $WAVE1 -eq 0 ]]; then
   for m in llama7b phi3; do
     for rep in rep1 rep2 rep3; do
-      sub "Task 4 X6 ${m} ${rep}" scripts/headline/headline_repeats_aqlm2.sbatch $D $H12 \
+      sub "Task 4 X6 ${m} ${rep}" scripts/headline/headline_repeats_aqlm2.sbatch $D "$(tl "${EST[x6]}")" \
         --export="ALL,CELLS=${m},REPS=${rep}"
     done
   done
+  fi
 
+  if [[ $WAVE1 -eq 0 && $DROP_X5 -eq 0 ]]; then
   for m in llama7b phi3; do
     for k in 1 2 3 4 5; do
-      sub "X5 ${m} subset${k}" scripts/regime_sweep/subset_seeds_aqlm2.sbatch $D $H12 \
+      sub "X5 ${m} subset${k}" scripts/regime_sweep/subset_seeds_aqlm2.sbatch $D "$(tl "${EST[x5]}")" \
         --export="ALL,CELLS=${m},SEEDS=${k}"
     done
   done
+  fi
 fi
 
 echo ""
