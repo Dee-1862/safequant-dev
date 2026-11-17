@@ -144,6 +144,16 @@ Do these in order, from the repo root on a Delta login node, after filling in `.
    bash scripts/delta_queue.sh --gptq-only
    ```
    Wait for it to finish before step 4.
+
+   To rebuild every GPTQ cell instead (DeltaAI, no copied checkpoints), use `--gptq-all`
+   with the full queue in step 5, or `--gptq-only --gptq-all` for just the builds: one
+   build per missing llama7b {4,3}, qwen7b {4,3}, mistral7b-v02 {4}, phi3 {4,3}
+   checkpoint, each followed by a WikiText-2 PPL check against the paper value (tag
+   `rebuilt`, warns above 2%); X1 and the GPTQ half of X2 wait for them.
+   `GPTQ_BACKEND=gptqmodel` switches the builder, `GPTQ_CELLS="phi3:4"` narrows the list.
+   On aarch64, `delta_make_envs.sh autogptq` builds auto-gptq 0.7.1 from source on
+   torch 2.7.1+cu128; every checkpoint records its backend and versions in
+   `sq_build_info.json`.
 4. **Smoke test** (about 1 h): every reviewer job at `--n_eval 8 --n_reasoning 8`, first
    cell/seed only, outputs suffixed `_smoke`. Check each `scripts/logs/smoke_*` log. This
    is also the real CUDA check: `delta_make_envs.sh` runs on a login node with no GPU.

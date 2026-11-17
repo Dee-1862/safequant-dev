@@ -5,6 +5,8 @@
 #   bash scripts/delta_queue.sh --smoke        # tiny dry run of every job (~1 h)
 #   bash scripts/delta_queue.sh --dry-run      # print the sbatch commands, submit nothing
 #   bash scripts/delta_queue.sh --gptq-only    # submit only the GPTQ-4 build (llama7b)
+#   bash scripts/delta_queue.sh --gptq-all     # full queue, rebuilding every GPTQ cell
+#   bash scripts/delta_queue.sh --gptq-only --gptq-all   # only the GPTQ build + PPL jobs
 #   options: --skip-setup  (checkpoints already downloaded)
 #            --skip-gptq   (GPTQ-4 checkpoint already built; auto-detected too)
 #
@@ -29,6 +31,18 @@
 # --n_eval 8 --n_reasoning 8 and the tag suffix _smoke (SMOKE_TAG overrides), first
 # cell/seed only. X1's smoke step fails fast if the GPTQ-4 checkpoint is missing.
 #
+# --gptq-all: instead of the single llama7b GPTQ-4 build, submits one build job per
+# MISSING checkpoint among llama7b {4,3}, qwen7b {4,3}, mistral7b-v02 {4}, phi3 {4,3}
+# (GPTQ_CELLS="phi3:4 llama7b:4" narrows the list), each depending on setup with
+# --time=2:00:00, and after each build a PPL job (afterok) that runs
+# experiments/regime_sweep/wikitext_ppl on that cell under the tag rebuilt
+# (PPL_TAG overrides) and prints it next to the paper value, warning above 2%.
+# Each model's gptq4 PPL job also measures fp32 (environment control).
+# GPTQ_BACKEND=autogptq (default, $AGENV) | gptqmodel ($CONDA_ENV) picks the builder.
+# X1 then depends on the llama7b gptq4 build + PPL jobs, and X2 is split in two: the
+# non-GPTQ cells (depend on setup only) and the GPTQ cells (depend on every build + PPL).
+# With --gptq-only, only the build + PPL jobs are submitted.
+#
 # Needs .env: SLURM_ACCOUNT + SLURM_PARTITION (GPU jobs), QM_ROOT, HF_HOME, AGENV (GPTQ
 # build). Optional: SLURM_CPU_PARTITION + SLURM_CPU_ACCOUNT -> the setup job runs on the
 # CPU partition under the CPU account (Delta CPU and GPU allocations are separate
@@ -41,13 +55,14 @@ cd "$ROOT"
 # shellcheck disable=SC1091
 source scripts/load_env.sh
 
-SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0; GPTQ_ONLY=0
+SMOKE=0; DRY=0; SKIP_SETUP=0; SKIP_GPTQ=0; GPTQ_ONLY=0; GPTQ_ALL=0
 for a in "$@"; do
   case "$a" in
     --smoke) SMOKE=1 ;;
     --dry-run) DRY=1 ;;
     --skip-setup) SKIP_SETUP=1 ;;
     --skip-gptq) SKIP_GPTQ=1 ;;
+    --gptq-all) GPTQ_ALL=1 ;;
     --gptq-only) GPTQ_ONLY=1 ;;
     -h|--help) sed -n '2,/^set -euo pipefail/{/^set -euo/!p}' "$0"; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
@@ -56,7 +71,20 @@ done
 if [[ $GPTQ_ONLY -eq 1 && $SMOKE -eq 1 ]]; then
   echo "ERROR: --gptq-only and --smoke are separate steps; run --gptq-only first." >&2; exit 2
 fi
-if [[ $SMOKE -eq 1 || $GPTQ_ONLY -eq 1 ]]; then SKIP_SETUP=1; fi
+if [[ $GPTQ_ALL -eq 1 && ( $SMOKE -eq 1 || $SKIP_GPTQ -eq 1 ) ]]; then
+  echo "ERROR: --gptq-all cannot be combined with --smoke or --skip-gptq." >&2; exit 2
+fi
+GPTQ_BACKEND="${GPTQ_BACKEND:-autogptq}"
+case "$GPTQ_BACKEND" in
+  autogptq)  GPTQ_ENV="${AGENV:-}" ;;
+  gptqmodel) GPTQ_ENV="${CONDA_ENV:-}" ;;
+  *) echo "ERROR: GPTQ_BACKEND must be autogptq or gptqmodel, got '$GPTQ_BACKEND'" >&2; exit 2 ;;
+esac
+if [[ $GPTQ_ALL -eq 1 && -z "$GPTQ_ENV" ]]; then
+  echo "ERROR: GPTQ_BACKEND=$GPTQ_BACKEND needs $([[ $GPTQ_BACKEND == autogptq ]] && echo AGENV || echo CONDA_ENV) in .env." >&2; exit 1
+fi
+# --gptq-only --gptq-all: build + PPL jobs only; they still wait for setup unless skipped
+if [[ $SMOKE -eq 1 || ( $GPTQ_ONLY -eq 1 && $GPTQ_ALL -eq 0 ) ]]; then SKIP_SETUP=1; fi
 if [[ $SMOKE -eq 1 ]]; then SKIP_GPTQ=1; fi
 if [[ $DRY -eq 0 && -z "${SLURM_ACCOUNT:-}" ]]; then
   echo "ERROR: set SLURM_ACCOUNT in .env (see .env.example)." >&2; exit 1
@@ -75,7 +103,7 @@ DRY_N=0
 GPTQ_CKPT="${QM_ROOT:-$HOME/quantized_models}/gptq/llama7b-gptq4bit-g128"
 
 # --- --gptq-only: just the GPTQ-4 build, then stop ----------------------------------
-if [[ $GPTQ_ONLY -eq 1 ]]; then
+if [[ $GPTQ_ONLY -eq 1 && $GPTQ_ALL -eq 0 ]]; then
   if [[ -f "${GPTQ_CKPT}/config.json" ]]; then
     echo "GPTQ-4 checkpoint already present: ${GPTQ_CKPT} (nothing submitted)"
     exit 0
@@ -110,7 +138,7 @@ sub() {
   local id
   if [[ $DRY -eq 1 ]]; then
     DRY_N=$((DRY_N + 1)); id="DRY${DRY_N}"
-    echo "[dry-run] ${SUB_ENV:-}bash scripts/submit.sh ${job} --parsable --kill-on-invalid-dep=yes $*" >&2
+    echo "[dry-run] ${SUB_ENV:-}bash scripts/submit.sh ${job} --parsable --kill-on-invalid-dep=yes $([[ $# -gt 0 ]] && printf '%q ' "$@")" >&2
   else
     id=$(env ${SUB_ENV:-} bash scripts/submit.sh "$job" --parsable --kill-on-invalid-dep=yes "$@")
     id="${id%%;*}"
@@ -120,6 +148,36 @@ sub() {
 }
 
 dep() { [[ -n "${1:-}" ]] && echo "--dependency=afterok:$1" || true; }
+# depall <id>... : one afterok over every non-empty id (empty -> nothing)
+depall() {
+  local ids=() x
+  for x in "$@"; do [[ -n "$x" ]] && ids+=("$x"); done
+  [[ ${#ids[@]} -gt 0 ]] && echo "--dependency=afterok:$(IFS=:; echo "${ids[*]}")" || true
+}
+
+# --- --gptq-all: one build + one PPL check per missing GPTQ checkpoint --------------
+# Fills GATE["model:bits"]="<build id> <ppl id>" for the cells it submits.
+declare -A GATE=()
+GPTQ_ALL_CELLS="${GPTQ_CELLS:-llama7b:4 llama7b:3 qwen7b:4 qwen7b:3 mistral7b-v02:4 phi3:4 phi3:3}"
+gptq_all_submit() {  # gptq_all_submit <dependency id or empty>
+  local up="$1" cell m b ck bid
+  for cell in $GPTQ_ALL_CELLS; do
+    m="${cell%%:*}"; b="${cell##*:}"
+    ck="${QM_ROOT:-$HOME/quantized_models}/gptq/${m}-gptq${b}bit-g128"
+    if [[ -f "${ck}/config.json" ]]; then
+      echo "GPTQ ${m} gptq${b}: checkpoint present, not rebuilding (${ck})" >&2
+      continue
+    fi
+    sub "GPTQ build ${m} gptq${b} [${GPTQ_BACKEND}]" scripts/quantize_gptq.sbatch $(dep "$up") \
+      --time=2:00:00 --job-name="sq_gptq_${m}_${b}" \
+      --export="ALL,CONDA_ENV=${GPTQ_ENV},GPTQ_BACKEND=${GPTQ_BACKEND}" -- "$m" "$b" 128
+    bid="$SUB_ID"
+    sub "PPL check ${m} gptq${b} vs paper" scripts/regime_sweep/wikitext_ppl_rebuilt.sbatch \
+      "$(dep "$bid")" --job-name="sq_ppl_${m}_${b}" \
+      --export="ALL,EXP_MODEL=${m},EXP_QUANT=gptq${b},PPL_TAG=${PPL_TAG:-rebuilt},WTPPL_FP32=$([[ $b == 4 ]] && echo 1 || echo 0)"
+    GATE["${m}:${b}"]="${bid} ${SUB_ID}"
+  done
+}
 
 # --- 1. setup -------------------------------------------------------------------
 SETUP=""
@@ -133,6 +191,16 @@ if [[ $SKIP_SETUP -eq 0 ]]; then
   SETUP="$SUB_ID"
 fi
 D="$(dep "$SETUP")"
+
+if [[ $GPTQ_ONLY -eq 1 && $GPTQ_ALL -eq 1 ]]; then
+  gptq_all_submit "$SETUP"
+  echo ""
+  echo "job id     job                                log"
+  [[ ${#LIST[@]} -gt 0 ]] && printf '%s\n' "${LIST[@]}" || echo "(nothing to submit: every checkpoint is present)"
+  echo ""
+  echo "watch: squeue -u \$USER"
+  exit 0
+fi
 
 H12="--time=12:00:00"
 
@@ -148,13 +216,22 @@ else
   # --- 2. full queue in priority order ------------------------------------------
   sub "X3 shuffled-label probe"    scripts/signal_geometry/probe_accuracy_shuffled_llama.sbatch $D
   sub "X4 refit floor, 100 splits" scripts/boundary/probe_refit_control_splits100_llama.sbatch $D
-  sub "X2 leakage, 14 quant cells" scripts/boundary/probe_leakage_control_quant.sbatch $D
+  X2_GPTQ_CELLS="llama7b:gptq4 llama7b:gptq3 qwen7b:gptq4 qwen7b:gptq3 mistral7b-v02:gptq4 phi3:gptq4 phi3:gptq3"
+  if [[ $GPTQ_ALL -eq 1 ]]; then
+    # split: non-GPTQ cells now; GPTQ cells after their rebuild + PPL (below)
+    sub "X2 leakage, 7 non-GPTQ cells" scripts/boundary/probe_leakage_control_quant.sbatch $D \
+      "--export=ALL,CELLS=llama7b:awq llama7b:aqlm2 qwen7b:awq mistral7b-v02:awq mistral7b-v02:aqlm2 phi3:awq phi3:aqlm2"
+  else
+    sub "X2 leakage, 14 quant cells" scripts/boundary/probe_leakage_control_quant.sbatch $D
+  fi
   sub "held-out llama3-8b aqlm2"   scripts/headline/headline_eval_llama3_8b_aqlm2_heldout.sbatch $D $H12
 
   # GPTQ-4 build (skipped if the checkpoint already exists), then X1 after it
   GPTQ=""
   CKPT="${QM_ROOT:-$HOME/quantized_models}/gptq/llama7b-gptq4bit-g128"
-  if [[ $SKIP_GPTQ -eq 0 && ! -f "${CKPT}/config.json" ]]; then
+  if [[ $GPTQ_ALL -eq 1 ]]; then
+    gptq_all_submit "$SETUP"
+  elif [[ $SKIP_GPTQ -eq 0 && ! -f "${CKPT}/config.json" ]]; then
     if [[ $DRY -eq 1 ]]; then
       echo "[dry-run] DEPENDENCY=${SETUP:+afterok:$SETUP} MODELS=llama7b BITS=4 bash scripts/quantize_gptq_all.sh" >&2
       DRY_N=$((DRY_N + 1)); GPTQ="DRY${DRY_N}"
@@ -172,8 +249,20 @@ else
       echo "         wait for it, or re-submit X1 after it finishes." >&2
     fi
   fi
-  X1DEP="$(dep "${GPTQ:-$SETUP}")"
+  if [[ $GPTQ_ALL -eq 1 ]]; then
+    # shellcheck disable=SC2086
+    X1DEP="$(depall "$SETUP" ${GATE["llama7b:4"]:-})"
+  else
+    X1DEP="$(dep "${GPTQ:-$SETUP}")"
+  fi
   sub "X1 XSTest llama gptq4"      scripts/headline/headline_eval_llama_gptq4_xstest.sbatch $X1DEP $H12
+
+  if [[ $GPTQ_ALL -eq 1 ]]; then
+    # shellcheck disable=SC2086
+    X2DEP="$(depall "$SETUP" ${GATE[*]:-})"
+    sub "X2 leakage, 7 GPTQ cells"   scripts/boundary/probe_leakage_control_quant.sbatch $X2DEP \
+      "--export=ALL,CELLS=${X2_GPTQ_CELLS}"
+  fi
 
   for step in perproj depth pm; do
     sub "Task 3 localization ${step}" scripts/localization/localization_with_flags.sbatch $D \

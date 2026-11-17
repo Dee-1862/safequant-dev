@@ -17,15 +17,18 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 #   sbatch scripts/quantize_gptq.sbatch mistral7b-v02
 #   sbatch scripts/quantize_gptq.sbatch qwen7b
 # Optional 2nd/3rd args override bits/group_size:  sbatch ... phi3 4 128
+# GPTQ_BACKEND=autogptq (default; run in the sq_autogptq env, CONDA_ENV=$AGENV) or
+# gptqmodel (run in sq_clean). scripts/quantize_gptq_all.sh picks the env to match.
 
 set -euo pipefail
 
 MODEL="${1:-llama7b}"
 BITS="${2:-4}"
 GROUP="${3:-128}"
+export GPTQ_BACKEND="${GPTQ_BACKEND:-autogptq}"
 
-echo "=== GPTQ quantize ${MODEL} (bits=${BITS}, group=${GROUP}) | $(date) ==="
+echo "=== GPTQ quantize ${MODEL} (bits=${BITS}, group=${GROUP}, backend=${GPTQ_BACKEND}) | $(date) ==="
 python -u scripts/quantize_gptq.py \
   --model "${MODEL}" --bits "${BITS}" --group_size "${GROUP}" \
-  --n_calib 128 --seed 42
+  --n_calib 128 --seqlen 2048 --seed 42 --backend "${GPTQ_BACKEND}"
 echo "=== done ${MODEL} | $(date) ==="

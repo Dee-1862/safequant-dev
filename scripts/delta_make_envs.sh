@@ -20,6 +20,9 @@
 #                with a Bridges `conda env export` if you have one.
 #   sq_autogptq  auto-gptq 0.7.1, transformers 4.44.2, torch 2.2.2, numpy<2
 #                (auto-gptq 0.7.1 does not support newer transformers/torch).
+#                On aarch64 (DeltaAI GH200) there is no CUDA torch 2.2.2, so it uses
+#                torch 2.7.1+cu128 and builds auto-gptq 0.7.1 from source with
+#                BUILD_CUDA_EXT=0 (no inference kernels; quantization is plain torch).
 # Every pip install runs under a constraints file, so a dependency can never move torch,
 # transformers or numpy. Each env ends with an import + version check that fails loudly,
 # and `pip freeze` is saved to scripts/logs/env_<name>_freeze.txt.
@@ -164,26 +167,53 @@ make_autogptq() {
   make_prefix "${AGENV}" 3.10
   conda activate "${AGENV}"
   local C="${TMPDIR}/sq_autogptq_constraints.txt"
-  cat > "$C" <<'EOF'
+  local AG_TORCH
+  if [[ "$(uname -m)" == "aarch64" ]]; then
+    # DeltaAI (GH200): no aarch64 CUDA torch exists before 2.7.0 (first on the cu128
+    # index), and auto-gptq 0.7.1 publishes only an sdist. Build auto-gptq from source
+    # with BUILD_CUDA_EXT=0 (pure-python; quantization itself is torch code, the skipped
+    # extensions are inference kernels). peft pinned to a release contemporary with
+    # transformers 4.44 because auto_gptq imports peft at import time.
+    AG_TORCH="2.7.1"
+    cat > "$C" <<'EOF'
+torch==2.7.1
+transformers==4.44.2
+numpy<2
+huggingface_hub<1.0
+peft==0.12.*
+EOF
+    python -m pip install -c "$C" "torch==${AG_TORCH}" --index-url https://download.pytorch.org/whl/cu128
+    python -m pip install -c "$C" "transformers==4.44.2" "numpy<2" "peft==0.12.*" \
+      "datasets" "pandas" "sentencepiece" "accelerate" "safetensors" "rouge" "gekko" "tqdm"
+    BUILD_CUDA_EXT=0 python -m pip install -c "$C" --no-build-isolation --no-binary auto-gptq \
+      "auto-gptq==0.7.1"
+  else
+    AG_TORCH="2.2.2"
+    cat > "$C" <<'EOF'
 torch==2.2.2
 transformers==4.44.2
 numpy<2
 EOF
-  # auto-gptq 0.7.1's PyPI wheel is built against torch 2.2 + CUDA 12.1
-  python -m pip install -c "$C" "torch==2.2.2" --index-url https://download.pytorch.org/whl/cu121
-  python -m pip install -c "$C" "transformers==4.44.2" "numpy<2" "auto-gptq==0.7.1" \
-    "datasets" "pandas" "sentencepiece" "accelerate"
+    # auto-gptq 0.7.1's PyPI wheel is built against torch 2.2 + CUDA 12.1
+    python -m pip install -c "$C" "torch==2.2.2" --index-url https://download.pytorch.org/whl/cu121
+    python -m pip install -c "$C" "transformers==4.44.2" "numpy<2" "auto-gptq==0.7.1" \
+      "datasets" "pandas" "sentencepiece" "accelerate"
+  fi
 
-  python - <<'PY'
-import sys
+  SQ_AG_TORCH="${AG_TORCH}" python - <<'PY'
+import os, platform, sys
 import torch, transformers, numpy, auto_gptq
 from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig  # noqa: F401
+want_torch = os.environ["SQ_AG_TORCH"]
 got = {"torch": torch.__version__, "transformers": transformers.__version__,
        "numpy": numpy.__version__, "auto_gptq": auto_gptq.__version__}
 for k, v in got.items():
     print(f"  {k:14s} {v}")
+print(f"  arch {platform.machine()}  torch CUDA build: {torch.version.cuda}"
+      f"  (cuda available here: {torch.cuda.is_available()}; False is expected on a login node)")
 bad = []
-if not got["torch"].startswith("2.2.2"): bad.append("torch != 2.2.2")
+if not got["torch"].startswith(want_torch): bad.append(f"torch != {want_torch}")
+if torch.version.cuda is None: bad.append("torch is a CPU-only build")
 if got["transformers"] != "4.44.2": bad.append("transformers != 4.44.2")
 if int(got["numpy"].split(".")[0]) >= 2: bad.append("numpy >= 2")
 if not got["auto_gptq"].startswith("0.7.1"): bad.append("auto-gptq != 0.7.1")
