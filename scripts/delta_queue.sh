@@ -21,8 +21,11 @@
 # --n_eval 8 --n_reasoning 8 and the tag suffix _smoke (SMOKE_TAG overrides), first
 # cell/seed only. X1's smoke step fails fast if the GPTQ-4 checkpoint is missing.
 #
-# Needs .env: SLURM_ACCOUNT, SLURM_PARTITION (GPU), optional SLURM_CPU_PARTITION
-# (setup runs there; else on the GPU partition), QM_ROOT, HF_HOME, AGENV (GPTQ build).
+# Needs .env: SLURM_ACCOUNT + SLURM_PARTITION (GPU jobs), QM_ROOT, HF_HOME, AGENV (GPTQ
+# build). Optional: SLURM_CPU_PARTITION + SLURM_CPU_ACCOUNT -> the setup job runs on the
+# CPU partition under the CPU account (Delta CPU and GPU allocations are separate
+# accounts). Setting the partition without the account is an error; with neither, setup
+# runs on the GPU partition under SLURM_ACCOUNT.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -44,6 +47,14 @@ done
 if [[ $SMOKE -eq 1 ]]; then SKIP_SETUP=1; SKIP_GPTQ=1; fi
 if [[ $DRY -eq 0 && -z "${SLURM_ACCOUNT:-}" ]]; then
   echo "ERROR: set SLURM_ACCOUNT in .env (see .env.example)." >&2; exit 1
+fi
+# Checked even in --dry-run, before anything is submitted.
+if [[ $SKIP_SETUP -eq 0 && -n "${SLURM_CPU_PARTITION:-}" && -z "${SLURM_CPU_ACCOUNT:-}" ]]; then
+  echo "ERROR: SLURM_CPU_PARTITION=${SLURM_CPU_PARTITION} is set but SLURM_CPU_ACCOUNT is not." >&2
+  echo "       Delta's CPU partitions need the CPU allocation account (see 'accounts';" >&2
+  echo "       usually ends in -delta-cpu). Set SLURM_CPU_ACCOUNT in .env, or unset" >&2
+  echo "       SLURM_CPU_PARTITION to run setup on the GPU partition. Nothing was submitted." >&2
+  exit 1
 fi
 
 LIST=()     # "<id>  <label>  <log>" rows for the summary
@@ -79,7 +90,7 @@ dep() { [[ -n "${1:-}" ]] && echo "--dependency=afterok:$1" || true; }
 SETUP=""
 if [[ $SKIP_SETUP -eq 0 ]]; then
   if [[ -n "${SLURM_CPU_PARTITION:-}" ]]; then
-    SUB_ENV="SLURM_PARTITION=${SLURM_CPU_PARTITION} SQ_GPUS_PER_NODE=0 " \
+    SUB_ENV="SLURM_ACCOUNT=${SLURM_CPU_ACCOUNT} SLURM_PARTITION=${SLURM_CPU_PARTITION} SQ_GPUS_PER_NODE=0 " \
       sub "delta_setup (cpu)" scripts/tests/delta_setup.sbatch
   else
     sub "delta_setup (gpu partition)" scripts/tests/delta_setup.sbatch

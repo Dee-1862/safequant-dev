@@ -113,6 +113,47 @@ sbatch --account="$SLURM_ACCOUNT" scripts/headline/headline_eval_llama.sbatch
 
 Jobs source `scripts/_env.sh`, which loads `.env` when present.
 
+## Run order on NCSA Delta (reviewer runs)
+
+Do these in order, from the repo root on a Delta login node, after filling in `.env`
+(Delta block in `.env.example` / `docs/ENV.md`: `SLURM_ACCOUNT`, `SLURM_PARTITION`,
+`HF_HOME`, `QM_ROOT`, `CONDA_ENV`, `AGENV`, `CONDA_SH` or `MODULES`; optionally
+`SLURM_CPU_PARTITION` + `SLURM_CPU_ACCOUNT` for the setup job).
+
+1. **Make the conda envs** (once). Creates `sq_clean` at `$CONDA_ENV` and `sq_autogptq` at
+   `$AGENV` on the project filesystem, checks versions, saves `pip freeze` to `scripts/logs/`:
+   ```bash
+   bash scripts/delta_make_envs.sh
+   ```
+2. **Setup: download everything** (once; about 200 GB). Log in to Hugging Face first
+   (gated Llama/Mistral). Submits `scripts/tests/delta_setup.sbatch` on its own:
+   ```bash
+   huggingface-cli login
+   bash scripts/delta_queue.sh --dry-run          # check the whole plan; submits nothing
+   # GPU partition/account from .env:
+   bash scripts/submit.sh scripts/tests/delta_setup.sbatch
+   # or on the CPU partition (needs both CPU variables in .env; load .env into the shell first):
+   set -a; source .env; set +a
+   SLURM_ACCOUNT="$SLURM_CPU_ACCOUNT" SLURM_PARTITION="$SLURM_CPU_PARTITION" SQ_GPUS_PER_NODE=0 \
+     bash scripts/submit.sh scripts/tests/delta_setup.sbatch
+   ```
+   Wait for it to finish (`squeue -u $USER`); it fails loudly if any model or dataset is missing.
+3. **Smoke test** (about 1 h): every reviewer job at `--n_eval 8 --n_reasoning 8`, first
+   cell/seed only, outputs suffixed `_smoke`. Check each `scripts/logs/smoke_*` log:
+   ```bash
+   bash scripts/delta_queue.sh --smoke
+   ```
+4. **Full queue**, skipping the setup that already ran. Jobs are submitted in priority
+   order (X3, X4, X2, held-out, GPTQ-4 build -> X1, Task 3, Task 4, X5) with Slurm
+   dependencies; the script prints every job id and log path:
+   ```bash
+   bash scripts/delta_queue.sh --skip-setup
+   ```
+
+Results appear in `python scripts/report_all.py` (section 5) and `PAPER_TABLES.md`
+(`python scripts/paper_values.py --md`) as each JSON lands; missing runs show as
+"missing". Localization intervals: `python scripts/localization_intervals.py`.
+
 ## Sanity check before any GPU run
 
 ```bash

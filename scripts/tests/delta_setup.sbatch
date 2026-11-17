@@ -12,10 +12,10 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # held-out model, judge and dataset the reviewer runs need. No GPU needed.
 #
 # Submit on the cheap CPU partition when .env names one:
-#   SLURM_PARTITION="$SLURM_CPU_PARTITION" SQ_GPUS_PER_NODE=0 \
-#     bash scripts/submit.sh scripts/tests/delta_setup.sbatch
-# (scripts/delta_queue.sh does this automatically; without SLURM_CPU_PARTITION it
-# falls back to the GPU partition from .env.)
+#   SLURM_ACCOUNT="$SLURM_CPU_ACCOUNT" SLURM_PARTITION="$SLURM_CPU_PARTITION" \
+#     SQ_GPUS_PER_NODE=0 bash scripts/submit.sh scripts/tests/delta_setup.sbatch
+# (scripts/delta_queue.sh does this automatically and refuses if SLURM_CPU_PARTITION
+# is set without SLURM_CPU_ACCOUNT; with neither it uses the GPU partition/account.)
 #
 # Steps: (0) HF login check  (1) fetch_checkpoints.sh -> QM_ROOT
 #        (2+3) scripts/delta_prefetch.py -> HF_HOME (held-out FP+AQLM, judge, datasets)

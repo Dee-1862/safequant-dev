@@ -90,9 +90,12 @@ and the Delta user guide:
 # .env
 SLURM_ACCOUNT=<from `accounts`; GPU accounts usually end in -delta-gpu>
 SLURM_PARTITION=gpuA100x4        # gpuA40x4: cheaper, fine for 8B fp16. Max time 48 h
+SLURM_CPU_PARTITION=cpu          # optional: setup job (downloads) runs here
+SLURM_CPU_ACCOUNT=<from `accounts`; CPU accounts usually end in -delta-cpu>  # required with SLURM_CPU_PARTITION
 HF_HOME=/path/on/project/or/work/fs/hf_cache      # large filesystem, not $HOME
 QM_ROOT=/path/on/project/or/work/fs/quantized_models
-CONDA_ENV=/path/to/conda_envs/sq_clean
+CONDA_ENV=/path/to/conda_envs/sq_clean           # created by scripts/delta_make_envs.sh
+AGENV=/path/to/conda_envs/sq_autogptq            # GPTQ generation env (same script)
 CONDA_SH=                        # empty: conda comes from `module load`
 MODULES=                         # space-separated, e.g. an anaconda module
 CUDA_HOME=                       # only exported if set
