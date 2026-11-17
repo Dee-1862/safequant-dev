@@ -240,9 +240,12 @@ def assert_new_result(calling_file, cfg):
         - None (raises FileExistsError if the output already exists)
     """
     path = result_path(calling_file, cfg)
-    for p in (path, path.with_name(path.stem + "_raw" + path.suffix)):
-        if p.exists():
-            raise FileExistsError(
-                f"{p} already exists; refusing to overwrite. Use a different --tag/seed "
-                f"or move the old file yourself."
-            )
+    if path.exists():
+        raise FileExistsError(
+            f"{path} already exists; refusing to overwrite. Use a different --tag/seed "
+            f"or move the old file yourself."
+        )
+    raw = path.with_name(path.stem + "_raw" + path.suffix)
+    if raw.exists():
+        # Left over from a crashed run (the raw sidecar is written at start): safe to reuse.
+        print(f"WARNING: stale raw sidecar {raw} from an earlier incomplete run; it will be overwritten.")

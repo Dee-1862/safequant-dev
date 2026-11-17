@@ -14,9 +14,9 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # around the headline numbers. Sampling is from the full WildJailbreak eval pool;
 # global seed stays 42. Existing default runs are untouched.
 #
-# Cells: the two Llama AQLM-2 cells. DEFAULT = llama7b + llama3-8b (the held-out
-# checkpoint; run it only after the held-out check has results). Override with e.g.
-#   CELLS="llama7b" bash scripts/submit.sh scripts/regime_sweep/subset_seeds_llama_aqlm2.sbatch
+# Cells: the two significant AQLM-2 cells in paired_screen: llama7b + phi3 (default).
+# Override with e.g.
+#   CELLS="llama7b" bash scripts/submit.sh scripts/regime_sweep/subset_seeds_aqlm2.sbatch
 # Set ALSO_RESTORATION=1 to additionally run restoration_sweep per seed (slower).
 #
 # Output (new names, never overwritten; the job aborts a run if its file exists):
@@ -25,7 +25,7 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # 24 h is the cap for a full 2 cells x 5 seeds run; split it by CELLS/SEEDS if needed
 # (Delta's limit is 48 h).
 
-CELLS="${CELLS:-llama7b llama3-8b}"
+CELLS="${CELLS:-llama7b phi3}"
 SEEDS="${SEEDS:-1 2 3 4 5}"
 
 echo "=== X5 prompt-subset runs | cells=${CELLS} seeds=${SEEDS} | $(date) ==="
