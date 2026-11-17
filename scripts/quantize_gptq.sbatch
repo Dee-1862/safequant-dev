@@ -31,7 +31,7 @@ export GPTQ_BACKEND="${GPTQ_BACKEND:-autogptq}"
 # slowed from ~2 min to over an hour. Affects speed only.
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-1}}"
 export MKL_NUM_THREADS="${MKL_NUM_THREADS:-${OMP_NUM_THREADS}}"
-echo "  threads: OMP_NUM_THREADS=${OMP_NUM_THREADS} (cpus-per-task=${SLURM_CPUS_PER_TASK:-unset})  GPTQ_FAST_PACK=${GPTQ_FAST_PACK:-1}"
+echo "  threads: OMP_NUM_THREADS=${OMP_NUM_THREADS} (cpus-per-task=${SLURM_CPUS_PER_TASK:-unset})"
 
 echo "=== GPTQ quantize ${MODEL} (bits=${BITS}, group=${GROUP}, backend=${GPTQ_BACKEND}) | $(date) ==="
 # GPTQ_OUTPUT_DIR: build into another folder (e.g. an unmodified-packing reference);
