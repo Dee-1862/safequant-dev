@@ -57,22 +57,22 @@ ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell ab
 |---|---|---:|---|---:|
 | Llama-3.1-8B | AWQ-4 | -3.5 | [-8.0, 1.0] | 1.0 |
 | Llama-3.1-8B | GPTQ-4 | -15.0 | [-21.5, -8.5] | 0.0002863359801210663 |
-| Llama-3.1-8B | AQLM-2 | 23.0 | [15.5, 30.5] | 1.9125048561675776e-07 |
-| Llama-3.1-8B | GPTQ-3 | 4.5 | [-3.0, 12.0] | 1.0 |
+| Llama-3.1-8B | AQLM-2 | 23.0 | [16.0, 30.0] | 1.9125048561675776e-07 |
+| Llama-3.1-8B | GPTQ-3 | 4.5 | [-3.0, 11.5] | 1.0 |
 | Llama-3.1-8B | GPTQ-2 | -24.0 | [-33.0, -15.0] | 1.0132045332383833e-05 |
 | Qwen-2.5-7B | AWQ-4 | 3.0 | [-3.0, 9.0] | 1.0 |
-| Qwen-2.5-7B | GPTQ-4 | -2.0 | [-7.5, 4.0] | 1.0 |
-| Qwen-2.5-7B | GPTQ-3 | 2.0 | [-5.0, 9.5] | 1.0 |
-| Qwen-2.5-7B | GPTQ-2 | -51.5 | [-59.5, -43.5] | 1.0824427924823939e-23 |
+| Qwen-2.5-7B | GPTQ-4 | -2.0 | [-8.0, 4.0] | 1.0 |
+| Qwen-2.5-7B | GPTQ-3 | 2.0 | [-5.5, 9.5] | 1.0 |
+| Qwen-2.5-7B | GPTQ-2 | -51.5 | [-59.5, -43.0] | 1.0824427924823939e-23 |
 | Mistral-7B-v0.2 | AWQ-4 | 0.0 | [-5.5, 5.5] | 1.0 |
 | Mistral-7B-v0.2 | GPTQ-4 | -5.0 | [-13.0, 3.0] | 1.0 |
-| Mistral-7B-v0.2 | AQLM-2 | -6.5 | [-13.5, 1.0] | 1.0 |
+| Mistral-7B-v0.2 | AQLM-2 | -6.5 | [-14.0, 1.0] | 1.0 |
 | Mistral-7B-v0.2 | GPTQ-3 | -72.0 | [-78.0, -65.5] | 1.7039789326189776e-42 |
-| Mistral-7B-v0.2 | GPTQ-2 | -64.0 | [-71.0, -56.5] | 5.804811509551235e-35 |
-| Phi-3-mini | AWQ-4 | -6.5 | [-12.0, -1.0] | 0.4505555066280067 |
+| Mistral-7B-v0.2 | GPTQ-2 | -64.0 | [-71.0, -57.0] | 5.804811509551235e-35 |
+| Phi-3-mini | AWQ-4 | -6.5 | [-12.5, -1.0] | 0.4505555066280067 |
 | Phi-3-mini | GPTQ-4 | 3.0 | [-2.5, 8.5] | 1.0 |
 | Phi-3-mini | AQLM-2 | 20.0 | [12.5, 27.5] | 1.0132045332383833e-05 |
-| Phi-3-mini | GPTQ-3 | -4.5 | [-11.5, 2.5] | 1.0 |
+| Phi-3-mini | GPTQ-3 | -4.5 | [-11.0, 2.0] | 1.0 |
 | Phi-3-mini | GPTQ-2 | -28.0 | [-36.5, -19.5] | 1.1321691505511739e-08 |
 
 ## tab:f3a_proj (Llama-3.1-8B)
@@ -248,3 +248,55 @@ ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell ab
 | write (LR-QAT trained) | 3.0 | 6.0 | 45.0 | yes |
 | write (PTQ untrained) | 4.0 | 63.5 | 47.0 | yes |
 | write (LR-QAT trained) | 4.0 | 2.5 | 47.0 | yes |
+
+## reviewer runs (X1, held-out, X3, X4, X5)
+
+Read only from the new result names; 'missing' until the GPU job lands.
+
+
+### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)
+
+missing: `outputs/headline/headline_llama_gptq4_x1_n200.json`
+
+### Held-out AQLM-2 screen
+
+| Model | FP ASR/ARC | Quant ASR/ARC | dASR | 95% CI | p (McNemar) | Source |
+|---|---|---|---:|---|---:|---|
+| llama3-8b | missing | | | | | `outputs/headline/headline_llama3-8b_aqlm2_heldout.json` |
+| mistral-nemo | missing | | | | | `outputs/headline/headline_mistral-nemo_aqlm2_heldout.json` |
+
+### X3: shuffled-label probe control (expect ~0.5)
+
+| Cell | FP mean acc | FP min-max | Quant mean acc | Quant min-max | max abs dev from 0.5 |
+|---|---:|---|---:|---|---:|
+| llama/aqlm2 | missing | `outputs/signal_geometry/probe_accuracy_llama_aqlm2_shuffled.json` | | | |
+| phi3/aqlm2 | missing | `outputs/signal_geometry/probe_accuracy_phi3_aqlm2_shuffled.json` | | | |
+
+### X4: 100-split FP-vs-FP refit floor
+
+| Model | splits | refit distance p95 (pooled) | cos floor p5 | cos median | per-layer p95 (median) |
+|---|---:|---:|---:|---:|---:|
+| llama | missing | `outputs/boundary/probe_refit_control_llama_splits100.json` | | | |
+| phi3 | missing | `outputs/boundary/probe_refit_control_phi3_splits100.json` | | | |
+
+### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)
+
+| Cell | seed | dASR (paired) | 95% CI | damage | read rec | write rec | both rec |
+|---|---:|---:|---|---:|---:|---:|---:|
+| llama | 1 | missing | `outputs/headline/headline_llama_aqlm2_subset1.json` | | | | |
+| llama | 2 | missing | `outputs/headline/headline_llama_aqlm2_subset2.json` | | | | |
+| llama | 3 | missing | `outputs/headline/headline_llama_aqlm2_subset3.json` | | | | |
+| llama | 4 | missing | `outputs/headline/headline_llama_aqlm2_subset4.json` | | | | |
+| llama | 5 | missing | `outputs/headline/headline_llama_aqlm2_subset5.json` | | | | |
+| phi3 | 1 | missing | `outputs/headline/headline_phi3_aqlm2_subset1.json` | | | | |
+| phi3 | 2 | missing | `outputs/headline/headline_phi3_aqlm2_subset2.json` | | | | |
+| phi3 | 3 | missing | `outputs/headline/headline_phi3_aqlm2_subset3.json` | | | | |
+| phi3 | 4 | missing | `outputs/headline/headline_phi3_aqlm2_subset4.json` | | | | |
+| phi3 | 5 | missing | `outputs/headline/headline_phi3_aqlm2_subset5.json` | | | | |
+
+Across seeds (present seeds only):
+
+| Cell | Metric | seeds | mean | sd | min | max |
+|---|---|---:|---:|---:|---:|---:|
+| llama | missing | 0 | | | | |
+| phi3 | missing | 0 | | | | |

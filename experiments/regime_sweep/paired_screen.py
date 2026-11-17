@@ -17,6 +17,10 @@ import json
 from pathlib import Path
 
 from core.manifest import RunConfig, find_result
+try:
+    from core.seeds import DEFAULT_SEED   # imports torch
+except ModuleNotFoundError:               # torch-free machines: same value
+    DEFAULT_SEED = 42
 from core.stats import paired_delta_asr, holm_bonferroni
 
 MODELS = ["llama", "qwen", "mistral", "phi3"]
@@ -84,7 +88,8 @@ def sweep(cells, alpha=0.05, variant=None):
             continue
         try:
             fp, q = load_labels(path, quantizer)
-            st = paired_delta_asr(fp, q)
+            # Appendix protocol: 2000 paired-bootstrap resamples, seed 42.
+            st = paired_delta_asr(fp, q, n_boot=2000, seed=DEFAULT_SEED)
         except KeyError as e:
             row["status"] = f"NO-LABELS: {e}"
             results.append(row)

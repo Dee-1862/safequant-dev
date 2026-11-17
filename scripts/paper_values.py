@@ -842,7 +842,23 @@ def build():
         "tab:dequant": build_dequant(),
         "tab:leakage": build_leakage(),
         "table:stats": build_stats(),
+        "reviewer_runs": build_reviewer_runs(),
     }
+
+
+def build_reviewer_runs():
+    """
+    Reviewer-item runs (X1, held-out AQLM-2, X3, X4, X5), read only from their new
+    result names; each entry is status "missing" until its JSON exists.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - block (dict): See scripts/reviewer_runs.py
+    """
+    from scripts.reviewer_runs import collect
+    return collect()
 
 
 def fmt_cell(x):
@@ -1017,6 +1033,9 @@ def as_markdown(pv):
         lines.append(
             f"| {row['role']} | {fmt_cell(row.get('bits'))} | {fmt_cell(row.get('asr'))} | "
             f"{fmt_cell(row.get('arc'))} | {fmt_cell(row.get('coherent'))} |")
+
+    from scripts.reviewer_runs import to_markdown as reviewer_markdown
+    lines.append(reviewer_markdown(pv["reviewer_runs"]))
 
     return "\n".join(lines)
 

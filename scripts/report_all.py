@@ -4,8 +4,15 @@
 import glob
 import json
 import os
+import sys
+from pathlib import Path
 
 import numpy as np
+
+# Make `experiments.*` importable when run as `python scripts/report_all.py`.
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 
 def latest(pat):
@@ -101,6 +108,14 @@ if hp:
               f"(straddles 0 -> read>write NOT significant, matches read_vs_write p)")
 else:
     print("  (no headline JSON found)")
+
+# --- 5. Reviewer-item runs (new result names only) -----------------------------
+hr("5. REVIEWER RUNS  (X1 XSTest, held-out AQLM-2, X3, X4, X5; 'missing' until run)")
+try:
+    from scripts.reviewer_runs import print_report
+    print_report()
+except Exception as e:
+    print(f"  reviewer-run report unavailable ({type(e).__name__}: {e})")
 
 print("\n" + "=" * 72)
 print("  Also finalized (not in JSONs): AWQ group sizes all g128 / INT4 / GEMM,")
