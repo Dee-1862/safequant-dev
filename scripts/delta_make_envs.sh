@@ -33,9 +33,16 @@
 # "driver too old" / CUDA driver error, reinstall torch for sq_clean from an older-CUDA
 # wheel index:
 #   TORCH_INDEX=https://download.pytorch.org/whl/cu126 bash scripts/delta_make_envs.sh clean
-# TORCH_INDEX     wheel index for torch in sq_clean (default: PyPI, whose 2.9 wheels are
-#                 CUDA 12.8). Setting it force-reinstalls torch from that index.
-# TORCH_VERSION   torch pin for sq_clean (default 2.9.*). torch 2.9 wheels exist for cu126,
+# TORCH_INDEX     wheel index for torch in sq_clean (default: PyPI, whose x86 2.9 wheels are
+#                 CUDA 12.8; on aarch64 the default is the cu128 index, because PyPI's
+#                 aarch64 torch is CPU-only). Setting it force-reinstalls torch from that index.
+# TORCH_VERSION   torch pin for sq_clean (default 2.9.*; 2.9.1 on aarch64).
+# GPTQMODEL_VERSION  default 5.7.0, the newest gptqmodel whose requirements accept
+#                 transformers 4.57 (6.0+ needs transformers>=5). Installed with its
+#                 dependencies under a constraints file built from requirements.txt, so it
+#                 cannot move any pinned package; a conflict fails the install.
+# The check fails if torch is a CPU-only build (torch.version.cuda is None).
+#                 torch 2.9 wheels exist for cu126,
 #                 cu128, cu130 only; the cu124 index stops at torch 2.6 (cu121 at 2.5), so
 #                 TORCH_INDEX=.../cu124 also needs TORCH_VERSION=2.6.* (outside the
 #                 recorded stack; check transformers 4.57 / gptqmodel still import).
@@ -93,14 +100,31 @@ make_clean() {
   make_prefix "${CONDA_ENV}" 3.10
   conda activate "${CONDA_ENV}"
   local TV="${TORCH_VERSION:-2.9.*}"
+  if [[ "$(uname -m)" == "aarch64" ]]; then
+    # PyPI's aarch64 torch wheels are CPU-only; the cu128 index has CUDA aarch64 builds.
+    TV="${TORCH_VERSION:-2.9.1}"
+    TORCH_INDEX="${TORCH_INDEX:-https://download.pytorch.org/whl/cu128}"
+  fi
+  local GV="${GPTQMODEL_VERSION:-5.7.0}"
   local C="${TMPDIR}/sq_clean_constraints.txt"
   printf 'torch==%s\ntransformers==4.57.*\nnumpy==2.2.*\n' "$TV" > "$C"
   # torch first. Default: PyPI (2.9 wheels bundle the CUDA 12.8 runtime).
   # TORCH_INDEX: a download.pytorch.org/whl/cuXXX index, force-reinstalled so it replaces
   # an existing torch build (the driver-error fix; see header).
   if [[ -n "${TORCH_INDEX:-}" ]]; then
-    echo "  torch==${TV} from ${TORCH_INDEX} (force-reinstall)"
-    python -m pip install -c "$C" --force-reinstall "torch==${TV}" \
+    # Skip when torch already is ${TV} built for this index's CUDA (cuXYZ -> X Y.Z), so a
+    # rerun does not re-download it or uninstall ~25 nvidia packages. Otherwise replace
+    # only torch itself (--no-deps), then let pip add any missing dependencies; this keeps
+    # uninstall churn low (dist-info renames have failed transiently on /work Lustre).
+    local want_cuda; want_cuda="$(echo "${TORCH_INDEX%/}" | sed -nE 's#.*/cu([0-9]+)([0-9])$#\1.\2#p')"
+    if SQ_TV="${TV%.\*}" SQ_CU="$want_cuda" python -c 'import os,torch,sys; sys.exit(0 if torch.__version__.startswith(os.environ["SQ_TV"]) and torch.version.cuda == os.environ["SQ_CU"] else 1)' 2>/dev/null; then
+      echo "  torch ${TV} (CUDA ${want_cuda}) already installed from ${TORCH_INDEX}; not reinstalling"
+    else
+      echo "  torch==${TV} from ${TORCH_INDEX} (replace torch only, then fill dependencies)"
+      python -m pip install -c "$C" --force-reinstall --no-deps "torch==${TV}" \
+        --index-url "${TORCH_INDEX}" --extra-index-url https://pypi.org/simple
+    fi
+    python -m pip install -c "$C" "torch==${TV}" \
       --index-url "${TORCH_INDEX}" --extra-index-url https://pypi.org/simple
   else
     python -m pip install -c "$C" "torch==${TV}"
@@ -112,31 +136,59 @@ make_clean() {
   # GPTQ loading backend used by core/model_loader.py via transformers GPTQConfig ->
   # optimum -> gptqmodel. GPTQMODEL_FORCE_BACKEND=torch is set there, so the CUDA
   # extensions are not needed: skip compiling them.
-  BUILD_CUDA_EXT=0 python -m pip install -c "$C" --no-build-isolation "gptqmodel==7.1.0"
+  # Constraints for gptqmodel = $C plus every requirements.txt pin (extras stripped), so
+  # its dependencies cannot move accelerate/safetensors/protobuf/...; a conflict errors out.
+  local CG="${TMPDIR}/sq_clean_constraints_all.txt"
+  { cat "$C"; sed -E 's/#.*//; s/\[[^]]*\]//; s/[[:space:]]+$//' "${TMPDIR}/sq_clean_requirements.txt" \
+      | grep -vE '^(\s*$|torch==|transformers==|numpy==)'; } > "$CG"
+  BUILD_CUDA_EXT=0 python -m pip install -c "$CG" --no-build-isolation "gptqmodel==${GV}"
   # (aqlm[gpu] for the 2-bit cells comes from requirements.txt above)
   # AutoAWQ is only needed for transformers' native AWQ loading; its own dependency pins
   # would downgrade transformers/torch, so install it without dependencies.
   python -m pip install --no-deps "autoawq==0.2.*"
 
-  SQ_TORCH_WANT="${TV%.\*}" python - <<'PY'
-import importlib, os, sys
+  SQ_TORCH_WANT="${TV%.\*}" SQ_GPTQMODEL_WANT="${GV}" python - <<'PY'
+import importlib, importlib.metadata as md, os, sys
 want = {"torch": os.environ["SQ_TORCH_WANT"], "transformers": "4.57", "bitsandbytes": "0.49",
-        "optimum": "2.2.0", "gptqmodel": "7.1.0"}
+        "optimum": "2.2.0", "gptqmodel": os.environ["SQ_GPTQMODEL_WANT"], "scipy": "1.15",
+        "torchao": "0.15"}
+# import name -> distribution name; versions come from package metadata because some
+# packages (optimum, aqlm) have no __version__ attribute
+dist = {"awq": "autoawq", "sklearn": "scikit-learn", "huggingface_hub": "huggingface-hub"}
+# same alias as core/model_loader.py _load_awq (transformers 4.57 renamed the class
+# autoawq 0.2.x imports); without it `import awq` fails on this stack by design
+import transformers.activations as _act
+if not hasattr(_act, "PytorchGELUTanh") and hasattr(_act, "GELUTanh"):
+    _act.PytorchGELUTanh = _act.GELUTanh
 bad = []
 for mod in ["torch", "transformers", "accelerate", "bitsandbytes", "datasets", "optimum",
-            "gptqmodel", "aqlm", "awq", "sklearn", "scipy", "pandas", "numpy", "tqdm",
-            "huggingface_hub", "sentencepiece"]:
+            "torchao", "gptqmodel", "aqlm", "awq", "sklearn", "scipy", "pandas", "numpy",
+            "tqdm", "huggingface_hub", "sentencepiece"]:
     try:
-        m = importlib.import_module(mod)
-        v = getattr(m, "__version__", "?")
+        importlib.import_module(mod)
+        v = md.version(dist.get(mod, mod))
         print(f"  {mod:16s} {v}")
         if mod in want and not str(v).startswith(want[mod]):
             bad.append(f"{mod} {v} (want {want[mod]})")
     except Exception as e:
         bad.append(f"{mod} import failed: {type(e).__name__}: {e}")
 import torch
-print(f"  torch CUDA build: {torch.version.cuda}  (cuda available here: {torch.cuda.is_available()};"
-      f" False is expected on a login node)")
+import platform
+print(f"  arch {platform.machine()}  torch CUDA build: {torch.version.cuda}"
+      f"  (cuda available here: {torch.cuda.is_available()}; False is expected on a login node)")
+if torch.version.cuda is None:
+    bad.append("torch is a CPU-only build (torch.version.cuda is None)")
+# core/model_loader.py forces act_group_aware=False through optimum into gptqmodel's
+# QuantizeConfig; make sure this gptqmodel has that field.
+try:
+    import dataclasses
+    from gptqmodel import QuantizeConfig
+    f = {x.name for x in dataclasses.fields(QuantizeConfig)}
+    print(f"  gptqmodel QuantizeConfig: act_group_aware={'act_group_aware' in f} desc_act={'desc_act' in f}")
+    if "desc_act" not in f:
+        bad.append("gptqmodel QuantizeConfig has no desc_act")
+except Exception as e:
+    bad.append(f"gptqmodel QuantizeConfig check failed: {type(e).__name__}: {e}")
 if bad:
     print("SQ_CLEAN CHECK FAILED:\n  " + "\n  ".join(bad)); sys.exit(1)
 print("sq_clean OK (imports + versions)")
@@ -181,10 +233,11 @@ transformers==4.44.2
 numpy<2
 huggingface_hub<1.0
 peft==0.12.*
+datasets==2.21.*
 EOF
     python -m pip install -c "$C" "torch==${AG_TORCH}" --index-url https://download.pytorch.org/whl/cu128
     python -m pip install -c "$C" "transformers==4.44.2" "numpy<2" "peft==0.12.*" \
-      "datasets" "pandas" "sentencepiece" "accelerate" "safetensors" "rouge" "gekko" "tqdm"
+      "datasets==2.21.*" "pandas" "sentencepiece" "accelerate" "safetensors" "rouge" "gekko" "tqdm"
     BUILD_CUDA_EXT=0 python -m pip install -c "$C" --no-build-isolation --no-binary auto-gptq \
       "auto-gptq==0.7.1"
   else
@@ -193,11 +246,12 @@ EOF
 torch==2.2.2
 transformers==4.44.2
 numpy<2
+datasets==2.21.*
 EOF
     # auto-gptq 0.7.1's PyPI wheel is built against torch 2.2 + CUDA 12.1
     python -m pip install -c "$C" "torch==2.2.2" --index-url https://download.pytorch.org/whl/cu121
     python -m pip install -c "$C" "transformers==4.44.2" "numpy<2" "auto-gptq==0.7.1" \
-      "datasets" "pandas" "sentencepiece" "accelerate"
+      "datasets==2.21.*" "pandas" "sentencepiece" "accelerate"
   fi
 
   SQ_AG_TORCH="${AG_TORCH}" python - <<'PY'
@@ -205,8 +259,10 @@ import os, platform, sys
 import torch, transformers, numpy, auto_gptq
 from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig  # noqa: F401
 want_torch = os.environ["SQ_AG_TORCH"]
+import datasets
 got = {"torch": torch.__version__, "transformers": transformers.__version__,
-       "numpy": numpy.__version__, "auto_gptq": auto_gptq.__version__}
+       "numpy": numpy.__version__, "auto_gptq": auto_gptq.__version__,
+       "datasets": datasets.__version__}
 for k, v in got.items():
     print(f"  {k:14s} {v}")
 print(f"  arch {platform.machine()}  torch CUDA build: {torch.version.cuda}"
@@ -217,6 +273,7 @@ if torch.version.cuda is None: bad.append("torch is a CPU-only build")
 if got["transformers"] != "4.44.2": bad.append("transformers != 4.44.2")
 if int(got["numpy"].split(".")[0]) >= 2: bad.append("numpy >= 2")
 if not got["auto_gptq"].startswith("0.7.1"): bad.append("auto-gptq != 0.7.1")
+if not got["datasets"].startswith("2.21."): bad.append("datasets != 2.21.*")
 if bad:
     print("SQ_AUTOGPTQ CHECK FAILED: " + ", ".join(bad)); sys.exit(1)
 print("sq_autogptq OK")
