@@ -521,18 +521,100 @@ def _f3a_block(model, quant_key="aqlm2"):
     }
 
 
+RHO_BOOT = 2000   # bootstrap_recovery resamples for rho intervals (appendix protocol)
+RHO_SEED = 42
+
+
+def _sweep_restoration(model, quant_key, xstest_source = None):
+    """
+    Restoration block from outputs/regime_sweep/restoration_sweep_<model>_<quant>.json:
+    ASR / ARC / per-prompt flags -> rho with paired-bootstrap CI, and McNemar rows.
+
+    Inputs:
+        - model (str): Filename model token
+        - quant_key (str): Quantizer id (key in flags_by_cond)
+        - xstest_source (str | None): headline JSON to take XSTest from, if any
+
+    Outputs:
+        - block (dict): rows (FP/quant/+W/+R/+Both), stats rows, sources
+    """
+    from core.stats import bootstrap_recovery, mcnemar_exact
+
+    name = f"restoration_sweep_{model}_{quant_key}.json"
+    d = load(f"{OUT}/regime_sweep/{name}")
+    flags = g(d, "flags_by_cond")
+    if not d or not flags:
+        return {"source": name, "status": "missing"}
+    asr = g(d, "asr_per_condition", default = {}) or {}
+    arc = g(d, "arc", default = {}) or {}
+    hl = load(f"{OUT}/headline/{xstest_source}") if xstest_source else None
+    xs = g(hl, "xstest", default = {}) or {}
+
+    fp, q = asr.get("fp32"), asr.get(quant_key)
+    damage = None if fp is None or q is None else q - fp
+    ci = bootstrap_recovery(flags, quant_key, n_boot = RHO_BOOT, seed = RHO_SEED)
+
+    def row(label, cond, side = None):
+        a = asr.get(cond)
+        rec = None if side is None or a is None or q is None else q - a
+        return {
+            "restoration": label,
+            "asr": rnd(a, 1),
+            "delta_quant": rnd(-rec, 1) if rec is not None else None,
+            "rho_pct": recovery_rho(rec, damage) if side else None,
+            "rho_ci_95_pct": [int(round(v)) for v in ci[side]] if side else None,
+            "arc": rnd(arc.get(cond), 0),
+            "xstest_fr": rnd(g(xs.get(cond, {}), "false_refusal_rate"), 1),
+        }
+
+    rows = [
+        row("FP32", "fp32"),
+        row("quant", quant_key),
+        row("+ Write-side", "write_restored", "write"),
+        row("+ Read-side", "read_restored", "read"),
+        row("+ Both", "both_restored", "both"),
+    ]
+
+    def mc(label, x, y, delta):
+        m = mcnemar_exact(flags[x], flags[y])
+        return {"comparison": label, "b": m["b"], "c": m["c"], "p": m["p_value"],
+                "delta_asr_pp": rnd(delta, 1)}
+
+    r_rec = q - asr["read_restored"]    # points recovered by read restoration
+    w_rec = q - asr["write_restored"]   # points recovered by write restoration
+    stats = [
+        mc("quant vs. read", quant_key, "read_restored", r_rec),
+        mc("quant vs. write", quant_key, "write_restored", w_rec),
+        mc("read vs. write", "read_restored", "write_restored", r_rec - w_rec),
+    ]
+    return {
+        "source": name,
+        "xstest_source": xstest_source if hl else None,
+        "damage_pp": rnd(damage, 1),
+        "rows": rows,
+        "stats": stats,
+        "rho_ci_95_pct": {k: [round(v, 1) for v in ci[k]] for k in ("read", "write", "both", "read_minus_write")},
+        "rho_boot": {"n_boot": RHO_BOOT, "seed": RHO_SEED},
+    }
+
+
 def build_f3a():
     """
-    Build tab:f3a — static restoration headline (Llama + Phi-3 AQLM-2).
+    Build tab:f3a — static restoration headline.
+
+    Llama AQLM-2 and Llama GPTQ-4 come from restoration_sweep (ASR/ARC/flags; rho CIs by
+    paired bootstrap, 2000 resamples, seed 42), with XSTest for AQLM-2 from the headline
+    run. Phi-3 AQLM-2 stays on its headline JSON.
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): Per-model headline tables
+        - block (dict): Per-cell restoration tables
     """
     return {
-        "llama": _f3a_block("llama"),
+        "llama": _sweep_restoration("llama", "aqlm2", "headline_llama_aqlm2.json"),
+        "llama_gptq4": _sweep_restoration("llama", "gptq4"),
         "phi3": _f3a_block("phi3"),
     }
 
@@ -572,11 +654,11 @@ def build_controls():
         }
         if cosmed and g(cosmed, "summary"):
             cell["direction_cosine"]["read_restored"] = rnd(
-                g(cosmed, "summary", "read_restored_cos_median"), 3)
+                g(cosmed, "summary", "cosmed_read_restored"), 3)
             cell["direction_cosine"]["write_restored"] = rnd(
-                g(cosmed, "summary", "write_restored_cos_median"), 3)
+                g(cosmed, "summary", "cosmed_write_restored"), 3)
             cell["direction_cosine"]["both_restored"] = rnd(
-                g(cosmed, "summary", "both_restored_cos_median"), 3)
+                g(cosmed, "summary", "cosmed_both_restored"), 3)
         else:
             cell["direction_cosine"]["note"] = (
                 "cosmed_after_restore missing or empty. Run "
@@ -772,41 +854,32 @@ def build_leakage():
 
 def build_stats():
     """
-    Build table:stats — paired McNemar on Llama AQLM-2 headline run.
+    Build table:stats — paired McNemar (exact) on Llama AQLM-2 and GPTQ-4, from the
+    per-prompt flags in restoration_sweep, with rho bootstrap CIs (2000, seed 42).
 
     Inputs:
         - None
 
     Outputs:
-        - block (dict): quant vs read/write and read vs write
+        - block (dict): quant vs read/write and read vs write, per cell
     """
-    hl = load(f"{OUT}/headline/headline_llama_aqlm2.json")
-    if not hl:
-        return {"status": "missing headline_llama_aqlm2.json"}
-    rec = g(hl, "recovery_pp", default = {}) or {}
-    rows = [
-        {"comparison": "quant vs. read", "b": g(hl, "mcnemar", "aqlm2_vs_read", "b"),
-         "c": g(hl, "mcnemar", "aqlm2_vs_read", "c"),
-         "p": g(hl, "mcnemar", "aqlm2_vs_read", "p_value"),
-         "delta_asr_pp": rnd(g(rec, "read"), 1)},
-        {"comparison": "quant vs. write", "b": g(hl, "mcnemar", "aqlm2_vs_write", "b"),
-         "c": g(hl, "mcnemar", "aqlm2_vs_write", "c"),
-         "p": g(hl, "mcnemar", "aqlm2_vs_write", "p_value"),
-         "delta_asr_pp": rnd(g(rec, "write"), 1)},
-        {"comparison": "read vs. write", "b": g(hl, "mcnemar", "read_vs_write", "b"),
-         "c": g(hl, "mcnemar", "read_vs_write", "c"),
-         "p": g(hl, "mcnemar", "read_vs_write", "p_value"),
-         "delta_asr_pp": rnd((rec.get("read") or 0) - (rec.get("write") or 0), 1)},
-    ]
-    boot = g(hl, "recovery_ci_95", default = {}) or {}
+    cells = {}
+    for quant_key, label in (("aqlm2", "Llama AQLM-2"), ("gptq4", "Llama GPTQ-4")):
+        blk = _sweep_restoration("llama", quant_key)
+        if blk.get("status") == "missing":
+            cells[quant_key] = {"label": label, "status": "missing", "source": blk["source"]}
+            continue
+        cells[quant_key] = {
+            "label": label,
+            "source": blk["source"],
+            "rows": blk["stats"],
+            "rho_ci_95_pct": blk["rho_ci_95_pct"],
+        }
     return {
-        "source": "headline_llama_aqlm2.json",
-        "rows": rows,
-        "recovery_ci_95_pp": {
-            "read": boot.get("read"),
-            "write": boot.get("write"),
-            "read_minus_write": boot.get("read_minus_write"),
-        },
+        "source": "restoration_sweep_llama_{aqlm2,gptq4}.json (flags_by_cond)",
+        "cells": cells,
+        # Back-compat: AQLM-2 rows stay at the top level
+        "rows": cells.get("aqlm2", {}).get("rows", []),
     }
 
 
@@ -825,8 +898,7 @@ def build():
             "generated_by": "scripts/paper_values.py",
             "note": (
                 "ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. "
-                "Null = cell absent. Incomplete Q-Resafe read/write r128 jobs stay "
-                "marked 'missing or running' until JSON lands."
+                "Null = cell absent. Q-Resafe read/write/both r128 jobs are complete."
             ),
             "seed": 42,
         },
@@ -944,17 +1016,23 @@ def as_markdown(pv):
                     f"{fmt_cell(row['asr'])} | {fmt_cell(row['rho_pct'])} | "
                     f"{fmt_cell(row['arc'])} |")
 
-    for model_key, label in (("llama", "Llama-3.1-8B"), ("phi3", "Phi-3-mini")):
+    for model_key, label in (("llama", "Llama-3.1-8B AQLM-2"),
+                             ("llama_gptq4", "Llama-3.1-8B GPTQ-4"),
+                             ("phi3", "Phi-3-mini AQLM-2")):
         f3 = pv["tab:f3a"].get(model_key, {})
         if not f3.get("rows"):
             continue
         lines.append(f"\n## tab:f3a ({label})\n")
-        lines.append("| Restoration | ASR | delta quant | rho % | ARC | XSTest |")
-        lines.append("|---|---|---:|---:|---:|---:|")
+        lines.append(f"Source: {f3.get('source')}"
+                     + (f"; XSTest: {f3['xstest_source']}" if f3.get("xstest_source") else "") + "\n")
+        lines.append("| Restoration | ASR | delta quant | rho % | rho 95% CI | ARC | XSTest |")
+        lines.append("|---|---|---:|---:|---|---:|---:|")
         for row in f3["rows"]:
+            rci = row.get("rho_ci_95_pct")
             lines.append(
                 f"| {row['restoration']} | {fmt_cell(row['asr'])} | "
                 f"{fmt_cell(row['delta_quant'])} | {fmt_cell(row['rho_pct'])} | "
+                f"{'--' if not rci else f'[{rci[0]}, {rci[1]}]'} | "
                 f"{fmt_cell(row['arc'])} | {fmt_cell(row['xstest_fr'])} |")
 
     lines.append("\n## tab:controls\n")
@@ -1019,12 +1097,17 @@ def as_markdown(pv):
             f"{fmt_cell(cell['surface_xstest_unsafe_recall'])} |")
 
     lines.append("\n## table:stats\n")
-    lines.append("| Comparison | b | c | p | delta ASR pp |")
-    lines.append("|---|---:|---:|---:|---:|")
-    for row in pv["table:stats"].get("rows", []):
-        lines.append(
-            f"| {row['comparison']} | {fmt_cell(row['b'])} | {fmt_cell(row['c'])} | "
-            f"{fmt_cell(row['p'])} | {fmt_cell(row['delta_asr_pp'])} |")
+    lines.append(f"Source: {pv['table:stats'].get('source')}\n")
+    lines.append("| Cell | Comparison | b | c | p | delta ASR pp |")
+    lines.append("|---|---|---:|---:|---:|---:|")
+    for cell in pv["table:stats"].get("cells", {}).values():
+        if cell.get("status") == "missing":
+            lines.append(f"| {cell['label']} | missing ({cell['source']}) | | | | |")
+            continue
+        for row in cell["rows"]:
+            lines.append(
+                f"| {cell['label']} | {row['comparison']} | {fmt_cell(row['b'])} | "
+                f"{fmt_cell(row['c'])} | {fmt_cell(row['p'])} | {fmt_cell(row['delta_asr_pp'])} |")
 
     lines.append("\n## tab:lrqat\n")
     lines.append("| Role | Bits | ASR | ARC | Coherent |")

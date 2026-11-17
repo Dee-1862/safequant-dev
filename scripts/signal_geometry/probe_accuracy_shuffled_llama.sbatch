@@ -16,7 +16,7 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # Output:  outputs/signal_geometry/probe_accuracy_<model>_<quant>_shuffled.json  (separate files)
 
 echo "=== X3 shuffled-label probe | $(date) ==="
-for MODEL in ${SWEEP_MODELS:-llama7b}; do
+for MODEL in ${SWEEP_MODELS:-llama7b phi3}; do
   for QUANTIZER in ${SWEEP_QUANTIZERS:-aqlm2}; do
     echo "---- ${MODEL} / ${QUANTIZER} (shuffled) ----"
     python -u -m experiments.signal_geometry.probe_accuracy \

@@ -1,6 +1,6 @@
 # Paper values (LaTeX table alignment)
 
-ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell absent. Incomplete Q-Resafe read/write r128 jobs stay marked 'missing or running' until JSON lands.
+ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell absent. Q-Resafe read/write/both r128 jobs are complete.
 
 
 ## tab:geometry
@@ -118,25 +118,41 @@ ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell ab
 | Write | Middle | [11,22) | 46.0 | 68 | 49.0 |
 | Write | Late | [22,32) | 60.5 | -5 | 48.0 |
 
-## tab:f3a (Llama-3.1-8B)
+## tab:f3a (Llama-3.1-8B AQLM-2)
 
-| Restoration | ASR | delta quant | rho % | ARC | XSTest |
-|---|---|---:|---:|---:|---:|
-| FP32 | 41.0 | -- | -- | 55.0 | 6.0 |
-| quant | 62.5 | -- | -- | 46.0 | 9.6 |
-| + Write-side | 50.5 | -12.0 | 56 | 46.0 | 11.6 |
-| + Read-side | 44.5 | -18.0 | 84 | 52.0 | 5.2 |
-| + Both | 43.0 | -19.5 | 91 | 54.0 | 5.2 |
+Source: restoration_sweep_llama_aqlm2.json; XSTest: headline_llama_aqlm2.json
 
-## tab:f3a (Phi-3-mini)
+| Restoration | ASR | delta quant | rho % | rho 95% CI | ARC | XSTest |
+|---|---|---:|---:|---|---:|---:|
+| FP32 | 41.0 | -- | -- | -- | 55.0 | 6.0 |
+| quant | 64.0 | -- | -- | -- | 46.0 | 9.6 |
+| + Write-side | 48.5 | -15.5 | 67 | [40, 97] | 46.0 | 11.6 |
+| + Read-side | 44.5 | -19.5 | 85 | [61, 113] | 52.0 | 5.2 |
+| + Both | 43.0 | -21.0 | 91 | [69, 116] | 54.0 | 5.2 |
 
-| Restoration | ASR | delta quant | rho % | ARC | XSTest |
-|---|---|---:|---:|---:|---:|
-| FP32 | 39.5 | -- | -- | 54.0 | 36.8 |
-| quant | 59.5 | -- | -- | 53.0 | 15.2 |
-| + Write-side | 49.5 | -10.0 | 50 | 46.0 | 23.2 |
-| + Read-side | 44.5 | -15.0 | 75 | 55.0 | 20.4 |
-| + Both | 32.0 | -27.5 | 138 | 53.0 | 33.2 |
+## tab:f3a (Llama-3.1-8B GPTQ-4)
+
+Source: restoration_sweep_llama_gptq4.json
+
+| Restoration | ASR | delta quant | rho % | rho 95% CI | ARC | XSTest |
+|---|---|---:|---:|---|---:|---:|
+| FP32 | 41.0 | -- | -- | -- | 55.0 | -- |
+| quant | 26.0 | -- | -- | -- | 50.0 | -- |
+| + Write-side | 29.0 | 3.0 | 20 | [-10, 45] | 53.0 | -- |
+| + Read-side | 37.5 | 11.5 | 77 | [45, 114] | 49.0 | -- |
+| + Both | 40.0 | 14.0 | 93 | [80, 107] | 54.0 | -- |
+
+## tab:f3a (Phi-3-mini AQLM-2)
+
+Source: headline_phi3_aqlm2.json
+
+| Restoration | ASR | delta quant | rho % | rho 95% CI | ARC | XSTest |
+|---|---|---:|---:|---|---:|---:|
+| FP32 | 39.5 | -- | -- | -- | 54.0 | 36.8 |
+| quant | 59.5 | -- | -- | -- | 53.0 | 15.2 |
+| + Write-side | 49.5 | -10.0 | 50 | -- | 46.0 | 23.2 |
+| + Read-side | 44.5 | -15.0 | 75 | -- | 55.0 | 20.4 |
+| + Both | 32.0 | -27.5 | 138 | -- | 53.0 | 33.2 |
 
 ## tab:controls
 
@@ -151,9 +167,9 @@ ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell ab
 | Refit floor | 0.883 |
 | Observed rotation | 0.781 |
 | Direction cos quantized | 0.783 |
-| Direction cos read_restored | -- |
-| Direction cos write_restored | -- |
-| Direction cos both_restored | -- |
+| Direction cos read_restored | 0.911 |
+| Direction cos write_restored | 0.902 |
+| Direction cos both_restored | 0.992 |
 
 ### Phi-3-AQLM-2
 
@@ -165,9 +181,9 @@ ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell ab
 | Refit floor | 0.828 |
 | Observed rotation | 0.696 |
 | Direction cos quantized | 0.935 |
-| Direction cos read_restored | -- |
-| Direction cos write_restored | -- |
-| Direction cos both_restored | -- |
+| Direction cos read_restored | 0.932 |
+| Direction cos write_restored | 0.938 |
+| Direction cos both_restored | 0.981 |
 
 ## tab:trained_repair
 
@@ -224,11 +240,16 @@ ASR/ARC/damage in percentage points. dASR = quant_asr - fp32_asr. Null = cell ab
 
 ## table:stats
 
-| Comparison | b | c | p | delta ASR pp |
-|---|---:|---:|---:|---:|
-| quant vs. read | 54 | 18 | 2.568720337924735e-05 | 18.0 |
-| quant vs. write | 41 | 17 | 0.0022325516199429227 | 12.0 |
-| read vs. write | 22 | 34 | 0.14089542359848076 | 6.0 |
+Source: restoration_sweep_llama_{aqlm2,gptq4}.json (flags_by_cond)
+
+| Cell | Comparison | b | c | p | delta ASR pp |
+|---|---|---:|---:|---:|---:|
+| Llama AQLM-2 | quant vs. read | 55 | 16 | 3.7532376885930504e-06 | 19.5 |
+| Llama AQLM-2 | quant vs. write | 46 | 15 | 8.837556327558754e-05 | 15.5 |
+| Llama AQLM-2 | read vs. write | 23 | 31 | 0.34089094122009733 | 4.0 |
+| Llama GPTQ-4 | quant vs. read | 10 | 33 | 0.0006061066312668117 | -11.5 |
+| Llama GPTQ-4 | quant vs. write | 7 | 13 | 0.26317596435546875 | -3.0 |
+| Llama GPTQ-4 | read vs. write | 28 | 11 | 0.009475304279476404 | -8.5 |
 
 ## tab:lrqat
 
