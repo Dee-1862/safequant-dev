@@ -43,9 +43,8 @@ echo "-----------------------------------------------------"
 n=0
 for m in $MODELS; do
   for b in $BITS; do
-    jid=$(sbatch --parsable --account="${SLURM_ACCOUNT:-YOUR_ALLOCATION}" \
-          --export=ALL,CONDA_ENV="$AGENV" \
-          scripts/quantize_gptq.sbatch "$m" "$b" "$GROUP")
+    jid=$(bash scripts/submit.sh scripts/quantize_gptq.sbatch --parsable \
+          --export=ALL,CONDA_ENV="$AGENV" -- "$m" "$b" "$GROUP")
     printf "  %-16s gptq%s  -> job %s\n" "$m" "$b" "$jid"
     n=$((n + 1))
   done

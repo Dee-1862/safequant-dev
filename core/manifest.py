@@ -223,3 +223,26 @@ def save_result(calling_file, cfg, data, raw = False):
     }
     path.write_text(json.dumps(payload, indent = 2, default = str))
     return path
+
+
+def assert_new_result(calling_file, cfg):
+    """
+    Refuse to run when the result JSON (or its raw sidecar) already exists.
+
+    Used by the opt-in flags (--tag, --subset_seed, --shuffle_labels, --n_splits) so a
+    new run can never overwrite an existing paper artifact. Default runs are unchanged.
+
+    Inputs:
+        - calling_file (Path | str): Experiment script path
+        - cfg (RunConfig): Run configuration
+
+    Outputs:
+        - None (raises FileExistsError if the output already exists)
+    """
+    path = result_path(calling_file, cfg)
+    for p in (path, path.with_name(path.stem + "_raw" + path.suffix)):
+        if p.exists():
+            raise FileExistsError(
+                f"{p} already exists; refusing to overwrite. Use a different --tag/seed "
+                f"or move the old file yourself."
+            )

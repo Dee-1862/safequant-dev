@@ -48,11 +48,17 @@ def load_labels(path, quant_key):
     return to_int(fbc["fp32"]), to_int(fbc[quant_key])
 
 
-def _find_cell_json(model, quantizer):
-    """Prefer the headline artifact (canonical, has flags), else restoration_sweep."""
-    cfg = RunConfig(model=model, quantizer=quantizer)
-    for script in (HEADLINE_SCRIPT, RESTORE_SCRIPT):
-        p = find_result(script, cfg)
+def _find_cell_json(model, quantizer, variant=None):
+    """Prefer the headline artifact (canonical, has flags), else restoration_sweep.
+    `variant` (e.g. a --tag / subsetK suffix) selects a non-default result file."""
+    cfg = RunConfig(model=model, quantizer=quantizer, variant=variant)
+    # headline_eval saves as headline_<model>_<quant>[_variant].json (output_stem="headline").
+    # Default behaviour (variant=None) is deliberately left exactly as before; the stem is
+    # only applied for explicit --variant lookups, which are all new files.
+    head_cfg = (RunConfig(model=model, quantizer=quantizer, variant=variant,
+                          output_stem="headline") if variant else cfg)
+    for script, c in ((HEADLINE_SCRIPT, head_cfg), (RESTORE_SCRIPT, cfg)):
+        p = find_result(script, c)
         if p and Path(p).exists():
             try:
                 if json.loads(Path(p).read_text()).get("flags_by_cond"):
@@ -62,7 +68,7 @@ def _find_cell_json(model, quantizer):
     return None
 
 
-def sweep(cells, alpha=0.05):
+def sweep(cells, alpha=0.05, variant=None):
     """Screen each (model, quantizer) cell; Holm-adjust across the tested ones."""
     results, pvals = [], []
     for model, quantizer in cells:
@@ -71,7 +77,7 @@ def sweep(cells, alpha=0.05):
             row["status"] = "NA-arch-mismatch"
             results.append(row)
             continue
-        path = _find_cell_json(model, quantizer)
+        path = _find_cell_json(model, quantizer, variant)
         if path is None:
             row["status"] = "NO-LABELS-rerun"
             results.append(row)
@@ -159,14 +165,22 @@ def main():
     ap.add_argument("--self_test", action="store_true",
                     help="run estimator against known-answer synthetic cases and exit")
     ap.add_argument("--alpha", type=float, default=0.05)
+    ap.add_argument("--cells", default=None,
+                    help="comma-separated model:quant cells to screen instead of the 4x5 "
+                         "grid, e.g. llama3-8b:aqlm2 (held-out check)")
+    ap.add_argument("--variant", default=None,
+                    help="result-file variant suffix to read, e.g. heldout or subset3")
     args = ap.parse_args()
 
     if args.self_test:
         self_test()
         return
 
-    cells = [(m, q) for m in MODELS for q in QUANTS]
-    results = sweep(cells, alpha=args.alpha)
+    if args.cells:
+        cells = [tuple(c.split(":", 1)) for c in args.cells.split(",")]
+    else:
+        cells = [(m, q) for m in MODELS for q in QUANTS]
+    results = sweep(cells, alpha=args.alpha, variant=args.variant)
     _print_table(results)
 
 

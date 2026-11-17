@@ -55,7 +55,7 @@ Edit `scripts/env.local.sh`:
 
 ```bash
 export SLURM_ACCOUNT=YOUR_SLURM_ACCOUNT
-export REPO_ROOT=/jet/home/$USER/projects/safequant
+export REPO_ROOT=/path/to/projects/safequant
 export HF_HOME=/ocean/projects/YOUR_OCEAN_ALLOCATION/$USER/.cache/huggingface
 export QM_ROOT=/ocean/projects/YOUR_OCEAN_ALLOCATION/$USER/quantized_models
 export CONDA_ENV=/ocean/projects/YOUR_OCEAN_ALLOCATION/$USER/conda_envs/sq_clean
@@ -75,6 +75,41 @@ Submit jobs:
 ```bash
 sbatch --account="$SLURM_ACCOUNT" scripts/headline/headline_eval_llama.sbatch
 ```
+
+## NCSA Delta (Slurm)
+
+The `.sbatch` files carry Bridges-2 headers (`--partition=GPU-shared`, `--gpus=h100-80:1`).
+On Delta, submit through `scripts/submit.sh`, which supplies account, partition and GPU
+request from `.env` (command-line flags override the `#SBATCH` lines; the Bridges-only
+`--gpus=h100-80:1` line is stripped from the stream, files on disk are untouched).
+
+All values below are **placeholders** - confirm on Delta with `accounts`, `module avail`
+and the Delta user guide:
+
+```bash
+# .env
+SLURM_ACCOUNT=<from `accounts`; GPU accounts usually end in -delta-gpu>
+SLURM_PARTITION=gpuA100x4        # gpuA40x4: cheaper, fine for 8B fp16. Max time 48 h
+HF_HOME=/path/on/project/or/work/fs/hf_cache      # large filesystem, not $HOME
+QM_ROOT=/path/on/project/or/work/fs/quantized_models
+CONDA_ENV=/path/to/conda_envs/sq_clean
+CONDA_SH=                        # empty: conda comes from `module load`
+MODULES=                         # space-separated, e.g. an anaconda module
+CUDA_HOME=                       # only exported if set
+```
+
+`scripts/_env.sh` reads `CONDA_SH`, `MODULES` and `CUDA_HOME` from `.env`. When they are
+empty and the Bridges-2 install is present, the old Bridges defaults are used.
+
+First jobs:
+
+```bash
+bash scripts/submit.sh scripts/tests/00_env_check.sbatch
+bash scripts/submit.sh scripts/tests/01_smoke_llama_aqlm2.sbatch
+```
+
+If Delta rejects the job for GPU type even with the stripping, delete the `--gpus=` lines
+from the sbatch files and let `submit.sh` supply `--gpus-per-node`.
 
 ## Checkpoint layout under `QM_ROOT`
 

@@ -69,7 +69,7 @@ except Exception as e:
 
 # --- 4. Headline McNemar + native points CI ------------------------------------
 hr("4. HEADLINE McNEMAR + POINTS CI  (Llama/AQLM-2)")
-hp = latest("**/headline_llama_aqlm2*.json")
+hp = latest("**/headline_llama_aqlm2.json")
 if hp:
     d = json.load(open(hp))
     for name, blk in (d.get("mcnemar") or {}).items():

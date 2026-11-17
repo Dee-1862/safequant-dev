@@ -101,6 +101,30 @@ def load_wildjailbreak_prompts(n_samples = None, config = "train", cache_dir = N
     return items
 
 
+def load_wildjailbreak_subset(n_samples, subset_seed, config = "eval", cache_dir = None):
+    """
+    Draw n_samples prompts at random from the FULL WildJailbreak pool.
+
+    The default loader returns the first n_samples of a fixed (seed 42) shuffle, so the
+    default eval set never changes. This helper instead samples from the whole pool
+    with `subset_seed`, giving independent prompt subsets for variance estimates.
+    Callers must only use it when --subset_seed is given.
+
+    Inputs:
+        - n_samples (int): Subset size
+        - subset_seed (int): Sampling seed (distinct from the global seed 42)
+        - config (str): "eval" or "train"
+        - cache_dir (str | None): HF cache override
+
+    Outputs:
+        - items (list[dict]): n_samples prompt dicts (same schema as the default loader)
+    """
+    pool = load_wildjailbreak_prompts(n_samples = None, config = config, cache_dir = cache_dir)
+    if n_samples > len(pool):
+        raise ValueError(f"subset of {n_samples} requested but pool has {len(pool)} prompts")
+    return random.Random(subset_seed).sample(pool, n_samples)
+
+
 # -- Safety: harmless prompts (for refusal direction) -------------------------
 
 

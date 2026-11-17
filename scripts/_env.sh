@@ -1,6 +1,14 @@
 #!/bin/bash
 # Shared environment for SafeQuant sbatch jobs. Loads .env from repo root.
 #   source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"   (sbatch; run from repo root)
+#
+# Cluster-specific bits come from .env (see .env.example):
+#   CONDA_SH   path to conda.sh. Empty -> auto-detect the Bridges-2 install, else
+#              assume conda is already on PATH (e.g. via MODULES).
+#   CUDA_HOME  only exported when set (Bridges-2 default used if that dir exists
+#              and CUDA_HOME is unset).
+#   MODULES    space-separated list passed to `module load` before conda activate.
+#   CONDA_ENV  env to activate (skipped when empty).
 
 set -euo pipefail
 
@@ -14,17 +22,46 @@ export QM_ROOT="${QM_ROOT:-${QUANTIZED_MODELS:-${HOME}/quantized_models}}"
 export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-${HF_HOME}}"
 export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HF_HOME}/datasets}"
 export TOKENIZERS_PARALLELISM=false
-export CUDA_HOME="${CUDA_HOME:-/opt/packages/cuda/v12.4.0}"
-export LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}"
 export SQ_LOG_DIR="${SQ_LOG_DIR:-${REPO_ROOT}/scripts/logs}"
 
 mkdir -p "${SQ_LOG_DIR}" "${HF_HOME}" "${HF_DATASETS_CACHE}" "${QM_ROOT}"
 
-if [[ -f /opt/packages/anaconda3-2024.10-1/etc/profile.d/conda.sh && -n "${CONDA_ENV:-}" ]]; then
-  # shellcheck disable=SC1091
-  source /opt/packages/anaconda3-2024.10-1/etc/profile.d/conda.sh
-  conda activate "${CONDA_ENV}"
-  module load gcc/10.2.0 2>/dev/null || true
+# --- Bridges-2 legacy defaults (only when nothing is configured) -------------
+_BRIDGES_CONDA="/opt/packages/anaconda3-2024.10-1/etc/profile.d/conda.sh"
+_BRIDGES_CUDA="/opt/packages/cuda/v12.4.0"
+if [[ -z "${CONDA_SH:-}" && -f "${_BRIDGES_CONDA}" ]]; then
+  CONDA_SH="${_BRIDGES_CONDA}"
+  : "${MODULES=gcc/10.2.0}"          # unset -> Bridges default; set-but-empty -> none
+fi
+if [[ -z "${CUDA_HOME:-}" && -d "${_BRIDGES_CUDA}" ]]; then
+  CUDA_HOME="${_BRIDGES_CUDA}"
+fi
+
+# --- modules, CUDA, conda ----------------------------------------------------
+if [[ -n "${MODULES:-}" ]]; then
+  if command -v module >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    module load ${MODULES} || echo "WARN: 'module load ${MODULES}' failed" >&2
+  else
+    echo "WARN: MODULES set but 'module' command not found" >&2
+  fi
+fi
+
+if [[ -n "${CUDA_HOME:-}" ]]; then
+  export CUDA_HOME
+  export LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+
+if [[ -n "${CONDA_ENV:-}" ]]; then
+  if [[ -n "${CONDA_SH:-}" ]]; then
+    # shellcheck disable=SC1090
+    source "${CONDA_SH}"
+  fi
+  if command -v conda >/dev/null 2>&1; then
+    conda activate "${CONDA_ENV}"
+  else
+    echo "WARN: CONDA_ENV set but conda not found (set CONDA_SH or MODULES)" >&2
+  fi
 fi
 
 cd "${REPO_ROOT}"
@@ -33,6 +70,7 @@ echo "=== SafeQuant | job=${SLURM_JOB_ID:-local} | $(date) ==="
 echo "  REPO_ROOT=${REPO_ROOT}"
 echo "  HF_HOME=${HF_HOME}"
 echo "  QM_ROOT=${QM_ROOT}"
+echo "  CONDA_ENV=${CONDA_ENV:-<none>}  MODULES=${MODULES:-<none>}  CUDA_HOME=${CUDA_HOME:-<unset>}"
 if command -v nvidia-smi >/dev/null 2>&1; then
   nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
 fi

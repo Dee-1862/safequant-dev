@@ -6,14 +6,19 @@ from pathlib import Path
 
 import torch
 
-from core.datasets import load_arc_challenge, load_wildjailbreak_prompts, load_xstest
+from core.datasets import (
+    load_arc_challenge,
+    load_wildjailbreak_prompts,
+    load_wildjailbreak_subset,
+    load_xstest,
+)
 from core.evaluation import (
     _extract_behavior,
     classify_batch,
     eval_xstest,
     generate_only,
 )
-from core.manifest import RunConfig, save_result
+from core.manifest import RunConfig, assert_new_result, save_result
 from core.model_loader import load_fp32, load_quantized
 from core.restoration import (
     extract_fp32_weights,
@@ -80,21 +85,41 @@ def main():
     ap.add_argument("--n_reasoning", type = int, default = 100)
     ap.add_argument("--asr_max_new_tokens", type = int, default = 256)
     ap.add_argument("--n_boot", type = int, default = 2000)
+    # X5: draw n_eval prompts at random from the full pool with this seed (default: off,
+    # the fixed first-n_eval set is used exactly as before).
+    ap.add_argument("--subset_seed", type = int, default = None)
+    # Optional suffix for the output JSON (e.g. --tag x1_n200 -> headline_llama_gptq4_x1_n200.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
 
     # Seed and open the raw checkpoint path up front
     set_global_seed(DEFAULT_SEED)
     qtz = args.quantizer
+    variant = "_".join(
+        x for x in (
+            f"subset{args.subset_seed}" if args.subset_seed is not None else None,
+            args.tag,
+        ) if x
+    ) or None
+    extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "n_boot": args.n_boot}
+    if args.subset_seed is not None:
+        extra["subset_seed"] = args.subset_seed
     cfg = RunConfig(
         model = args.model,
         quantizer = qtz,
+        variant = variant,
         output_stem = "headline",
-        extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "n_boot": args.n_boot},
+        extra = extra,
     )
+    if variant:
+        assert_new_result(_SCRIPT, cfg)  # opt-in runs never overwrite an existing artifact
     raw_path = save_result(_SCRIPT, cfg, {}, raw = True)
 
     # Load eval sets
-    wj_items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
+    if args.subset_seed is None:
+        wj_items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
+    else:
+        wj_items = load_wildjailbreak_subset(args.n_eval, args.subset_seed, config = "eval")
     behaviors = [_extract_behavior(it) for it in wj_items]
     arc_items = load_arc_challenge(n_samples = args.n_reasoning)
     xstest_items = load_xstest()

@@ -8,9 +8,13 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
+from core.datasets import (
+    load_arc_challenge,
+    load_wildjailbreak_prompts,
+    load_wildjailbreak_subset,
+)
 from core.evaluation import _extract_behavior, classify_batch, generate_only
-from core.manifest import RunConfig, save_result
+from core.manifest import RunConfig, assert_new_result, save_result
 from core.model_loader import load_fp32, load_quantized
 from core.restoration import Restorer, measure_arc
 from core.seeds import DEFAULT_SEED, set_global_seed
@@ -30,14 +34,26 @@ def main():
     parser.add_argument("--quantizer", default = "aqlm2")
     parser.add_argument("--n_eval", type = int, default = 1000)
     parser.add_argument("--n_reasoning", type = int, default = 50)
+    # X5: draw n_eval prompts at random from the full pool with this seed (default: off).
+    parser.add_argument("--subset_seed", type = int, default = None)
     args = parser.parse_args()
+
+    # Subset runs get their own filename and must not overwrite an existing result
+    variant = f"subset{args.subset_seed}" if args.subset_seed is not None else None
+    if variant:
+        assert_new_result(
+            _SCRIPT, RunConfig(model = args.model, quantizer = args.quantizer, variant = variant)
+        )
 
     # Resolve quantizer label and device
     qtz = args.quantizer
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Load eval prompts and behaviors
-    items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
+    if args.subset_seed is None:
+        items = load_wildjailbreak_prompts(n_samples = args.n_eval, config = "eval")
+    else:
+        items = load_wildjailbreak_subset(args.n_eval, args.subset_seed, config = "eval")
     behaviors = [_extract_behavior(item) for item in items]
     arc_items = load_arc_challenge(n_samples = args.n_reasoning)
 
@@ -139,7 +155,13 @@ def main():
     cfg = RunConfig(
         model = args.model,
         quantizer = qtz,
-        extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "seed": SEED},
+        variant = variant,
+        extra = {
+            "n_eval": args.n_eval,
+            "n_reasoning": args.n_reasoning,
+            "seed": SEED,
+            **({"subset_seed": args.subset_seed} if args.subset_seed is not None else {}),
+        },
     )
     data = {
         "fp32_asr": fp32_asr,

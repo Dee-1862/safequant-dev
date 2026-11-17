@@ -180,3 +180,31 @@ def per_layer_probe_accuracy(residuals_by_layer, labels):
             fold_accs.append(clf.score(X[test_idx], y[test_idx]))
         accs[layer_idx] = float(np.mean(fold_accs))
     return accs
+
+
+def permute_labels_by_layer(harmful_by_layer, harmless_by_layer, seed = SEED):
+    """
+    Shuffled-label control: pool harmful+harmless residuals and re-split at random.
+
+    Equivalent to permuting the harmful/harmless labels. One permutation (drawn from
+    `seed`) is shared by every layer so each layer sees the same relabelling; class
+    sizes are preserved. A probe fit on the result should sit near 50% accuracy.
+
+    Inputs:
+        - harmful_by_layer (dict): Layer -> harmful residual tensors
+        - harmless_by_layer (dict): Layer -> harmless residual tensors
+        - seed (int): Permutation seed (42 for the paper)
+
+    Outputs:
+        - (harmful_perm, harmless_perm) (tuple[dict, dict]): Relabelled residuals
+    """
+    layers = sorted(harmful_by_layer.keys())
+    n_h = len(harmful_by_layer[layers[0]])
+    n_s = len(harmless_by_layer[layers[0]])
+    perm = np.random.default_rng(seed).permutation(n_h + n_s)
+    h_out, s_out = {}, {}
+    for layer_idx in layers:
+        pooled = list(harmful_by_layer[layer_idx]) + list(harmless_by_layer[layer_idx])
+        h_out[layer_idx] = [pooled[i] for i in perm[:n_h]]
+        s_out[layer_idx] = [pooled[i] for i in perm[n_h:]]
+    return h_out, s_out
