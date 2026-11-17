@@ -34,6 +34,7 @@ from config import MODELS, MODEL_REVISIONS, HF_HOME, QM_ROOT  # noqa: E402
 from core.datasets import load_dataset  # noqa: E402
 
 BACKENDS = ("autogptq", "gptqmodel")
+PACK_INFO = {"mode": "backend default", "patched": []}  # filled by quantize_autogptq
 
 
 def default_output_dir(model, bits, group_size):
@@ -171,6 +172,8 @@ def build_info(args, backend, model_path, revision, n_calib_built):
         },
         "host": {"machine": platform.machine(), "node": platform.node(), "gpu": gpu,
                  "slurm_job_id": os.environ.get("SLURM_JOB_ID")},
+        "packing": dict(PACK_INFO),
+        "torch_threads": torch.get_num_threads(),
         "git_sha": _git_sha(),
         "created_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
@@ -191,6 +194,17 @@ def quantize_autogptq(args, model_path, revision, calib, tmp_dir):
         - None
     """
     from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
+
+    # Vectorized packing (scripts/gptq_fast_pack.py): same arithmetic per element,
+    # bit-identical output (scripts/tests/test_gptq_fast_pack.py), minutes faster.
+    # GPTQ_FAST_PACK=0 keeps auto-gptq's per-column loop.
+    if os.environ.get("GPTQ_FAST_PACK", "1") != "0":
+        import gptq_fast_pack
+        PACK_INFO["patched"] = gptq_fast_pack.apply()
+        PACK_INFO["mode"] = "vectorized (bit-identical)" if PACK_INFO["patched"] else "auto-gptq loop (patch not applicable)"
+        print(f"  packing: {PACK_INFO['mode']}  {PACK_INFO['patched']}")
+    else:
+        PACK_INFO["mode"] = "auto-gptq loop (GPTQ_FAST_PACK=0)"
 
     quantize_config = BaseQuantizeConfig(**recipe(args))
     init_kwargs = {
@@ -236,7 +250,11 @@ def quantize_autogptq(args, model_path, revision, calib, tmp_dir):
         if _mod.__class__.__name__.endswith("RotaryEmbedding"):
             _mod.register_forward_pre_hook(_pin_rotary)
 
+    import time
+    t0 = time.time()
     model.quantize(calib)
+    PACK_INFO["quantize_and_pack_seconds"] = round(time.time() - t0, 1)
+    print(f"  quantize + pack took {PACK_INFO['quantize_and_pack_seconds']} s")
     print(f"\n[3/3] saving to {tmp_dir} ...")
     model.save_quantized(str(tmp_dir), use_safetensors = True)
 
