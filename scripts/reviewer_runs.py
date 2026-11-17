@@ -1,12 +1,14 @@
-# Summaries for the reviewer-item runs (X1, X2, held-out AQLM-2, X3, X4, X5).
+# Summaries for the reviewer-item runs (X1, X2, held-out AQLM-2, X3, X4, X5, X6).
 #
-# Reads ONLY the new result names, never the paper's existing artifacts:
+# Reads the new result names. The one exception is X6, which also READS (never
+# writes) the original headline_<model>_aqlm2.json as repeat 1:
 #   X1        outputs/headline/headline_llama_gptq4_x1_n200.json
 #   held-out  outputs/headline/headline_<model>_aqlm2_heldout.json   (llama3-8b, else mistral-nemo)
 #   X3        outputs/signal_geometry/probe_accuracy_<model>_<quant>_shuffled.json
 #   X4        outputs/boundary/probe_refit_control_<model>_splits100.json
 #   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
 #   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
+#   X6        outputs/headline/headline_<model>_aqlm2{,_rep2,_rep3}.json   (same prompts)
 # Every entry reports status "missing" (with the expected path) until its JSON exists.
 # Used by scripts/report_all.py (section 5) and scripts/paper_values.py ("reviewer_runs").
 import json
@@ -34,6 +36,8 @@ X2_CELLS = (
     ("mistral", "awq"), ("mistral", "gptq4"), ("mistral", "aqlm2"),
     ("phi3", "awq"), ("phi3", "gptq4"), ("phi3", "gptq3"), ("phi3", "aqlm2"),
 )
+X6_CELLS = ("llama", "phi3")
+X6_REPS = (("rep1 (original)", ""), ("rep2", "_rep2"), ("rep3", "_rep3"))
 
 
 def _load(path):
@@ -227,9 +231,48 @@ def x2():
     return out
 
 
+def _rho(d, side):
+    """rho % = recovery / damage from a headline JSON (None if undefined)."""
+    dmg = d.get("damage_pp")
+    rec = (d.get("recovery_pp") or {}).get(side)
+    return None if not dmg or rec is None else 100.0 * rec / dmg
+
+
+def x6():
+    out = {}
+    for model in X6_CELLS:
+        reps = {}
+        for label, suffix in X6_REPS:
+            path = OUT / "headline" / f"headline_{model}_aqlm2{suffix}.json"
+            d = _load(path)
+            if d is None:
+                reps[label] = _missing(path)
+                continue
+            asr = d.get("asr", {})
+            reps[label] = {
+                "status": "ok", "source": _rel(path),
+                "quant_asr": _r(asr.get("aqlm2")),
+                "write_restored_asr": _r(asr.get("write_restored")),
+                "read_restored_asr": _r(asr.get("read_restored")),
+                "both_restored_asr": _r(asr.get("both_restored")),
+                "rho_read_pct": _r(_rho(d, "read")),
+                "rho_write_pct": _r(_rho(d, "write")),
+            }
+        ok = [r for r in reps.values() if r.get("status") == "ok"]
+        metrics = ("quant_asr", "write_restored_asr", "read_restored_asr",
+                   "both_restored_asr", "rho_read_pct", "rho_write_pct")
+        out[model] = {
+            "reps": reps,
+            "n_present": len(ok),
+            "across_reps": {m: _spread([r[m] for r in ok]) for m in metrics} if ok else None,
+        }
+    return out
+
+
 def collect():
     """All reviewer-run summaries in one dict (statuses say what is missing)."""
-    return {"x1": x1(), "x2": x2(), "heldout": heldout(), "x3": x3(), "x4": x4(), "x5": x5()}
+    return {"x1": x1(), "x2": x2(), "heldout": heldout(), "x3": x3(), "x4": x4(),
+            "x5": x5(), "x6": x6()}
 
 
 # ---------------------------------------------------------------- rendering --
@@ -243,7 +286,7 @@ def _ci(x):
 
 def to_markdown(rv):
     """Markdown block for PAPER_TABLES.md. Missing runs show as 'missing'."""
-    L = ["\n## reviewer runs (X1, X2, held-out, X3, X4, X5)\n",
+    L = ["\n## reviewer runs (X1, X2, held-out, X3, X4, X5, X6)\n",
          "Read only from the new result names; 'missing' until the GPU job lands.\n"]
 
     L.append("\n### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)\n")
@@ -330,6 +373,26 @@ def to_markdown(rv):
             if s:
                 L.append(f"| {m} | {name} | {s['n']} | {s['mean']} | {_f(s['sd'])} | "
                          f"{s['min']} | {s['max']} |")
+
+    L.append("\n### X6: same-prompt repeats (AQLM-2; original + rep2 + rep3)\n")
+    L.append("| Cell | Run | quant ASR | +Write ASR | +Read ASR | +Both ASR | rho read % | rho write % |")
+    L.append("|---|---|---:|---:|---:|---:|---:|---:|")
+    for m, block in rv["x6"].items():
+        for label, r in block["reps"].items():
+            if r["status"] != "ok":
+                L.append(f"| {m} | {label} | missing | `{r['expected']}` | | | | |")
+                continue
+            L.append(f"| {m} | {label} | {_f(r['quant_asr'])} | {_f(r['write_restored_asr'])} | "
+                     f"{_f(r['read_restored_asr'])} | {_f(r['both_restored_asr'])} | "
+                     f"{_f(r['rho_read_pct'])} | {_f(r['rho_write_pct'])} |")
+        agg = block["across_reps"]
+        if agg:
+            def ms(k):
+                s = agg[k]
+                return "--" if not s else f"{s['mean']} +/- {_f(s['sd'])}"
+            L.append(f"| {m} | mean +/- sd ({block['n_present']} runs) | {ms('quant_asr')} | "
+                     f"{ms('write_restored_asr')} | {ms('read_restored_asr')} | "
+                     f"{ms('both_restored_asr')} | {ms('rho_read_pct')} | {ms('rho_write_pct')} |")
     return "\n".join(L)
 
 
