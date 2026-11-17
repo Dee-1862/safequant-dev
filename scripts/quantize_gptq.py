@@ -295,7 +295,8 @@ def main():
                     help = "calibration windows (GPTQ standard = 128)")
     ap.add_argument("--seqlen", type = int, default = 2048,
                     help = "tokens per calibration window (GPTQ standard = 2048)")
-    ap.add_argument("--seed", type = int, default = 0)
+    # 42 = what scripts/quantize_gptq.sbatch has always passed (the paper checkpoints)
+    ap.add_argument("--seed", type = int, default = 42)
     ap.add_argument("--output_dir", default = None)
     ap.add_argument("--backend", default = os.environ.get("GPTQ_BACKEND", "autogptq"),
                     help = "autogptq (default) | gptqmodel; default from $GPTQ_BACKEND")

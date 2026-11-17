@@ -22,7 +22,7 @@ uses PV-tuning that we do not reproduce. AWQ uses public checkpoints too. Proven
 | dampening | `damp_percent=0.1` | hard-coded |
 | calibration | 128 windows x 2048 tokens | `--n_calib 128 --seqlen 2048` |
 | calibration text | WikiText-2-raw **train** split (`Salesforce/wikitext`, `wikitext-2-raw-v1`), all lines joined with `"\n\n"` and tokenized once; each window starts at a random token offset | `build_calibration()` |
-| seed | window offsets drawn after `random.seed`, `np.random.seed`, `torch.manual_seed`. The script's default is `--seed 0`; **the launcher passes `--seed 42`**, so the paper checkpoints use 42 | `scripts/quantize_gptq.sbatch` |
+| seed | window offsets drawn after `random.seed`, `np.random.seed`, `torch.manual_seed`. The paper checkpoints use 42: the launcher has passed `--seed 42` since the script was added, and the script's default is also 42 | `scripts/quantize_gptq.sbatch` |
 | FP base | loaded in fp16, pinned to `config.MODEL_REVISIONS` where set (e.g. `phi3` -> `ff07dc01...`) so GPTQ starts from the same weights as the AQLM cell | `MODEL_REVISIONS` |
 | Phi-3 | fused `qkv_proj` / `gate_up_proj` layout registered with auto-gptq at runtime; RotaryEmbedding pinned to the input device during quantization | in the script |
 | output | `$QM_ROOT/gptq/<model>-gptq<bits>bit-g<group>/` (where `config.QUANTIZED_CHECKPOINTS` reads it) | `default_output_dir()` |
