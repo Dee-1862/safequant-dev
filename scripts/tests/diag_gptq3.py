@@ -52,6 +52,17 @@ def load_gptqmodel(path, bits, dtype):
     return model.eval(), tok
 
 
+def load_dense(model_name, bits):
+    """Dense fp16 copy written by scripts/gptq_dequant_dense.py, loaded as a plain model."""
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    path = Path(QM_ROOT) / "gptq_dense" / f"{model_name}-gptq{bits}bit-g128"
+    tok = AutoTokenizer.from_pretrained(str(path))
+    model = AutoModelForCausalLM.from_pretrained(str(path), device_map="cuda:0", torch_dtype=torch.float16)
+    n_q = sum("QuantLinear" in type(m).__name__ for m in model.modules())
+    print(f"  dense model from {path}; QuantLinear modules: {n_q}")
+    return model.eval(), tok
+
+
 def load_autogptq(path, model_name):
     from transformers import AutoTokenizer
     from auto_gptq import AutoGPTQForCausalLM
@@ -128,7 +139,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--bits", type=int, default=3)
-    ap.add_argument("--method", choices=["gptqmodel", "autogptq"], required=True)
+    ap.add_argument("--method", choices=["gptqmodel", "autogptq", "dense"], required=True)
     ap.add_argument("--dtype", choices=list(DTYPES), default="fp16")
     ap.add_argument("--windows", type=int, default=20)
     a = ap.parse_args()
@@ -146,6 +157,8 @@ def main():
     try:
         if a.method == "gptqmodel":
             model, tok = load_gptqmodel(path, a.bits, DTYPES[a.dtype])
+        elif a.method == "dense":
+            model, tok = load_dense(a.model, a.bits)
         else:
             model, tok = load_autogptq(path, a.model)
         text = load_wikitext2("test")

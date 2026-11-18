@@ -221,6 +221,11 @@ def save_result(calling_file, cfg, data, raw = False):
         "git_sha": _git_sha(),
         **data,
     }
+    # Record a non-default model load (e.g. GPTQ-3 dense copy) in the manifest
+    import sys as _sys
+    _li = getattr(_sys.modules.get("core.model_loader"), "LOAD_INFO", None)
+    if _li:
+        payload["manifest"]["load_info"] = dict(_li)
     path.write_text(json.dumps(payload, indent = 2, default = str))
     return path
 

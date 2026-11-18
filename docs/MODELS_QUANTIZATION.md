@@ -105,3 +105,27 @@ instead (Triton dequantize + fp16 matmul for >= 1024 tokens per batch, Triton GE
 that). Bridges used `awq_ext`, so AWQ numerics can differ slightly; the reviewer runs check
 each AWQ cell's WikiText-2 PPL against the paper (`scripts/delta_queue.sh --awq-ppl`,
 tag `delta`), warning above 2%.
+
+## GPTQ-3 on Delta / DeltaAI: dense weights dequantized by auto-gptq
+
+gptqmodel 5.7.0, the GPTQ loader in `sq_clean`, unpacks 3-bit checkpoints wrongly on this
+stack. Its 3-bit path (`TorchQuantLinear`) gives PPL `nan` in fp16 and around 1e6 in bf16
+(phi3 and llama7b), with the first non-finite value at an `mlp.down_proj` output. The
+checkpoints themselves are correct: auto-gptq 0.7.1, which wrote them, loads them to
+phi3 8.419 and llama7b 8.766 on the first 20 WikiText-2 test windows (paper, full test
+set: 8.465 and 8.770). gptqmodel 5.6.12 has the same 3-bit fault; 5.4.2, 5.0.0 and 4.2.5
+do not work with optimum 2.2.0. 4-bit and 2-bit load correctly (phi3 2-bit: gptqmodel
+535.21 vs auto-gptq 535.81 on the same windows). Bridges ran gptqmodel 7.1.0.
+
+For the GPTQ-3 cells, `scripts/gptq_dequant_dense.py` (run in `sq_autogptq`) loads each
+checkpoint with unmodified auto-gptq 0.7.1, pushes an identity matrix through every
+QuantLinear with its bias detached, which returns exactly the fp16 weights auto-gptq
+computes (`scales[g_idx] * (q - zeros[g_idx])`), and saves a plain fp16 model with those
+weights to `$QM_ROOT/gptq_dense/<model>-gptq3bit-g128`. `sq_dequant_info.json` there
+records the source checkpoint, the auto-gptq/torch/transformers versions and the checks:
+per-decoder-layer and logits max |auto-gptq - dense| on 4 real inputs, and the auto-gptq
+PPL on 20 windows. `core/model_loader.py` loads that copy for `gptq3` only when
+`SQ_GPTQ3_DENSE=1`, and every result saved after such a load carries
+`manifest.load_info` naming the dense copy. The default GPTQ path is unchanged.
+Verification job: `scripts/tests/dense_gptq3.sbatch`. The dense copies are not used by
+any experiment until those numbers have been reviewed.

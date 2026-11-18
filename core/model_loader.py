@@ -12,7 +12,11 @@ from datasets import load_dataset as _load_ds
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from transformers import GPTQConfig
 
-from config import MODELS, DEVICE, HF_HOME, QUANTIZED_CHECKPOINTS
+from config import MODELS, DEVICE, HF_HOME, QM_ROOT, QUANTIZED_CHECKPOINTS
+
+# What the last load used, when it differs from the default path (read by
+# core/manifest.save_result into every result's manifest as 'load_info').
+LOAD_INFO = {}
 
 try:
     from config import MODEL_REVISIONS
@@ -60,6 +64,7 @@ def load_fp32(model_name, device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -105,6 +110,7 @@ def load_nf4(model_name, device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -148,6 +154,7 @@ def load_int8(model_name, device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -184,6 +191,7 @@ def load_quantized(model_name, quantizer = "nf4", device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     quantizer = quantizer.lower()
 
     if quantizer == "fp32":
@@ -398,6 +406,37 @@ def _load_gptq(model_name, device = None, bits = 4):
 
         _oq.GPTQQuantizer.__init__ = _agaw_init
         _oq.GPTQQuantizer._safequant_agaw_patch = True
+
+    # GPTQ-3 via dense weights (opt-in): gptqmodel 5.7.0 unpacks 3-bit weights wrongly on
+    # this stack (PPL nan in fp16). scripts/gptq_dequant_dense.py writes the exact fp16
+    # weights auto-gptq 0.7.1 computes for the same checkpoint to
+    # $QM_ROOT/gptq_dense/<model>-gptq3bit-g128; with SQ_GPTQ3_DENSE=1 that copy is loaded as
+    # a plain fp16 model. Default off: the GPTQ path below is unchanged.
+    if bits == 3 and os.environ.get("SQ_GPTQ3_DENSE") == "1":
+        import json as _json
+        dense = os.path.join(QM_ROOT, "gptq_dense", f"{model_name}-gptq3bit-g128")
+        if not os.path.exists(os.path.join(dense, "config.json")):
+            raise FileNotFoundError(f"SQ_GPTQ3_DENSE=1 but no dense copy at {dense} "
+                                    "(run scripts/gptq_dequant_dense.py)")
+        print(f"Loading GPTQ-3 as dense fp16 (dequantized by auto-gptq): {model_name} -> {dense}")
+        tokenizer = AutoTokenizer.from_pretrained(dense)
+        model = AutoModelForCausalLM.from_pretrained(
+            dense, device_map = device, torch_dtype = torch.float16,
+        )
+        model.eval()
+        info_path = os.path.join(dense, "sq_dequant_info.json")
+        dq = _json.loads(open(info_path).read()) if os.path.exists(info_path) else {}
+        LOAD_INFO.clear()
+        LOAD_INFO.update({
+            "gptq3_weights": "dense fp16, dequantized by auto-gptq 0.7.1 (SQ_GPTQ3_DENSE=1)",
+            "dense_dir": dense,
+            "source_checkpoint": dq.get("source_checkpoint"),
+            "dequant_versions": dq.get("versions"),
+            "dequant_checks": {k: dq.get("checks", {}).get(k)
+                               for k in ("logits_max_abs_diff", "autogptq_ppl_20_windows")},
+        })
+        print("  OK Loaded GPTQ-3 dense copy")
+        return model, tokenizer
 
     # Look up a registered pre-quantized checkpoint when bits map to a suffix
     bit_suffix = {4: "gptq4", 3: "gptq3", 2: "gptq2", 8: "gptq8"}.get(bits)
