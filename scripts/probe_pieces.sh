@@ -85,13 +85,15 @@ piece_host_gb() {
   fi
 }
 
-# Expected minutes running alone (x3 measured 34-42 min shuffled-only; paired fits twice)
+# Expected minutes running alone. Measured: X3 shuffled-only 34 min (llama) / 42 min (phi3),
+# of which model loads + extraction ~10-15 min and probe fits the rest. X4 = one FP32
+# extraction + 6400 small logistic fits; X2 = one quantized extraction of ~1050 prompts + fits.
 piece_min() {
   local kind m q t
   IFS=: read -r kind m q t <<< "$1"
   case "$kind" in
-    x3p) if fp32_cached "$m"; then echo 45; else echo 75; fi ;;
-    x3) echo 45 ;; x4) echo 75 ;; x2) echo 75 ;; *) echo 90 ;;
+    x3p) if fp32_cached "$m"; then echo 35; else echo 60; fi ;;
+    x3) echo 45 ;; x4) echo 45 ;; x2) echo 50 ;; *) echo 90 ;;
   esac
 }
 

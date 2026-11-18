@@ -16,7 +16,7 @@ export QM_ROOT
 source scripts/probe_pieces.sh
 ORDER="${CHAIN_ORDER:-$PROBE_ALL}"
 JOBS="${PROBE_CLAIMS}/jobs.tsv"; mkdir -p "${PROBE_CLAIMS}"; touch "$JOBS"
-limit() { case "$1" in x3:*) echo 1:30:00 ;; *) echo 1:55:00 ;; esac; }   # all < 2 h
+limit() { case "$1" in x4:*) echo 1:15:00 ;; *) echo 1:30:00 ;; esac; }   # short limits backfill sooner; ~1.6x expected
 echo "[$(date)] chain start: ${ORDER}"
 while :; do
   # cancel pending pool jobs with nothing left to do
