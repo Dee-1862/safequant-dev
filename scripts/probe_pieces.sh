@@ -8,6 +8,11 @@
 #                                x4:<model>:1000 = 1000 splits (empirical p down to 0.001), run last on 64 CPUs
 #   x2:<model>:<quant>[:<tag>]   X2 leakage control on a quantized cell (= probe_leakage_control_quant.sbatch)
 #   x3:<model>                   (superseded) X3 shuffled-only, aqlm2
+#   ppl:<model>:<quant>:<tag>    WikiText-2 PPL sanity check (wikitext_ppl --no_fp32 --tag <tag>)
+#   x2fp:<model>[:<tag>]         X2 leakage control on the FP32 model (probe_leakage_control, no --quantizer)
+#   diag:<model>:<quant>[:<tag>] X2 activation diagnostic, FP32 vs quantized (x2_activation_diag)
+# AQLM gate: pieces on mistral7b-v02 aqlm2 (our only 2x8 AQLM checkpoint, Triton kernel on
+# aarch64) wait until its DeltaAI PPL (tag delta) is within AQLM_GATE_TOL of the paper's value.
 # Collapsed cells use tag "rebuilt" (DeltaAI rebuilt checkpoints, dense GPTQ path).
 # Outputs keep their names; every script refuses to overwrite an existing result.
 #
@@ -47,6 +52,9 @@ piece_cmd() {  # piece_cmd <piece>  -> python command
     x3)  echo "python -u -m experiments.signal_geometry.probe_accuracy --model $m --quantizer aqlm2 --n_calib 200 --probe_type linear --shuffle_labels" ;;
     x4)  echo "python -u -m experiments.boundary.probe_refit_control --model $m --n_calib 200 --n_splits ${q:-100}" ;;
     x2)  echo "python -u -m experiments.boundary.probe_leakage_control --model $m --quantizer $q --n_calib 200 --n_transfer 200${t:+ --tag $t}" ;;
+    ppl) echo "python -u -m experiments.regime_sweep.wikitext_ppl --model $m --quantizers $q --no_fp32 --tag $t" ;;
+    x2fp) echo "python -u -m experiments.boundary.probe_leakage_control --model $m --n_calib 200 --n_transfer 200${q:+ --tag $q}" ;;
+    diag) echo "python -u -m experiments.boundary.x2_activation_diag --model $m --quantizer $q --n_calib 200${t:+ --tag $t}" ;;
     *)   return 1 ;;
   esac
 }
@@ -69,8 +77,8 @@ piece_gb() {
   IFS=: read -r kind m q t <<< "$1"
   case "$kind" in
     x3p) a=$(quant_gb "$m" "$q"); if fp32_cached "$m"; then echo "$a"; else b=$(fp32_gb "$m"); echo $(( a > b ? a : b )); fi ;;
-    x3|x4) fp32_gb "$m" ;;
-    x2) quant_gb "$m" "$q" ;;
+    x3|x4|x2fp|diag) fp32_gb "$m" ;;
+    x2|ppl) quant_gb "$m" "$q" ;;
     *) echo 35 ;;
   esac
 }
@@ -80,7 +88,7 @@ piece_host_gb() {
   local kind m q t
   IFS=: read -r kind m q t <<< "$1"
   local fp=0
-  case "$kind" in x3|x4) fp=1 ;; x3p) fp32_cached "$m" || fp=1 ;; esac
+  case "$kind" in x3|x4|x2fp|diag) fp=1 ;; x3p) fp32_cached "$m" || fp=1 ;; esac
   if (( fp )); then
     case "$m" in phi3) echo 12 ;; *) echo 22 ;; esac
   else
@@ -96,14 +104,37 @@ piece_min() {
   IFS=: read -r kind m q t <<< "$1"
   case "$kind" in
     x3p) if fp32_cached "$m"; then echo 35; else echo 60; fi ;;
-    x3) echo 45 ;; x4) [[ "${q:-100}" == 100 ]] && echo 60 || echo 110 ;; x2) echo 50 ;; *) echo 90 ;;
+    x3) echo 45 ;; x4) [[ "${q:-100}" == 100 ]] && echo 60 || echo 110 ;; x2) echo 20 ;;
+    ppl) echo 30 ;; x2fp) echo 20 ;; diag) echo 35 ;; *) echo 90 ;;
   esac
 }
 
-# Ready = its checkpoint can be loaded now (GPTQ cells need the dense copy on Delta)
+# filename model token (outputs/...)
+file_model() { case "$1" in llama7b) echo llama ;; mistral7b-v02) echo mistral ;; qwen7b) echo qwen ;; *) echo "$1" ;; esac; }
+
+# AQLM gate: 0 when <model> aqlm2 DeltaAI PPL (tag delta) is within AQLM_GATE_TOL of the paper's
+AQLM_GATE_MODELS="${AQLM_GATE_MODELS:-mistral7b-v02}"
+AQLM_GATE_TOL="${AQLM_GATE_TOL:-0.02}"
+aqlm_gate_ok() {
+  local fm d; fm=$(file_model "$1"); d="${REPO_ROOT:-.}/outputs/regime_sweep"
+  python3 - "$d/wikitext_ppl_${fm}_aqlm2_wikitext2_ppl_delta.json" "$d/wikitext_ppl_${fm}_aqlm2_wikitext2_ppl.json" "$AQLM_GATE_TOL" <<'PY' 2>/dev/null
+import json, sys
+try:
+    new = json.load(open(sys.argv[1]))["wikitext2_ppl"]; ref = json.load(open(sys.argv[2]))["wikitext2_ppl"]
+    sys.exit(0 if new is not None and abs(new / ref - 1) <= float(sys.argv[3]) else 1)
+except Exception:
+    sys.exit(1)
+PY
+}
+
+# Ready = its checkpoint can be loaded now (GPTQ cells need the dense copy on Delta; gated AQLM
+# cells need a passing DeltaAI PPL check)
 piece_ready() {
   local kind m q t
   IFS=: read -r kind m q t <<< "$1"
+  if [[ "$q" == aqlm2 && " ${AQLM_GATE_MODELS} " == *" $m "* && "$kind" != ppl && "$kind" != diag ]]; then
+    aqlm_gate_ok "$m" || return 1
+  fi
   [[ "$q" == gptq* && "${SQ_GPTQ_DENSE:-0}" == 1 ]] || return 0
   [[ -f "${QM_ROOT}/gptq_dense/${m}-gptq${q#gptq}bit-g128/config.json" ]]
 }
