@@ -12,7 +12,14 @@
 #             outputs/boundary/probe_leakage_control_<model>_<quant>_rebuilt.json,
 #             outputs/regime_sweep/arc_check_<model>_<quant>_dense.json (else _rebuilt_unmod)
 #             (5 collapsed cells on DeltaAI rebuilt dense checkpoints; reported separately)
-#   X4        outputs/boundary/probe_refit_control_<model>_splits100.json
+#   X4        outputs/boundary/probe_refit_control_<model>_splits100.json  (FP-vs-FP refit floor),
+#             tested against outputs/signal_geometry/probe_rotation_<model>_<quant>.json (observed
+#             FP-vs-quant probe cosines; Table 1/7 coswmed = their median over layers):
+#               split-median test: per split, median over layers of the refit cosine; empirical
+#                 p = (#split-medians <= observed coswmed + 1) / (n_splits + 1)
+#               per-layer test: floor = 5th percentile of that layer's refit cosine over splits;
+#                 count layers whose observed cosine is below its floor
+#             The pooled 95th-percentile refit distance is descriptive only, not a test threshold.
 #   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
 #   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
 #   X6        outputs/headline/headline_<model>_aqlm2_rep{1,2,3}.json   (Delta repeats, same
@@ -41,7 +48,9 @@ X3_CELLS = (
 # Collapsed cells (DeltaAI rebuilds; never compared against Table 1's collapsed numbers)
 COLLAPSED_CELLS = (("llama", "gptq2"), ("qwen", "gptq2"), ("mistral", "gptq2"),
                    ("phi3", "gptq2"), ("mistral", "gptq3"))
-X4_MODELS = ("llama", "phi3")
+X4_MODELS = ("llama", "phi3", "mistral", "qwen")
+# X4 tests: every Table 1 cell (qwen has no AQLM-2 cell)
+X4_QUANTS = ("aqlm2", "awq", "gptq4", "gptq3", "gptq2")
 X5_CELLS = ("llama", "phi3")          # the two significant AQLM-2 cells
 X5_SEEDS = (1, 2, 3, 4, 5)
 CONDS = ("fp32", "QUANT", "write_restored", "read_restored", "both_restored")
@@ -201,23 +210,66 @@ def collapsed():
     return out
 
 
+def _x4_test(cos_by_split, observed):
+    """
+    Compare one cell's observed FP-vs-quant probe cosines with the FP-vs-FP refit floor.
+
+    Inputs:
+        - cos_by_split (dict): layer -> list of refit cosines, one per split (X4)
+        - observed (dict): layer -> observed FP-vs-quant cosine (probe_rotation)
+
+    Outputs:
+        - res (dict): split-median distribution + empirical p, per-layer floor count
+    """
+    import numpy as np
+    layers = sorted(cos_by_split, key = int)
+    C = np.array([cos_by_split[L] for L in layers], dtype = np.float64)   # (layers, splits)
+    split_medians = np.median(C, axis = 0)
+    obs = np.array([observed[L] for L in layers], dtype = np.float64)
+    coswmed = float(np.median(obs))
+    floors = np.percentile(C, 5, axis = 1)
+    below = [int(L) for L, o, f in zip(layers, obs, floors) if o < f]
+    n = len(split_medians)
+    return {
+        "coswmed": _r(coswmed, 3),
+        "split_median_min": _r(float(split_medians.min()), 3),
+        "split_median_p5": _r(float(np.percentile(split_medians, 5)), 3),
+        "split_median_median": _r(float(np.median(split_medians)), 3),
+        "p_value": _r((int((split_medians <= coswmed).sum()) + 1) / (n + 1), 4),
+        "n_layers": len(layers),
+        "n_below_floor": len(below),
+        "layers_below_floor": below,
+    }
+
+
 def x4():
-    out = {}
+    out = {"floors": {}, "tests": {}}
     for model in X4_MODELS:
         path = OUT / "boundary" / f"probe_refit_control_{model}_splits100.json"
         d = _load(path)
         if d is None:
-            out[model] = _missing(path)
+            out["floors"][model] = _missing(path)
             continue
         s = d.get("summary_splits", {})
-        out[model] = {
+        out["floors"][model] = {
             "status": "ok", "source": _rel(path),
             "n_splits": s.get("n_splits"),
+            # descriptive only (not a test threshold)
             "refit_distance_p95_pooled": _r(s.get("refit_distance_p95_pooled"), 3),
             "cos_floor_p5_pooled": _r(s.get("cos_floor_p5_pooled"), 3),
             "cos_median_pooled": _r(s.get("cos_median_pooled"), 3),
             "refit_distance_p95_per_layer_median": _r(s.get("refit_distance_p95_per_layer_median"), 3),
         }
+        for q in X4_QUANTS:
+            if model == "qwen" and q == "aqlm2":
+                continue
+            rpath = OUT / "signal_geometry" / f"probe_rotation_{model}_{q}.json"
+            r = _load(rpath)
+            if r is None:
+                continue
+            res = {"status": "ok", "floor_source": _rel(path), "observed_source": _rel(rpath)}
+            res.update(_x4_test(d["cos_by_split_per_layer"], r["cos_probe_weight_per_layer"]))
+            out["tests"][f"{model}/{q}"] = res
     return out
 
 
@@ -397,15 +449,25 @@ def to_markdown(rv):
                  f"{_f(r['table1_a_min'])} | {_f(r['delta_vs_table1_pt'])} |")
 
     L.append("\n### X4: 100-split FP-vs-FP refit floor\n")
-    L.append("| Model | splits | refit distance p95 (pooled) | cos floor p5 | cos median | per-layer p95 (median) |")
+    L.append("Floor runs (pooled p95 is descriptive only, not a test threshold):\n")
+    L.append("| Model | splits | refit distance p95 (pooled) | cos p5 (pooled) | cos median | per-layer p95 (median) |")
     L.append("|---|---:|---:|---:|---:|---:|")
-    for m, r in rv["x4"].items():
+    for m, r in rv["x4"]["floors"].items():
         if r["status"] != "ok":
             L.append(f"| {m} | missing | `{r['expected']}` | | | |")
             continue
         L.append(f"| {m} | {_f(r['n_splits'])} | {_f(r['refit_distance_p95_pooled'])} | "
                  f"{_f(r['cos_floor_p5_pooled'])} | {_f(r['cos_median_pooled'])} | "
                  f"{_f(r['refit_distance_p95_per_layer_median'])} |")
+    L.append("\nTests per Table 1 cell. Split-median: median over layers of the refit cosine, one per "
+             "split; p = (#split-medians <= coswmed + 1) / (splits + 1). Per-layer: floor = 5th "
+             "percentile of that layer's refit cosine; count of layers with observed FP-vs-quant "
+             "cosine below it.\n")
+    L.append("| Cell | coswmed | split-median min / p5 / median | p | layers below floor |")
+    L.append("|---|---:|---:|---:|---:|")
+    for c, r in rv["x4"]["tests"].items():
+        L.append(f"| {c} | {_f(r['coswmed'])} | {_f(r['split_median_min'])} / {_f(r['split_median_p5'])} / "
+                 f"{_f(r['split_median_median'])} | {_f(r['p_value'])} | {r['n_below_floor']} / {r['n_layers']} |")
 
     L.append("\n### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)\n")
     L.append("| Cell | seed | dASR (paired) | 95% CI | damage | read rec | write rec | both rec |")
