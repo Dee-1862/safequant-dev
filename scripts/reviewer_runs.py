@@ -17,8 +17,10 @@
 #             FP-vs-quant probe cosines; Table 1/7 coswmed = their median over layers):
 #               split-median test: per split, median over layers of the refit cosine; empirical
 #                 p = (#split-medians <= observed coswmed + 1) / (n_splits + 1)
+#                 and z = (median of split-medians - coswmed) / SD(split-medians)
 #               per-layer test: floor = 5th percentile of that layer's refit cosine over splits;
-#                 count layers whose observed cosine is below its floor
+#                 count layers whose observed cosine is below floor - X4_FLOOR_MARGIN (rounding ties
+#                 in low-variance early layers do not count)
 #             The pooled 95th-percentile refit distance is descriptive only, not a test threshold.
 #   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
 #   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
@@ -51,6 +53,7 @@ COLLAPSED_CELLS = (("llama", "gptq2"), ("qwen", "gptq2"), ("mistral", "gptq2"),
 X4_MODELS = ("llama", "phi3", "mistral", "qwen")
 # X4 tests: every Table 1 cell (qwen has no AQLM-2 cell)
 X4_QUANTS = ("aqlm2", "awq", "gptq4", "gptq3", "gptq2")
+X4_FLOOR_MARGIN = 0.002
 X5_CELLS = ("llama", "phi3")          # the two significant AQLM-2 cells
 X5_SEEDS = (1, 2, 3, 4, 5)
 CONDS = ("fp32", "QUANT", "write_restored", "read_restored", "both_restored")
@@ -228,14 +231,21 @@ def _x4_test(cos_by_split, observed):
     obs = np.array([observed[L] for L in layers], dtype = np.float64)
     coswmed = float(np.median(obs))
     floors = np.percentile(C, 5, axis = 1)
-    below = [int(L) for L, o, f in zip(layers, obs, floors) if o < f]
+    below = [int(L) for L, o, f in zip(layers, obs, floors) if o < f - X4_FLOOR_MARGIN]
     n = len(split_medians)
+    n_le = int((split_medians <= coswmed).sum())
+    sd = float(np.std(split_medians, ddof = 1))
     return {
         "coswmed": _r(coswmed, 3),
         "split_median_min": _r(float(split_medians.min()), 3),
         "split_median_p5": _r(float(np.percentile(split_medians, 5)), 3),
         "split_median_median": _r(float(np.median(split_medians)), 3),
-        "p_value": _r((int((split_medians <= coswmed).sum()) + 1) / (n + 1), 4),
+        "p_value": _r((n_le + 1) / (n + 1), 4),
+        "p_label": f"p < {1 / (n + 1):.1g} ({n} splits)" if n_le == 0 else f"p = {(n_le + 1) / (n + 1):.3g}",
+        "n_splits": n,
+        "split_median_sd": _r(sd, 4),
+        "z": _r((float(np.median(split_medians)) - coswmed) / sd, 1) if sd > 0 else None,
+        "floor_margin": X4_FLOOR_MARGIN,
         "n_layers": len(layers),
         "n_below_floor": len(below),
         "layers_below_floor": below,
@@ -462,12 +472,13 @@ def to_markdown(rv):
     L.append("\nTests per Table 1 cell. Split-median: median over layers of the refit cosine, one per "
              "split; p = (#split-medians <= coswmed + 1) / (splits + 1). Per-layer: floor = 5th "
              "percentile of that layer's refit cosine; count of layers with observed FP-vs-quant "
-             "cosine below it.\n")
-    L.append("| Cell | coswmed | split-median min / p5 / median | p | layers below floor |")
-    L.append("|---|---:|---:|---:|---:|")
+             "cosine below floor - 0.002. z = (median split-median - coswmed) / SD(split-medians).\n")
+    L.append("| Cell | coswmed | split-median min / p5 / median (SD) | p | z | layers below floor |")
+    L.append("|---|---:|---:|---|---:|---:|")
     for c, r in rv["x4"]["tests"].items():
         L.append(f"| {c} | {_f(r['coswmed'])} | {_f(r['split_median_min'])} / {_f(r['split_median_p5'])} / "
-                 f"{_f(r['split_median_median'])} | {_f(r['p_value'])} | {r['n_below_floor']} / {r['n_layers']} |")
+                 f"{_f(r['split_median_median'])} ({_f(r['split_median_sd'])}) | {r['p_label']} | {_f(r['z'])} | "
+                 f"{r['n_below_floor']} / {r['n_layers']} |")
 
     L.append("\n### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)\n")
     L.append("| Cell | seed | dASR (paired) | 95% CI | damage | read rec | write rec | both rec |")
