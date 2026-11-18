@@ -40,5 +40,5 @@ for M in ${DENSE_MODELS:-phi3 llama7b qwen7b mistral7b-v02}; do
   python -u scripts/regime_sweep/compare_ppl_rebuilt.py --model "$M" --quant "gptq${B}" --tag dense --ref_tag rebuilt_unmod || true
 done
 done
-echo "=== summary"; grep -hE '^RESULT|^  [a-z0-9-]+ +gptq[0-9] +[0-9.]+|^####' "scripts/logs/dense_gptq_${SLURM_JOB_ID}.out" || true
+echo "=== summary"; cat "scripts/logs/dense_gptq_${SLURM_JOB_ID}.out" | grep -hE '^RESULT|^  [a-z0-9-]+ +gptq[0-9] +[0-9.]+|^####' || true   # via cat: grep refuses its own output file
 echo "=== done | $(date) ==="
