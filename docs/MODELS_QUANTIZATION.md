@@ -129,8 +129,13 @@ checkpoint when `SQ_GPTQ_DENSE=1` (all GPTQ bit widths, 2/3/4, so every GPTQ cel
 through the same auto-gptq dequantization) or `SQ_GPTQ3_DENSE=1` (GPTQ-3 only). A missing
 dense copy is an error, not a fallback to gptqmodel. Every result saved after such a load
 carries `manifest.load_info` naming the dense copy, the bit width, the source checkpoint
-and the dequantization checks. Both variables default off; the default GPTQ path is
-unchanged. Verification job: `scripts/tests/dense_gptq.sbatch` (`DENSE_BITS`,
+and the dequantization checks. In Python both default off.
+On Delta, `scripts/_env.sh` sets `SQ_GPTQ_DENSE=1` for every job whenever
+`$QM_ROOT/gptq_dense` exists, so all GPTQ cells (2/3/4-bit) load through auto-gptq's
+dequantization; `SQ_GPTQ_DENSE=0` restores the gptqmodel path. `arc_check.sbatch` then
+tags GPTQ results `dense`. The GPTQ checkpoints in `$QM_ROOT/gptq` stay: they were
+written by auto-gptq, the dense copies are derived from them, and `sq_dequant_info.json`
+points back to them. Verification job: `scripts/tests/dense_gptq.sbatch` (`DENSE_BITS`,
 `DENSE_MODELS`); for 4- and 2-bit it compares the dense PPL with the paper and with
 `rebuilt_unmod` (the same checkpoint loaded by gptqmodel).
 
@@ -145,5 +150,22 @@ GPTQ-3 verification (job 3622151; 4 inputs x 512 tokens; full test set vs paper)
 qwen7b is the only one of the three with linear biases; auto-gptq adds the bias after the
 matmul, `nn.Linear` fuses it, so outputs differ by fp16 rounding (likely cause, not yet
 isolated). The three GPTQ-3 dense results record `load_info.gptq3_weights`; later results
-use `load_info.gptq_weights` and `gptq_bits`. The dense copies are not used by any
-experiment until the numbers have been reviewed.
+use `load_info.gptq_weights` and `gptq_bits`. 
+GPTQ-4 / GPTQ-2 verification (job 3622567; full PPL dense vs gptqmodel `rebuilt_unmod`
+on the same checkpoint vs paper):
+
+| cell | per-layer max diff | logits max diff | PPL20 auto-gptq / dense | full PPL dense / gptqmodel / paper |
+|---|---|---|---|---|
+| phi3 gptq4 | 0 | 0 | 7.1833 / 7.1840 | 6.777 / 6.777 / 6.815 |
+| llama7b gptq4 | 0 | 0 | 7.6456 / 7.6456 | 7.545 / 7.545 / 7.540 |
+| qwen7b gptq4 | 6 (layer 27) | 0.102 | 7.3773 / 7.3773 | 7.678 / 7.679 / 7.696 |
+| mistral7b-v02 gptq4 | 0 | 0 | 6.4227 / 6.4227 | 6.032 / 6.032 / 6.032 |
+| phi3 gptq2 | 0 | 0 | 535.81 / 535.21 | 689.4 / 689.4 / 522.9 |
+| llama7b gptq2 | 0 | 0 | 131.15 / 131.15 | 136.1 / 136.1 / 19,996 |
+| qwen7b gptq2 | 22.5 (layer 27) | 1.43 | 32.159 / 32.161 | 35.59 / 35.58 / 34.63 |
+
+For 4- and 2-bit the dense path changes no PPL (gptqmodel loads those widths correctly);
+it is used so that all GPTQ cells share one load path. The GPTQ-2 gap to the paper is the
+rebuilt checkpoints, not the loader. (phi3 gptq2 PPL20 differs by 0.1% between
+sq_autogptq and sq_clean with identical layer outputs: transformers 4.44 vs 4.57.)
+Reviewed and adopted for all GPTQ cells on 2026-11-18.

@@ -18,7 +18,9 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 set -euo pipefail
 MODEL="${EXP_MODEL:?set EXP_MODEL}"
 QUANT="${EXP_QUANT:?set EXP_QUANT}"
-TAG="${ARC_TAG:-rebuilt_unmod}"
+# Default tag follows the GPTQ load path (_env.sh sets SQ_GPTQ_DENSE=1 where dense copies exist)
+if [[ "$QUANT" == gptq* && "${SQ_GPTQ_DENSE:-0}" == 1 ]]; then DEFTAG=dense; else DEFTAG=rebuilt_unmod; fi
+TAG="${ARC_TAG:-$DEFTAG}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-1}}"
 
 if [[ "$QUANT" == gptq* ]]; then
@@ -26,7 +28,7 @@ if [[ "$QUANT" == gptq* ]]; then
   [[ -f "${CKPT}/config.json" ]] || { echo "ERROR: checkpoint not found at ${CKPT}" >&2; exit 1; }
   python -u scripts/fix_autogptq_checkpoints.py "${CKPT}"
 fi
-echo "=== ARC check | ${MODEL}/${QUANT} | tag=${TAG} | $(date) ==="
+echo "=== ARC check | ${MODEL}/${QUANT} | tag=${TAG} | SQ_GPTQ_DENSE=${SQ_GPTQ_DENSE:-0} | $(date) ==="
 python -u scripts/regime_sweep/arc_check.py --model "${MODEL}" --quantizer "${QUANT}" \
   --n_reasoning 100 --tag "${TAG}"
 echo "=== done | $(date) ==="
