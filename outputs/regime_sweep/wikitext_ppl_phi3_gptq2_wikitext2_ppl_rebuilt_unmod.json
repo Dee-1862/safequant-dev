@@ -1,0 +1,61 @@
+{
+  "manifest": {
+    "model": "phi3",
+    "quantizer": "gptq2",
+    "variant": "wikitext2_ppl_rebuilt_unmod",
+    "extra": {}
+  },
+  "git_sha": "7fbb466f9dcab1165f2f7cd27b7c3fe615a1cb55",
+  "model": "phi3",
+  "quantizer": "gptq2",
+  "seq_len": 2048,
+  "wikitext2_ppl": 689.3824462890625,
+  "wikitext2_ppl_fp32": 6.350447654724121,
+  "ppl_ratio": 108.55651188246995,
+  "status": "ok",
+  "seed": 42,
+  "dataset": "wikitext-2-raw-v1/test",
+  "wikitext2_ppl_fp32_source": "outputs/regime_sweep/wikitext_ppl_phi3_fp32_wikitext2_ppl.json",
+  "checkpoint_build": {
+    "backend": "autogptq",
+    "model": "phi3",
+    "model_path": "microsoft/Phi-3-mini-4k-instruct",
+    "revision": "ff07dc01615f8113924aed013115ab2abd32115b",
+    "recipe": {
+      "bits": 2,
+      "group_size": 128,
+      "desc_act": true,
+      "sym": true,
+      "damp_percent": 0.1
+    },
+    "calibration": {
+      "dataset": "Salesforce/wikitext wikitext-2-raw-v1 train",
+      "n_samples": 128,
+      "seqlen": 2048,
+      "seed": 42
+    },
+    "versions": {
+      "python": "3.10.22",
+      "torch": "2.7.1+cu128",
+      "torch_cuda": "12.8",
+      "transformers": "4.44.2",
+      "numpy": "1.26.4",
+      "accelerate": "1.15.0",
+      "auto_gptq": "0.7.1",
+      "gptqmodel": null,
+      "optimum": null
+    },
+    "host": {
+      "machine": "aarch64",
+      "node": "gh021.hsn.cm.delta.internal.ncsa.edu",
+      "gpu": "NVIDIA GH200 120GB",
+      "slurm_job_id": "3620335"
+    },
+    "timing": {
+      "quantize_and_pack_seconds": 324.6
+    },
+    "torch_threads": 8,
+    "git_sha": "7fbb466f9dcab1165f2f7cd27b7c3fe615a1cb55",
+    "created_utc": "2026-11-17T21:39:33.657388+00:00"
+  }
+}
