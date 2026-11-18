@@ -22,6 +22,12 @@ export QM_ROOT="${QM_ROOT:-${QUANTIZED_MODELS:-${HOME}/quantized_models}}"
 export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-${HF_HOME}}"
 export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HF_HOME}/datasets}"
 export TOKENIZERS_PARALLELISM=false
+# Size CPU thread pools to the Slurm allocation. Unset, torch/OpenMP/BLAS start a pool
+# for the whole node (GPTQ build test: 298 threads on 1 allowed CPU, ~6x slower).
+# Speed only; a job's own OMP_NUM_THREADS wins.
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-1}}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-${OMP_NUM_THREADS}}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-${OMP_NUM_THREADS}}"
 export SQ_LOG_DIR="${SQ_LOG_DIR:-${REPO_ROOT}/scripts/logs}"
 
 mkdir -p "${SQ_LOG_DIR}" "${HF_HOME}" "${HF_DATASETS_CACHE}" "${QM_ROOT}"

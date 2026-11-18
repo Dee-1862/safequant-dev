@@ -62,8 +62,9 @@
 # the smoke test and the first real runs. --limits prints the table and exits.
 #
 # --wave1: only X3, X4, X2's non-GPTQ cells (AQLM + AWQ; AWQ waits for its PPL checks
-# with --awq-ppl), held-out, and the Tables 5-7 reruns (Task 3 localization). No GPTQ
-# builds, X1, X2 GPTQ cells, X6 repeats or X5. --drop-x5 removes X5 from the full queue.
+# with --awq-ppl), held-out, the Tables 5-7 reruns (Task 3 localization), and X1 when
+# the llama7b gptq4 checkpoint already exists. No GPTQ builds, X2 GPTQ cells, X6 or X5.
+# Every queue job gets --cpus-per-task=${JOB_CPUS:-8} (threads sized in _env.sh). --drop-x5 removes X5 from the full queue.
 #
 # Needs .env: SLURM_ACCOUNT + SLURM_PARTITION (GPU jobs), QM_ROOT, HF_HOME, AGENV (GPTQ
 # build). Optional: SLURM_CPU_PARTITION + SLURM_CPU_ACCOUNT -> the setup job runs on the
@@ -215,6 +216,7 @@ sub() {
   local out_override="" a
   for a in "$@"; do [[ "$a" == --output=* ]] && out_override="${a#--output=}"; done
   local id
+  if [[ " $* " != *" --cpus-per-task="* ]]; then set -- --cpus-per-task="${JOB_CPUS:-8}" "$@"; fi
   if [[ $DRY -eq 1 ]]; then
     DRY_N=$((DRY_N + 1)); id="DRY${DRY_N}"
     echo "[dry-run] ${SUB_ENV:-}bash scripts/submit.sh ${job} --parsable --kill-on-invalid-dep=yes $([[ $# -gt 0 ]] && printf '%q ' "$@")" >&2
@@ -372,6 +374,15 @@ else
       "$(x2_time "${X2_GPTQ_CELLS}")" "--export=ALL,CELLS=${X2_GPTQ_CELLS}"
   fi
   fi   # WAVE1 -eq 0 (GPTQ builds, X1, X2 GPTQ cells)
+
+  if [[ $WAVE1 -eq 1 ]]; then
+    X1CK="${QM_ROOT:-$HOME/quantized_models}/gptq/llama7b-gptq4bit-g128"
+    if [[ -f "${X1CK}/config.json" ]]; then
+      sub "X1 XSTest llama gptq4"    scripts/headline/headline_eval_llama_gptq4_xstest.sbatch $D "$(tl "${EST[x1]}")"
+    else
+      echo "WARNING: --wave1 skips X1: ${X1CK} not built" >&2
+    fi
+  fi
 
   for step in perproj depth pm; do
     sub "Task 3 localization ${step}" scripts/localization/localization_with_flags.sbatch $D \
