@@ -12,7 +12,8 @@
 #             outputs/boundary/probe_leakage_control_<model>_<quant>_rebuilt.json,
 #             outputs/regime_sweep/arc_check_<model>_<quant>_dense.json (else _rebuilt_unmod)
 #             (5 collapsed cells on DeltaAI rebuilt dense checkpoints; reported separately)
-#   X4        outputs/boundary/probe_refit_control_<model>_splits100.json  (FP-vs-FP refit floor),
+#   X4        outputs/boundary/probe_refit_control_<model>_splits1000.json if present, else _splits100.json
+#             (FP-vs-FP refit floor),
 #             tested against outputs/signal_geometry/probe_rotation_<model>_<quant>.json (observed
 #             FP-vs-quant probe cosines; Table 1/7 coswmed = their median over layers):
 #               split-median test: per split, median over layers of the refit cosine; empirical
@@ -255,7 +256,10 @@ def _x4_test(cos_by_split, observed):
 def x4():
     out = {"floors": {}, "tests": {}}
     for model in X4_MODELS:
-        path = OUT / "boundary" / f"probe_refit_control_{model}_splits100.json"
+        # the 1000-split floor (empirical p down to 0.001) replaces the 100-split one once it exists
+        path = OUT / "boundary" / f"probe_refit_control_{model}_splits1000.json"
+        if not path.exists():
+            path = OUT / "boundary" / f"probe_refit_control_{model}_splits100.json"
         d = _load(path)
         if d is None:
             out["floors"][model] = _missing(path)
