@@ -393,7 +393,7 @@ else
   for m in llama7b phi3; do
     for rep in rep1 rep2 rep3; do
       sub "Task 4 X6 ${m} ${rep}" scripts/headline/headline_repeats_aqlm2.sbatch $D "$(tl "${EST[x6]}")" \
-        --export="ALL,CELLS=${m},REPS=${rep}"
+        --export="ALL,CELLS=${m},REPS=${rep}" --nice="${REPEAT_NICE:-500}"
     done
   done
   fi
@@ -402,7 +402,7 @@ else
   for m in llama7b phi3; do
     for k in 1 2 3 4 5; do
       sub "X5 ${m} subset${k}" scripts/regime_sweep/subset_seeds_aqlm2.sbatch $D "$(tl "${EST[x5]}")" \
-        --export="ALL,CELLS=${m},SEEDS=${k}"
+        --export="ALL,CELLS=${m},SEEDS=${k}" --nice="${REPEAT_NICE:-500}"
     done
   done
   fi
