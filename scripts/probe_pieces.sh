@@ -4,7 +4,8 @@
 #   x3p:<model>:<quant>[:<tag>]  X3 matched pair: probe_accuracy --paired (real + shuffled-label
 #                                probe on the same activations, seed 42); FP32 pair cached once
 #                                per model family in $X3_FP32_CACHE
-#   x4:<model>                   X4 refit floor, 100 splits (= probe_refit_control_splits100_llama.sbatch)
+#   x4:<model>[:<splits>]        X4 refit floor, 100 splits by default (= probe_refit_control_splits100_llama.sbatch);
+#                                x4:<model>:1000 = 1000 splits (empirical p down to 0.001), run last on 64 CPUs
 #   x2:<model>:<quant>[:<tag>]   X2 leakage control on a quantized cell (= probe_leakage_control_quant.sbatch)
 #   x3:<model>                   (superseded) X3 shuffled-only, aqlm2
 # Collapsed cells use tag "rebuilt" (DeltaAI rebuilt checkpoints, dense GPTQ path).
@@ -29,6 +30,8 @@ PROBE_TIER_B="x3p:llama7b:aqlm2 x3p:qwen7b:awq x3p:mistral7b-v02:aqlm2 x3p:phi3:
 x3p:llama7b:awq x3p:llama7b:gptq4 x3p:llama7b:gptq3 x3p:qwen7b:gptq4 x3p:qwen7b:gptq3 \
 x3p:mistral7b-v02:awq x3p:mistral7b-v02:gptq4 x3p:phi3:awq x3p:phi3:gptq4 x3p:phi3:gptq3"
 # tier C (lowest): the 5 collapsed cells on rebuilt dense checkpoints, X3 pair + X2
+# tier D (last, after everything else; 64 CPUs): X4 with 1000 splits for the two AQLM-2 headline models
+PROBE_TIER_D="x4:llama7b:1000 x4:phi3:1000"
 PROBE_TIER_C="x3p:llama7b:gptq2:rebuilt x3p:qwen7b:gptq2:rebuilt x3p:phi3:gptq2:rebuilt \
 x2:llama7b:gptq2:rebuilt x2:qwen7b:gptq2:rebuilt x2:phi3:gptq2:rebuilt \
 x3p:mistral7b-v02:gptq2:rebuilt x3p:mistral7b-v02:gptq3:rebuilt \
@@ -42,7 +45,7 @@ piece_cmd() {  # piece_cmd <piece>  -> python command
   case "$kind" in
     x3p) echo "python -u -m experiments.signal_geometry.probe_accuracy --model $m --quantizer $q --n_calib 200 --probe_type linear --paired --fp32_cache_dir ${X3_FP32_CACHE}${t:+ --tag $t}" ;;
     x3)  echo "python -u -m experiments.signal_geometry.probe_accuracy --model $m --quantizer aqlm2 --n_calib 200 --probe_type linear --shuffle_labels" ;;
-    x4)  echo "python -u -m experiments.boundary.probe_refit_control --model $m --n_calib 200 --n_splits 100" ;;
+    x4)  echo "python -u -m experiments.boundary.probe_refit_control --model $m --n_calib 200 --n_splits ${q:-100}" ;;
     x2)  echo "python -u -m experiments.boundary.probe_leakage_control --model $m --quantizer $q --n_calib 200 --n_transfer 200${t:+ --tag $t}" ;;
     *)   return 1 ;;
   esac
@@ -93,7 +96,7 @@ piece_min() {
   IFS=: read -r kind m q t <<< "$1"
   case "$kind" in
     x3p) if fp32_cached "$m"; then echo 35; else echo 60; fi ;;
-    x3) echo 45 ;; x4) echo 60 ;; x2) echo 50 ;; *) echo 90 ;;
+    x3) echo 45 ;; x4) [[ "${q:-100}" == 100 ]] && echo 60 || echo 110 ;; x2) echo 50 ;; *) echo 90 ;;
   esac
 }
 
