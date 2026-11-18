@@ -10,6 +10,7 @@
 # Read-only; always exits 0 unless a file is missing (exit 1).
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -48,6 +49,12 @@ def main():
         a, b = new.get("wikitext2_ppl"), old.get("wikitext2_ppl")
         if a is None or b is None:
             print(f"  !! {q}: PPL is null (rebuilt status={new.get('status')})")
+            missing = True
+            continue
+        if not (math.isfinite(a) and math.isfinite(b)):
+            # NaN/inf compares False against the tolerance, so it would pass silently
+            print(f"  !! {q}: PPL is not finite (rebuilt {a}, paper {b})")
+            warn.append(f"{q} PPL not finite ({a})")
             missing = True
             continue
         d = 100.0 * (a - b) / b
