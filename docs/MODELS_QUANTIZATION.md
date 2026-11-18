@@ -106,7 +106,7 @@ that). Bridges used `awq_ext`, so AWQ numerics can differ slightly; the reviewer
 each AWQ cell's WikiText-2 PPL against the paper (`scripts/delta_queue.sh --awq-ppl`,
 tag `delta`), warning above 2%.
 
-## GPTQ-3 on Delta / DeltaAI: dense weights dequantized by auto-gptq
+## GPTQ on Delta / DeltaAI: dense weights dequantized by auto-gptq
 
 gptqmodel 5.7.0, the GPTQ loader in `sq_clean`, unpacks 3-bit checkpoints wrongly on this
 stack. Its 3-bit path (`TorchQuantLinear`) gives PPL `nan` in fp16 and around 1e6 in bf16
@@ -117,15 +117,33 @@ set: 8.465 and 8.770). gptqmodel 5.6.12 has the same 3-bit fault; 5.4.2, 5.0.0 a
 do not work with optimum 2.2.0. 4-bit and 2-bit load correctly (phi3 2-bit: gptqmodel
 535.21 vs auto-gptq 535.81 on the same windows). Bridges ran gptqmodel 7.1.0.
 
-For the GPTQ-3 cells, `scripts/gptq_dequant_dense.py` (run in `sq_autogptq`) loads each
+`scripts/gptq_dequant_dense.py --bits <b>` (run in `sq_autogptq`) loads each
 checkpoint with unmodified auto-gptq 0.7.1, pushes an identity matrix through every
 QuantLinear with its bias detached, which returns exactly the fp16 weights auto-gptq
 computes (`scales[g_idx] * (q - zeros[g_idx])`), and saves a plain fp16 model with those
-weights to `$QM_ROOT/gptq_dense/<model>-gptq3bit-g128`. `sq_dequant_info.json` there
+weights to `$QM_ROOT/gptq_dense/<model>-gptq<b>bit-g128`. `sq_dequant_info.json` there
 records the source checkpoint, the auto-gptq/torch/transformers versions and the checks:
 per-decoder-layer and logits max |auto-gptq - dense| on 4 real inputs, and the auto-gptq
-PPL on 20 windows. `core/model_loader.py` loads that copy for `gptq3` only when
-`SQ_GPTQ3_DENSE=1`, and every result saved after such a load carries
-`manifest.load_info` naming the dense copy. The default GPTQ path is unchanged.
-Verification job: `scripts/tests/dense_gptq3.sbatch`. The dense copies are not used by
-any experiment until those numbers have been reviewed.
+PPL on 20 windows. `core/model_loader.py` loads the dense copy instead of the GPTQ
+checkpoint when `SQ_GPTQ_DENSE=1` (all GPTQ bit widths, 2/3/4, so every GPTQ cell goes
+through the same auto-gptq dequantization) or `SQ_GPTQ3_DENSE=1` (GPTQ-3 only). A missing
+dense copy is an error, not a fallback to gptqmodel. Every result saved after such a load
+carries `manifest.load_info` naming the dense copy, the bit width, the source checkpoint
+and the dequantization checks. Both variables default off; the default GPTQ path is
+unchanged. Verification job: `scripts/tests/dense_gptq.sbatch` (`DENSE_BITS`,
+`DENSE_MODELS`); for 4- and 2-bit it compares the dense PPL with the paper and with
+`rebuilt_unmod` (the same checkpoint loaded by gptqmodel).
+
+GPTQ-3 verification (job 3622151; 4 inputs x 512 tokens; full test set vs paper):
+
+| model | per-layer max diff | logits max diff | PPL20 auto-gptq / dense | full PPL dense / paper |
+|---|---|---|---|---|
+| phi3 | 0 | 0 | 8.4191 / 8.4195 | 8.378 / 8.465 (-1.03%) |
+| llama7b | 0 | 0 | 8.7664 / 8.7664 | 8.799 / 8.770 (+0.33%) |
+| qwen7b | 16 (values ~1.2e4, 2 fp16 ulp) | 0.336 | 8.3166 / 8.3165 | 8.688 / 8.634 (+0.63%) |
+
+qwen7b is the only one of the three with linear biases; auto-gptq adds the bias after the
+matmul, `nn.Linear` fuses it, so outputs differ by fp16 rounding (likely cause, not yet
+isolated). The three GPTQ-3 dense results record `load_info.gptq3_weights`; later results
+use `load_info.gptq_weights` and `gptq_bits`. The dense copies are not used by any
+experiment until the numbers have been reviewed.

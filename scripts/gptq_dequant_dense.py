@@ -6,7 +6,7 @@
 # in fp16, ~1e6 in bf16), while auto-gptq 0.7.1, which wrote the checkpoints, loads them
 # correctly (phi3 8.419 / llama7b 8.766 on 20 WikiText-2 windows). This writes the exact
 # fp16 weights auto-gptq computes, so sq_clean can evaluate GPTQ-3 cells as a plain fp16
-# model (core/model_loader.py, opt-in SQ_GPTQ3_DENSE=1).
+# model (core/model_loader.py, opt-in SQ_GPTQ_DENSE=1 for all bit widths, SQ_GPTQ3_DENSE=1 for 3-bit only).
 #
 # Method: load with AutoGPTQForCausalLM.from_quantized (qlinear_cuda torch path: weights =
 # scales[g_idx] * (q - zeros[g_idx]) in fp16, then x @ weights + bias). For each QuantLinear

@@ -34,12 +34,15 @@ def main():
     ap.add_argument("--quant", required=True)
     ap.add_argument("--tag", default="rebuilt")
     ap.add_argument("--tol", type=float, default=2.0, help="warn above this %% difference")
+    ap.add_argument("--ref_tag", default=None,
+                    help="compare with wikitext2_ppl_<ref_tag> (e.g. rebuilt_unmod, the same "
+                         "checkpoint via gptqmodel) instead of the paper file")
     args = ap.parse_args()
 
     rows, warn, missing = [], [], False
     for q in (args.quant, "fp32"):
         new, pn = _load(args.model, q, f"wikitext2_ppl_{args.tag}")
-        old, po = _load(args.model, q, "wikitext2_ppl")
+        old, po = _load(args.model, q, f"wikitext2_ppl_{args.ref_tag}" if args.ref_tag else "wikitext2_ppl")
         if new is None and q == "fp32":
             continue  # fp32 is only measured in some rebuilt jobs
         if new is None or old is None:
@@ -69,15 +72,16 @@ def main():
                   f"transformers={v.get('transformers')}  auto_gptq={v.get('auto_gptq')}  "
                   f"gptqmodel={v.get('gptqmodel')}")
 
-    print(f"  {args.model:14s} {'cell':6s} {'rebuilt':>9s} {'paper':>9s} {'diff':>8s}")
+    ref = args.ref_tag or "paper"
+    print(f"  {args.model:14s} {'cell':6s} {args.tag[:9]:>9s} {ref[:13]:>13s} {'diff':>8s}")
     for q, a, b, d, flag in rows:
-        print(f"  {args.model:14s} {q:6s} {a:9.3f} {b:9.3f} {d:+7.2f}%"
+        print(f"  {args.model:14s} {q:6s} {a:9.3f} {b:13.3f} {d:+7.2f}%"
               f"{'  <-- WARN >' + format(args.tol, 'g') + '%' if flag else ''}")
     if warn:
-        print(f"  WARNING: rebuilt PPL differs from the paper by more than {args.tol:g}%: "
+        print(f"  WARNING: rebuilt PPL differs from {ref} by more than {args.tol:g}%: "
               + "; ".join(warn))
     elif rows and not missing:
-        print(f"  OK: within {args.tol:g}% of the paper.")
+        print(f"  OK: within {args.tol:g}% of {ref}.")
     sys.exit(1 if missing else 0)
 
 

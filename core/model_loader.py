@@ -407,18 +407,23 @@ def _load_gptq(model_name, device = None, bits = 4):
         _oq.GPTQQuantizer.__init__ = _agaw_init
         _oq.GPTQQuantizer._safequant_agaw_patch = True
 
-    # GPTQ-3 via dense weights (opt-in): gptqmodel 5.7.0 unpacks 3-bit weights wrongly on
+    # GPTQ via dense weights (opt-in): gptqmodel 5.7.0 unpacks 3-bit weights wrongly on
     # this stack (PPL nan in fp16). scripts/gptq_dequant_dense.py writes the exact fp16
     # weights auto-gptq 0.7.1 computes for the same checkpoint to
-    # $QM_ROOT/gptq_dense/<model>-gptq3bit-g128; with SQ_GPTQ3_DENSE=1 that copy is loaded as
-    # a plain fp16 model. Default off: the GPTQ path below is unchanged.
-    if bits == 3 and os.environ.get("SQ_GPTQ3_DENSE") == "1":
+    # $QM_ROOT/gptq_dense/<model>-gptq<bits>bit-g128, loaded here as a plain fp16 model.
+    #   SQ_GPTQ_DENSE=1   -> every GPTQ bit width (2/3/4) uses its dense copy (one path for all)
+    #   SQ_GPTQ3_DENSE=1  -> GPTQ-3 only (kept for the first verification run)
+    # Default off: the GPTQ path below is unchanged. A missing dense copy is an error, never a
+    # silent fallback to gptqmodel.
+    _dense_on = (os.environ.get("SQ_GPTQ_DENSE") == "1" and bits in (2, 3, 4)) or \
+                (os.environ.get("SQ_GPTQ3_DENSE") == "1" and bits == 3)
+    if _dense_on:
         import json as _json
-        dense = os.path.join(QM_ROOT, "gptq_dense", f"{model_name}-gptq3bit-g128")
+        dense = os.path.join(QM_ROOT, "gptq_dense", f"{model_name}-gptq{bits}bit-g128")
         if not os.path.exists(os.path.join(dense, "config.json")):
-            raise FileNotFoundError(f"SQ_GPTQ3_DENSE=1 but no dense copy at {dense} "
-                                    "(run scripts/gptq_dequant_dense.py)")
-        print(f"Loading GPTQ-3 as dense fp16 (dequantized by auto-gptq): {model_name} -> {dense}")
+            raise FileNotFoundError(f"dense GPTQ requested but no dense copy at {dense} "
+                                    f"(run scripts/gptq_dequant_dense.py --model {model_name} --bits {bits})")
+        print(f"Loading GPTQ-{bits} as dense fp16 (dequantized by auto-gptq): {model_name} -> {dense}")
         tokenizer = AutoTokenizer.from_pretrained(dense)
         model = AutoModelForCausalLM.from_pretrained(
             dense, device_map = device, torch_dtype = torch.float16,
@@ -428,14 +433,16 @@ def _load_gptq(model_name, device = None, bits = 4):
         dq = _json.loads(open(info_path).read()) if os.path.exists(info_path) else {}
         LOAD_INFO.clear()
         LOAD_INFO.update({
-            "gptq3_weights": "dense fp16, dequantized by auto-gptq 0.7.1 (SQ_GPTQ3_DENSE=1)",
+            "gptq_weights": f"GPTQ-{bits} as dense fp16, dequantized by auto-gptq 0.7.1",
+            "gptq_bits": bits,
+            "env": {k: os.environ[k] for k in ("SQ_GPTQ_DENSE", "SQ_GPTQ3_DENSE") if k in os.environ},
             "dense_dir": dense,
             "source_checkpoint": dq.get("source_checkpoint"),
             "dequant_versions": dq.get("versions"),
             "dequant_checks": {k: dq.get("checks", {}).get(k)
                                for k in ("logits_max_abs_diff", "autogptq_ppl_20_windows")},
         })
-        print("  OK Loaded GPTQ-3 dense copy")
+        print(f"  OK Loaded GPTQ-{bits} dense copy")
         return model, tokenizer
 
     # Look up a registered pre-quantized checkpoint when bits map to a suffix
