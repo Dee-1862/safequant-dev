@@ -41,7 +41,7 @@ for STEP in ${STEPS}; do
           || echo "FAILED per_projection ${MODEL}"
         ;;
       depth)
-        for SIDE in read write; do
+        for SIDE in ${SIDES:-read write}; do   # SIDES=read|write runs one side
           echo "---- depth_bands ${MODEL} ${SIDE} | $(date) ----"
           python -u -m experiments.localization.depth_bands \
             --model "${MODEL}" --quantizer aqlm2 --projections "${SIDE}" \
