@@ -22,16 +22,17 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # Submit:  SLURM_PARTITION=ghx4-interactive DENSE_BITS="4 2" bash scripts/submit.sh \
 #            scripts/tests/dense_gptq.sbatch --cpus-per-task=8
 set -uo pipefail   # not -e: report every cell even if one step fails
+FAIL=0             # exit 1 at the end if any requested cell has no dense copy (afterok chains)
 for B in ${DENSE_BITS:-4 2}; do
 for M in ${DENSE_MODELS:-phi3 llama7b qwen7b mistral7b-v02}; do
   CK="${QM_ROOT}/gptq/${M}-gptq${B}bit-g128"
   echo "################ ${M} gptq${B} | $(date)"
-  if [[ ! -f "${CK}/config.json" ]]; then echo "RESULT ${M} gptq${B}: no checkpoint at ${CK}; skipped"; continue; fi
+  if [[ ! -f "${CK}/config.json" ]]; then echo "RESULT ${M} gptq${B}: no checkpoint at ${CK}; skipped"; FAIL=1; continue; fi
   python -u scripts/fix_autogptq_checkpoints.py "${CK}" >/dev/null
   if [[ -f "${QM_ROOT}/gptq_dense/${M}-gptq${B}bit-g128/config.json" ]]; then
     echo "  dense copy exists; skipping dequantization"
   else
-    "${AGENV}/bin/python" -u scripts/gptq_dequant_dense.py --model "$M" --bits "$B" || { echo "RESULT ${M} gptq${B}: dequantization FAILED"; continue; }
+    "${AGENV}/bin/python" -u scripts/gptq_dequant_dense.py --model "$M" --bits "$B" || { echo "RESULT ${M} gptq${B}: dequantization FAILED"; FAIL=1; continue; }
   fi
   python -u scripts/tests/diag_gptq3.py --model "$M" --bits "$B" --method dense
   SQ_GPTQ_DENSE=1 python -u -m experiments.regime_sweep.wikitext_ppl \
@@ -41,4 +42,5 @@ for M in ${DENSE_MODELS:-phi3 llama7b qwen7b mistral7b-v02}; do
 done
 done
 echo "=== summary"; cat "scripts/logs/dense_gptq_${SLURM_JOB_ID}.out" | grep -hE '^RESULT|^  [a-z0-9-]+ +gptq[0-9] +[0-9.]+|^####' || true   # via cat: grep refuses its own output file
-echo "=== done | $(date) ==="
+echo "=== done | $(date) | exit ${FAIL} ==="
+exit "${FAIL}"

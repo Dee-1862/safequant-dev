@@ -9,10 +9,14 @@
 set -u
 cd "$(dirname "$0")/.."
 REPO_ROOT="$(pwd)"; export REPO_ROOT
+# same view of the world as the jobs: QM_ROOT from .env, dense GPTQ path where copies exist
+[[ -z "${QM_ROOT:-}" && -f .env ]] && QM_ROOT=$(sed -nE 's/^(export )?QM_ROOT=//p' .env | tail -1)
+export QM_ROOT
+[[ -z "${SQ_GPTQ_DENSE+x}" && -d "${QM_ROOT}/gptq_dense" ]] && export SQ_GPTQ_DENSE=1
 source scripts/probe_pieces.sh
 ORDER="${CHAIN_ORDER:-$PROBE_ALL}"
 JOBS="${PROBE_CLAIMS}/jobs.tsv"; mkdir -p "${PROBE_CLAIMS}"; touch "$JOBS"
-limit() { case "$1" in x3:*) echo 1:30:00 ;; *) echo 1:55:00 ;; esac; }
+limit() { case "$1" in x3:*) echo 1:30:00 ;; *) echo 1:55:00 ;; esac; }   # all < 2 h
 echo "[$(date)] chain start: ${ORDER}"
 while :; do
   # cancel pending pool jobs with nothing left to do
@@ -23,9 +27,16 @@ while :; do
     left=0; for p in $pool; do piece_claimed "$p" || left=1; done
     (( left == 0 )) && scancel "$jid" && echo "[$(date)] cancelled pending ${jid} (all pieces claimed: ${pool})"
   done < "$JOBS"
-  NEXT=""; for p in $ORDER; do piece_claimed "$p" || { NEXT="$p"; break; }; done
-  if [[ -z "$NEXT" ]]; then echo "[$(date)] all pieces claimed; chain done"; break; fi
-  if [[ -z "$(squeue -h -u "$USER" -p ghx4-interactive -o %i 2>/dev/null)" ]]; then
+  NEXT=""; ALL=1
+  for p in $ORDER; do
+    piece_claimed "$p" && continue
+    ALL=0
+    piece_ready "$p" || continue            # e.g. GPTQ cell whose dense copy is not built yet
+    piece_waits_for_fp32 "$p" && continue   # its family's FP32 pair is being computed
+    NEXT="$p"; break
+  done
+  if (( ALL )); then echo "[$(date)] all pieces claimed; chain done"; break; fi
+  if [[ -n "$NEXT" && -z "$(squeue -h -u "$USER" -p ghx4-interactive -o %i 2>/dev/null)" ]]; then
     id=$(SLURM_PARTITION=ghx4-interactive POOL="$NEXT" MAX_PAR=1 bash scripts/submit.sh scripts/probe_pool.sbatch \
            --parsable --cpus-per-task=8 --mem=64G --time="$(limit "$NEXT")" --job-name="sq_pp_i_$(piece_key "$NEXT")" 2>&1 | tail -1)
     id="${id%%;*}"

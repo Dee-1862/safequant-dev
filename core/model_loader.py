@@ -18,6 +18,36 @@ from config import MODELS, DEVICE, HF_HOME, QM_ROOT, QUANTIZED_CHECKPOINTS
 # core/manifest.save_result into every result's manifest as 'load_info').
 LOAD_INFO = {}
 
+
+# Optional cross-process load lock (SQ_LOAD_LOCK=<file>): scripts/probe_pool.sbatch sets it so
+# that pieces packed on one GPU load their models one at a time (host-memory peak of one load,
+# not four). Off when unset; reentrant within a process (load_quantized may call load_fp32).
+_LOCK_DEPTH = [0]
+
+
+def _with_load_lock(fn):
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*a, **kw):
+        path = os.environ.get("SQ_LOAD_LOCK")
+        if not path or _LOCK_DEPTH[0] > 0:
+            _LOCK_DEPTH[0] += 1
+            try:
+                return fn(*a, **kw)
+            finally:
+                _LOCK_DEPTH[0] -= 1
+        import fcntl
+        with open(path, "a") as fh:
+            fcntl.flock(fh, fcntl.LOCK_EX)
+            _LOCK_DEPTH[0] += 1
+            try:
+                return fn(*a, **kw)
+            finally:
+                _LOCK_DEPTH[0] -= 1
+                fcntl.flock(fh, fcntl.LOCK_UN)
+    return wrapper
+
 try:
     from config import MODEL_REVISIONS
 except ImportError:
@@ -52,6 +82,7 @@ def _use_remote_code(model_path):
     return "phi-3" not in p and "phi3" not in p
 
 
+@_with_load_lock
 def load_fp32(model_name, device = None):
     """
     Load model in FP32 precision.
@@ -98,6 +129,7 @@ def load_fp32(model_name, device = None):
     return model, tokenizer
 
 
+@_with_load_lock
 def load_nf4(model_name, device = None):
     """
     Load model in NF4 quantization (bitsandbytes 4-bit NormalFloat).
@@ -142,6 +174,7 @@ def load_nf4(model_name, device = None):
     return model, tokenizer
 
 
+@_with_load_lock
 def load_int8(model_name, device = None):
     """
     Load model in INT8 quantization (bitsandbytes 8-bit).
@@ -178,6 +211,7 @@ def load_int8(model_name, device = None):
     return model, tokenizer
 
 
+@_with_load_lock
 def load_quantized(model_name, quantizer = "nf4", device = None):
     """
     Unified loader that dispatches to the right quantizer backend.
