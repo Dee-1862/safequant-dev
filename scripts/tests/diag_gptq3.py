@@ -45,6 +45,9 @@ def load_gptqmodel(path, bits, dtype):
         str(path), quantization_config=GPTQConfig(bits=bits, use_exllama=False),
         device_map="cuda:0", cache_dir=HF_HOME, torch_dtype=dtype)
     kinds = sorted({type(m).__name__ for m in model.modules() if "QuantLinear" in type(m).__name__})
+    import gptqmodel
+    from importlib.metadata import version as _v
+    print(f"  gptqmodel {_v('gptqmodel')} from {Path(gptqmodel.__file__).parent.parent}")
     print(f"  quant kernels in model: {kinds}")
     return model.eval(), tok
 
@@ -130,7 +133,14 @@ def main():
     ap.add_argument("--windows", type=int, default=20)
     a = ap.parse_args()
     path = ckpt_dir(a.model, a.bits)
-    tag = f"{a.model} gptq{a.bits} | {a.method}" + (f" {a.dtype}" if a.method == "gptqmodel" else " fp16")
+    gv = ""
+    if a.method == "gptqmodel":
+        try:
+            from importlib.metadata import version as _v
+            gv = f" {_v('gptqmodel')}"
+        except Exception:
+            gv = " ?"
+    tag = f"{a.model} gptq{a.bits} | {a.method}{gv}" + (f" {a.dtype}" if a.method == "gptqmodel" else " fp16")
     print(f"=== {tag} | {path}")
     t0 = time.time()
     try:
