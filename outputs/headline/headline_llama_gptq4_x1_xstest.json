@@ -1,0 +1,192 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "gptq4",
+    "variant": "x1_xstest",
+    "output_stem": "headline",
+    "extra": {
+      "n_eval": 200,
+      "n_reasoning": 100,
+      "asr_max_new_tokens": 256,
+      "n_xstest": null,
+      "batch_size": 16,
+      "merged_from_pieces": "x1_xstest"
+    },
+    "n_eval": 200,
+    "n_reasoning": 100,
+    "asr_max_new_tokens": 256,
+    "n_xstest": null,
+    "batch_size": 16,
+    "merged_from_pieces": "x1_xstest"
+  },
+  "git_sha": "7df81049801a8f9807532004d3c7c48789375ef1",
+  "xstest": {
+    "both_restored": {
+      "false_refusal_rate": 6.0,
+      "false_refusal_ci": [
+        0.036694082794353496,
+        0.0966237027853151
+      ],
+      "n_refusal_on_safe": 15,
+      "n_safe": 250
+    },
+    "fp32": {
+      "false_refusal_rate": 6.0,
+      "false_refusal_ci": [
+        0.036694082794353496,
+        0.0966237027853151
+      ],
+      "n_refusal_on_safe": 15,
+      "n_safe": 250
+    },
+    "gptq4": {
+      "false_refusal_rate": 9.2,
+      "false_refusal_ci": [
+        0.06208656638760557,
+        0.13426265296808712
+      ],
+      "n_refusal_on_safe": 23,
+      "n_safe": 250
+    },
+    "read_restored": {
+      "false_refusal_rate": 8.8,
+      "false_refusal_ci": [
+        0.058830921041025906,
+        0.12963936909266374
+      ],
+      "n_refusal_on_safe": 22,
+      "n_safe": 250
+    },
+    "write_restored": {
+      "false_refusal_rate": 6.8,
+      "false_refusal_ci": [
+        0.04288555795457601,
+        0.1061900860690986
+      ],
+      "n_refusal_on_safe": 17,
+      "n_safe": 250
+    }
+  },
+  "pieces": [
+    {
+      "file": "outputs/headline_pieces/x1_xstest/llama_gptq4_both_restored_xstest.json",
+      "condition": "both_restored",
+      "parts": [
+        "xstest"
+      ],
+      "prompts": [
+        0,
+        200
+      ],
+      "job_id": "3633289",
+      "node": "gh033.hsn.cm.delta.internal.ncsa.edu",
+      "timings": {
+        "load_s": 28.2,
+        "xstest_s": 13.2,
+        "total_s": 42.8
+      }
+    },
+    {
+      "file": "outputs/headline_pieces/x1_xstest/llama_gptq4_fp32_xstest.json",
+      "condition": "fp32",
+      "parts": [
+        "xstest"
+      ],
+      "prompts": [
+        0,
+        200
+      ],
+      "job_id": "3633289",
+      "node": "gh033.hsn.cm.delta.internal.ncsa.edu",
+      "timings": {
+        "load_s": 85.0,
+        "xstest_s": 22.7,
+        "total_s": 112.0
+      }
+    },
+    {
+      "file": "outputs/headline_pieces/x1_xstest/llama_gptq4_quant_xstest.json",
+      "condition": "gptq4",
+      "parts": [
+        "xstest"
+      ],
+      "prompts": [
+        0,
+        200
+      ],
+      "job_id": "3633289",
+      "node": "gh033.hsn.cm.delta.internal.ncsa.edu",
+      "timings": {
+        "load_s": 28.0,
+        "xstest_s": 14.0,
+        "total_s": 43.3
+      }
+    },
+    {
+      "file": "outputs/headline_pieces/x1_xstest/llama_gptq4_read_restored_xstest.json",
+      "condition": "read_restored",
+      "parts": [
+        "xstest"
+      ],
+      "prompts": [
+        0,
+        200
+      ],
+      "job_id": "3633289",
+      "node": "gh033.hsn.cm.delta.internal.ncsa.edu",
+      "timings": {
+        "load_s": 23.3,
+        "xstest_s": 12.9,
+        "total_s": 37.5
+      }
+    },
+    {
+      "file": "outputs/headline_pieces/x1_xstest/llama_gptq4_write_restored_xstest.json",
+      "condition": "write_restored",
+      "parts": [
+        "xstest"
+      ],
+      "prompts": [
+        0,
+        200
+      ],
+      "job_id": "3633289",
+      "node": "gh033.hsn.cm.delta.internal.ncsa.edu",
+      "timings": {
+        "load_s": 17.4,
+        "xstest_s": 13.3,
+        "total_s": 31.8
+      }
+    }
+  ],
+  "piece_commit": "7df81049801a8f9807532004d3c7c48789375ef1",
+  "piece_env": {
+    "python": "3.10.22",
+    "python_exe": "/work/hdd/bjwh/dbhoomireddy/conda_envs/sq_clean/bin/python",
+    "conda_prefix": "/work/hdd/bjwh/dbhoomireddy/conda_envs/sq_clean",
+    "packages": {
+      "torch": "2.9.1+cu128",
+      "transformers": "4.57.6",
+      "accelerate": "1.10.1",
+      "bitsandbytes": "0.49.2",
+      "aqlm": "1.1.7",
+      "auto_gptq": null,
+      "optimum": "2.2.0",
+      "tokenizers": "0.22.2",
+      "safetensors": "0.6.2",
+      "numpy": "2.2.6",
+      "triton": "3.5.1"
+    },
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "gpu": "NVIDIA GH200 120GB",
+    "arch": "aarch64",
+    "env": {
+      "EVAL_BATCH_SIZE": null,
+      "SQ_GPTQ_DENSE": "1",
+      "CUBLAS_WORKSPACE_CONFIG": null,
+      "QM_ROOT": "/work/hdd/bjwh/dbhoomireddy/quantized_models"
+    },
+    "seed": 42
+  }
+}
