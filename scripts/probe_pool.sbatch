@@ -21,7 +21,7 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 #       and nvidia-smi shows that much free,
 #   (d) host: no model load in progress (SQ_LOAD_LOCK: one load at a time per job) and the
 #       job's cgroup has its load peak + 4 GB free (anonymous memory vs memory.max),
-#   (e) the time left covers its expected minutes x 2 when sharing the GPU (x 1.3 alone).
+#   (e) the time left covers its expected minutes x 1.5 when sharing the GPU (x 1.3 alone).
 # Pieces start >= 90 s apart; GPU memory is logged every 60 s.
 set -uo pipefail
 source scripts/probe_pieces.sh
@@ -96,7 +96,7 @@ while :; do
       piece_ready "$p" || { WAITING=1; WHY="not ready: $p"; continue; }
       piece_waits_for_fp32 "$p" && { WAITING=1; WHY="FP32 pair in progress: $p"; continue; }
       need=$(piece_gb "$p"); hneed=$(piece_host_gb "$p"); mins=$(piece_min "$p")
-      if (( MAX_PAR > 1 )); then cont=20; else cont=13; fi      # x10
+      if (( MAX_PAR > 1 )); then cont=15; else cont=13; fi      # x10 (packed pieces get their own CPUs)
       (( LEFT * 10 < mins * cont )) && { WHY="time: $p"; continue; }
       (( USED + need > GPU_BUDGET_GB || FREE < need + 4 )) && { WHY="gpu memory: $p"; continue; }
       (( LOADING )) && { WAITING=1; WHY="a model load is in progress"; break; }
