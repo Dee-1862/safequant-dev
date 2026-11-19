@@ -37,6 +37,7 @@ x3p:mistral7b-v02:awq x3p:mistral7b-v02:gptq4 x3p:phi3:awq x3p:phi3:gptq4 x3p:ph
 # tier C (lowest): the 5 collapsed cells on rebuilt dense checkpoints, X3 pair + X2
 # tier D (last, after everything else; 64 CPUs): X4 with 1000 splits for the two AQLM-2 headline models
 PROBE_TIER_D="x4:llama7b:1000 x4:phi3:1000"
+# x4 1000 estimate 80 min on 64 CPUs: the 100-split fit took 48 min on 8 workers (10x fits on 8x workers ~ 60 min) + extraction
 PROBE_TIER_C="x3p:llama7b:gptq2:rebuilt x3p:qwen7b:gptq2:rebuilt x3p:phi3:gptq2:rebuilt \
 x2:llama7b:gptq2:rebuilt x2:qwen7b:gptq2:rebuilt x2:phi3:gptq2:rebuilt \
 x3p:mistral7b-v02:gptq2:rebuilt x3p:mistral7b-v02:gptq3:rebuilt \
@@ -104,7 +105,7 @@ piece_min() {
   IFS=: read -r kind m q t <<< "$1"
   case "$kind" in
     x3p) if fp32_cached "$m"; then echo 35; else echo 60; fi ;;
-    x3) echo 45 ;; x4) [[ "${q:-100}" == 100 ]] && echo 60 || echo 110 ;; x2) echo 20 ;;
+    x3) echo 45 ;; x4) [[ "${q:-100}" == 100 ]] && echo 60 || echo 80 ;; x2) echo 20 ;;
     ppl) echo 30 ;; x2fp) echo 20 ;; diag) echo 35 ;; *) echo 90 ;;
   esac
 }
