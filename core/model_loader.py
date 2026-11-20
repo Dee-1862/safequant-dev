@@ -12,7 +12,51 @@ from datasets import load_dataset as _load_ds
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from transformers import GPTQConfig
 
-from config import MODELS, DEVICE, HF_HOME, QUANTIZED_CHECKPOINTS
+from config import MODELS, DEVICE, HF_HOME, QM_ROOT, QUANTIZED_CHECKPOINTS
+
+# What the last load used, when it differs from the default path (read by
+# core/manifest.save_result into every result's manifest as 'load_info').
+LOAD_INFO = {}
+
+
+# Optional cross-process load lock (SQ_LOAD_LOCK=<file>): scripts/probe_pool.sbatch sets it so
+# that pieces packed on one GPU load their models one at a time (host-memory peak of one load,
+# not four). Off when unset; reentrant within a process (load_quantized may call load_fp32).
+_LOCK_DEPTH = [0]
+
+
+def _with_load_lock(fn):
+    """
+    Serialize model loads across processes when SQ_LOAD_LOCK names a lock file.
+
+    Inputs:
+        - fn (callable): Loader to wrap (load_fp32 / load_quantized)
+
+    Outputs:
+        - wrapper (callable): Same signature; holds an exclusive flock on SQ_LOAD_LOCK
+          for the outermost call only (reentrant), no lock when the variable is unset
+    """
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*a, **kw):
+        path = os.environ.get("SQ_LOAD_LOCK")
+        if not path or _LOCK_DEPTH[0] > 0:
+            _LOCK_DEPTH[0] += 1
+            try:
+                return fn(*a, **kw)
+            finally:
+                _LOCK_DEPTH[0] -= 1
+        import fcntl
+        with open(path, "a") as fh:
+            fcntl.flock(fh, fcntl.LOCK_EX)
+            _LOCK_DEPTH[0] += 1
+            try:
+                return fn(*a, **kw)
+            finally:
+                _LOCK_DEPTH[0] -= 1
+                fcntl.flock(fh, fcntl.LOCK_UN)
+    return wrapper
 
 try:
     from config import MODEL_REVISIONS
@@ -48,6 +92,7 @@ def _use_remote_code(model_path):
     return "phi-3" not in p and "phi3" not in p
 
 
+@_with_load_lock
 def load_fp32(model_name, device = None):
     """
     Load model in FP32 precision.
@@ -60,6 +105,7 @@ def load_fp32(model_name, device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -93,6 +139,7 @@ def load_fp32(model_name, device = None):
     return model, tokenizer
 
 
+@_with_load_lock
 def load_nf4(model_name, device = None):
     """
     Load model in NF4 quantization (bitsandbytes 4-bit NormalFloat).
@@ -105,6 +152,7 @@ def load_nf4(model_name, device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -136,6 +184,7 @@ def load_nf4(model_name, device = None):
     return model, tokenizer
 
 
+@_with_load_lock
 def load_int8(model_name, device = None):
     """
     Load model in INT8 quantization (bitsandbytes 8-bit).
@@ -148,6 +197,7 @@ def load_int8(model_name, device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     if device is None:
         device = DEVICE
     model_path = _resolve_model_path(model_name)
@@ -171,6 +221,7 @@ def load_int8(model_name, device = None):
     return model, tokenizer
 
 
+@_with_load_lock
 def load_quantized(model_name, quantizer = "nf4", device = None):
     """
     Unified loader that dispatches to the right quantizer backend.
@@ -184,6 +235,7 @@ def load_quantized(model_name, quantizer = "nf4", device = None):
         - model (torch.nn.Module): Loaded model
         - tokenizer (Tokenizer): Matching tokenizer
     """
+    LOAD_INFO.clear()  # describes the most recent load only
     quantizer = quantizer.lower()
 
     if quantizer == "fp32":
@@ -242,6 +294,12 @@ def _load_awq(model_name, device = None):
         model_path, cache_dir = HF_HOME,
         trust_remote_code = _use_remote_code(model_path)
     )
+    # transformers 4.57 renamed PytorchGELUTanh -> GELUTanh (same function:
+    # gelu(approximate="tanh")); autoawq 0.2.x still imports the old name at package
+    # import, which transformers' AWQ loading triggers. Alias only when missing.
+    import transformers.activations as _act
+    if not hasattr(_act, "PytorchGELUTanh") and hasattr(_act, "GELUTanh"):
+        _act.PytorchGELUTanh = _act.GELUTanh  # renamed in transformers 4.57; autoawq 0.2.x still imports the old name
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         device_map = device,
@@ -392,6 +450,44 @@ def _load_gptq(model_name, device = None, bits = 4):
 
         _oq.GPTQQuantizer.__init__ = _agaw_init
         _oq.GPTQQuantizer._safequant_agaw_patch = True
+
+    # GPTQ via dense weights (opt-in): gptqmodel 5.7.0 unpacks 3-bit weights wrongly on
+    # this stack (PPL nan in fp16). scripts/gptq_dequant_dense.py writes the exact fp16
+    # weights auto-gptq 0.7.1 computes for the same checkpoint to
+    # $QM_ROOT/gptq_dense/<model>-gptq<bits>bit-g128, loaded here as a plain fp16 model.
+    #   SQ_GPTQ_DENSE=1   -> every GPTQ bit width (2/3/4) uses its dense copy (one path for all)
+    #   SQ_GPTQ3_DENSE=1  -> GPTQ-3 only (kept for the first verification run)
+    # Default off: the GPTQ path below is unchanged. A missing dense copy is an error, never a
+    # silent fallback to gptqmodel.
+    _dense_on = (os.environ.get("SQ_GPTQ_DENSE") == "1" and bits in (2, 3, 4)) or \
+                (os.environ.get("SQ_GPTQ3_DENSE") == "1" and bits == 3)
+    if _dense_on:
+        import json as _json
+        dense = os.path.join(QM_ROOT, "gptq_dense", f"{model_name}-gptq{bits}bit-g128")
+        if not os.path.exists(os.path.join(dense, "config.json")):
+            raise FileNotFoundError(f"dense GPTQ requested but no dense copy at {dense} "
+                                    f"(run scripts/gptq_dequant_dense.py --model {model_name} --bits {bits})")
+        print(f"Loading GPTQ-{bits} as dense fp16 (dequantized by auto-gptq): {model_name} -> {dense}")
+        tokenizer = AutoTokenizer.from_pretrained(dense)
+        model = AutoModelForCausalLM.from_pretrained(
+            dense, device_map = device, torch_dtype = torch.float16,
+        )
+        model.eval()
+        info_path = os.path.join(dense, "sq_dequant_info.json")
+        dq = _json.loads(open(info_path).read()) if os.path.exists(info_path) else {}
+        LOAD_INFO.clear()
+        LOAD_INFO.update({
+            "gptq_weights": f"GPTQ-{bits} as dense fp16, dequantized by auto-gptq 0.7.1",
+            "gptq_bits": bits,
+            "env": {k: os.environ[k] for k in ("SQ_GPTQ_DENSE", "SQ_GPTQ3_DENSE") if k in os.environ},
+            "dense_dir": dense,
+            "source_checkpoint": dq.get("source_checkpoint"),
+            "dequant_versions": dq.get("versions"),
+            "dequant_checks": {k: dq.get("checks", {}).get(k)
+                               for k in ("logits_max_abs_diff", "autogptq_ppl_20_windows")},
+        })
+        print(f"  OK Loaded GPTQ-{bits} dense copy")
+        return model, tokenizer
 
     # Look up a registered pre-quantized checkpoint when bits map to a suffix
     bit_suffix = {4: "gptq4", 3: "gptq3", 2: "gptq2", 8: "gptq8"}.get(bits)

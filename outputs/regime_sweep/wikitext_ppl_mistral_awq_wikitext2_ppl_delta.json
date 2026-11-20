@@ -1,0 +1,19 @@
+{
+  "manifest": {
+    "model": "mistral7b-v02",
+    "quantizer": "awq",
+    "variant": "wikitext2_ppl_delta",
+    "extra": {}
+  },
+  "git_sha": "599b924b7cabe9e4d950ac6349d8fa285f4faece",
+  "model": "mistral7b-v02",
+  "quantizer": "awq",
+  "seq_len": 2048,
+  "wikitext2_ppl": 6.0725507736206055,
+  "wikitext2_ppl_fp32": 5.938313961029053,
+  "ppl_ratio": 1.0226052063721283,
+  "status": "ok",
+  "seed": 42,
+  "dataset": "wikitext-2-raw-v1/test",
+  "checkpoint_build": null
+}

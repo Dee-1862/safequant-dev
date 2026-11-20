@@ -1,0 +1,45 @@
+{
+  "manifest": {
+    "model": "qwen7b",
+    "quantizer": "gptq2",
+    "variant": "dense",
+    "extra": {
+      "n_reasoning": 100
+    },
+    "n_reasoning": 100,
+    "load_info": {
+      "gptq_weights": "GPTQ-2 as dense fp16, dequantized by auto-gptq 0.7.1",
+      "gptq_bits": 2,
+      "env": {
+        "SQ_GPTQ_DENSE": "1"
+      },
+      "dense_dir": "/work/hdd/bjwh/dbhoomireddy/quantized_models/gptq_dense/qwen7b-gptq2bit-g128",
+      "source_checkpoint": "/work/hdd/bjwh/dbhoomireddy/quantized_models/gptq/qwen7b-gptq2bit-g128",
+      "dequant_versions": {
+        "python": "3.10.22",
+        "torch": "2.7.1+cu128",
+        "torch_cuda": "12.8",
+        "transformers": "4.44.2",
+        "auto_gptq": "0.7.1"
+      },
+      "dequant_checks": {
+        "logits_max_abs_diff": 1.427734375,
+        "autogptq_ppl_20_windows": 32.15863849997314
+      }
+    }
+  },
+  "git_sha": "6bd560ee71bffbfa4cae86b76e49bd23175e4aea",
+  "model": "qwen7b",
+  "quantizer": "gptq2",
+  "n_reasoning": 100,
+  "arc": 19.0,
+  "arc_wilson95": [
+    12.514653992704261,
+    27.779024070807857
+  ],
+  "chance": 25.0,
+  "paper_arc_quant": 27.0,
+  "paper_arc_fp32": 51.0,
+  "paper_source": "outputs/regime_sweep/restoration_sweep_qwen_gptq2.json",
+  "seed": 42
+}

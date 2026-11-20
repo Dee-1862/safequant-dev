@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "gptq2",
+    "variant": "rebuilt_unmod",
+    "extra": {
+      "n_reasoning": 100
+    },
+    "n_reasoning": 100
+  },
+  "git_sha": "2ef700cfe5b91f877763f5d19b9ca33e6a2fedd4",
+  "model": "llama7b",
+  "quantizer": "gptq2",
+  "n_reasoning": 100,
+  "arc": 20.0,
+  "arc_wilson95": [
+    13.33659225590988,
+    28.883096192650235
+  ],
+  "chance": 25.0,
+  "paper_arc_quant": 21.0,
+  "paper_arc_fp32": 55.0,
+  "paper_source": "outputs/regime_sweep/restoration_sweep_llama_gptq2.json",
+  "seed": 42
+}
