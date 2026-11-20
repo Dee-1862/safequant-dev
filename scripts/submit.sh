@@ -17,7 +17,9 @@
 # Env (from .env or the shell):
 #   SLURM_ACCOUNT    required   (from `accounts`)
 #   SLURM_PARTITION  default gpuA100x4   (gpuA40x4 is cheaper and fits 8B fp16)
-#   SQ_GPUS_PER_NODE default 1
+#   SQ_GPUS_PER_NODE default 1; 0 = CPU job (no --gpus-per-node passed), e.g.
+#     SLURM_PARTITION="$SLURM_CPU_PARTITION" SQ_GPUS_PER_NODE=0 bash scripts/submit.sh job.sbatch
+#   (shell values win over .env, see scripts/load_env.sh)
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
@@ -49,7 +51,10 @@ GPUS="${SQ_GPUS_PER_NODE:-1}"
 cd "$ROOT"
 mkdir -p "${SQ_LOG_DIR:-${ROOT}/scripts/logs}"
 
-ARGS=(--account="$SLURM_ACCOUNT" --partition="$PARTITION" --gpus-per-node="$GPUS")
+ARGS=(--account="$SLURM_ACCOUNT" --partition="$PARTITION")
+if [[ "$GPUS" != "0" ]]; then
+  ARGS+=(--gpus-per-node="$GPUS")
+fi
 
 echo "submit: ${JOB#"$ROOT"/}  account=$SLURM_ACCOUNT partition=$PARTITION gpus-per-node=$GPUS ${SB_ARGS[*]:-} ${JOB_ARGS[*]:+-- ${JOB_ARGS[*]}}" >&2
 if [[ "${SQ_KEEP_GPUS_LINE:-0}" == "1" ]]; then
