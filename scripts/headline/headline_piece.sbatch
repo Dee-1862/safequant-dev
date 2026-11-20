@@ -12,7 +12,7 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # Headline-eval pieces (experiments/headline/headline_piece.py), run back to back in one job.
 # PIECES = ';'-separated argument lists, one per piece (use '+' between --parts, e.g. wj+arc).
 #   PIECES="--group heldout --model llama3-8b --quantizer aqlm2 --condition fp32 --parts wj+arc" \
-#   SLURM_PARTITION=ghx4-interactive bash scripts/submit.sh scripts/headline/headline_piece.sbatch --time=1:55:00
+#   SLURM_PARTITION="$SLURM_INTERACTIVE_PARTITION" bash scripts/submit.sh scripts/headline/headline_piece.sbatch --time=1:55:00
 # Merge afterwards on CPU: python -m experiments.headline.merge_pieces --group ... (see that file).
 set -uo pipefail
 FAIL=0

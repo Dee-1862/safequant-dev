@@ -16,7 +16,7 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 # env's own 5.7.0, load phi3 and llama7b at 3 and 2 bits and compute PPL on 20
 # WikiText-2 windows; auto-gptq 0.7.1's own loader is the reference (it wrote the
 # checkpoints). Prints RESULT lines only. Submit (interactive partition = fast start):
-#   SLURM_PARTITION=ghx4-interactive bash scripts/submit.sh \
+#   SLURM_PARTITION="$SLURM_INTERACTIVE_PARTITION" bash scripts/submit.sh \
 #     scripts/tests/gptqmodel_versions.sbatch --cpus-per-task=8
 set -uo pipefail   # not -e: every combination runs even if one fails
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-1}}"

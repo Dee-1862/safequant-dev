@@ -1,5 +1,6 @@
 #!/bin/bash
-# Login-node watcher (light: squeue/sbatch every 60 s, no compute). ghx4-interactive allows ONE
+# Login-node watcher (light: squeue/sbatch every 60 s, no compute). The interactive partition
+# ($SLURM_INTERACTIVE_PARTITION, from .env) allows ONE
 # job per user (queued or running), so dependencies cannot chain there. Whenever that slot is
 # free, submit the next unclaimed probe pieces (up to CHAIN_PACK=3 that fit the GPU together;
 # order from CHAIN_ORDER) as one scripts/probe_pool.sbatch job on one GPU under 2 h. Also cancels PENDING probe-pool
@@ -10,8 +11,9 @@ set -u
 cd "$(dirname "$0")/.."
 REPO_ROOT="$(pwd)"; export REPO_ROOT
 # same view of the world as the jobs: QM_ROOT from .env, dense GPTQ path where copies exist
-[[ -z "${QM_ROOT:-}" && -f .env ]] && QM_ROOT=$(sed -nE 's/^(export )?QM_ROOT=//p' .env | tail -1)
+source scripts/load_env.sh
 export QM_ROOT
+PART="${SLURM_INTERACTIVE_PARTITION:?set SLURM_INTERACTIVE_PARTITION in .env}"
 [[ -z "${SQ_GPTQ_DENSE+x}" && -d "${QM_ROOT}/gptq_dense" ]] && export SQ_GPTQ_DENSE=1
 source scripts/probe_pieces.sh
 ORDER="${CHAIN_ORDER:-$PROBE_ALL}"
@@ -43,9 +45,9 @@ while :; do
     PACK+=("$p"); GB=$(( GB + g )); mn=$(piece_min "$p"); (( mn > MINS )) && MINS=$mn
   done
   if (( ALL )); then echo "[$(date)] all pieces claimed; chain done"; break; fi
-  if (( ${#PACK[@]} > 0 )) && [[ -z "$(squeue -h -u "$USER" -p ghx4-interactive -o %i 2>/dev/null)" ]]; then
+  if (( ${#PACK[@]} > 0 )) && [[ -z "$(squeue -h -u "$USER" -p "$PART" -o %i 2>/dev/null)" ]]; then
     n=${#PACK[@]}; (( n > 1 )) && lim=1:55:00 || lim=$(limit "${PACK[0]}")
-    id=$(SLURM_PARTITION=ghx4-interactive POOL="${PACK[*]}" MAX_PAR=$n bash scripts/submit.sh scripts/probe_pool.sbatch \
+    id=$(SLURM_PARTITION="$PART" POOL="${PACK[*]}" MAX_PAR=$n bash scripts/submit.sh scripts/probe_pool.sbatch \
            --parsable --cpus-per-task=$(( 8 * n )) --mem=$(( n > 1 ? 113 : 64 ))G --time="$lim" \
            --job-name="sq_pp_i_$(piece_key "${PACK[0]}")$( (( n > 1 )) && echo "_p$n")" 2>&1 | tail -1)
     id="${id%%;*}"

@@ -1,7 +1,8 @@
 #!/bin/bash
 # Login-node runner (light: squeue/sbatch every 60 s): submits the jobs listed in a queue file
-# to ghx4-interactive one at a time, in order, whenever the lane (1 job per user) is free, and
-# cancels each entry's ghx4 copies once its interactive job has started (RUNNING or ended).
+# to the interactive partition ($SLURM_INTERACTIVE_PARTITION, from .env) one at a time, in order,
+# whenever the lane (1 job per user) is free, and cancels each entry's batch-partition copies
+# once its interactive job has started (RUNNING or ended).
 #   nohup setsid bash scripts/interactive_queue.sh scripts/logs/iq/queue.sh >> scripts/logs/iq/runner.log 2>&1 &
 # Queue file (bash, re-read every loop, so entries can be appended while it runs): one line per job
 #   q KEY "CANCEL_IDS" "ENV_ASSIGNMENTS" JOB_FILE "SBATCH_ARGS"
@@ -11,6 +12,8 @@
 main() {
   set -u
   cd "$(dirname "$0")/.."
+  source scripts/load_env.sh
+  local PART="${SLURM_INTERACTIVE_PARTITION:?set SLURM_INTERACTIVE_PARTITION in .env}"
   local QF="$1" ST="$(dirname "$1")/state.tsv"
   touch "$ST"
   log() { echo "[$(date '+%F %T')] $*"; }
@@ -20,7 +23,7 @@ main() {
     q() { KEYS+=("$1"); CANC+=("$2"); ENVS+=("$3"); JOBF+=("$4"); ARGS+=("$5"); }
     # shellcheck disable=SC1090
     source "$QF"
-    local busy; busy=$(squeue -h -u "$USER" -p ghx4-interactive -o %i 2>/dev/null)
+    local busy; busy=$(squeue -h -u "$USER" -p "$PART" -o %i 2>/dev/null)
     local all_ended=1 next=-1 i
     for i in "${!KEYS[@]}"; do
       local k=${KEYS[$i]} line jid st cdone
@@ -31,14 +34,14 @@ main() {
       [[ -n "$st" ]] && all_ended=0
       if [[ "$cdone" != yes && -n "${CANC[$i]// }" && "$st" != PENDING ]]; then
         scancel ${CANC[$i]} 2>/dev/null
-        log "$k ($jid) started: cancelled ghx4 copy ${CANC[$i]}"
+        log "$k ($jid) started: cancelled batch copy ${CANC[$i]}"
         awk -F'\t' -v OFS='\t' -v k="$k" '$1 == k {$3 = "yes"} 1' "$ST" > "$ST.tmp" && mv "$ST.tmp" "$ST"
       fi
     done
     if (( all_ended )); then log "queue done"; break; fi
     if (( next >= 0 )) && [[ -z "$busy" ]]; then
       local out id
-      out=$( ( eval "export ${ENVS[$next]}"; SLURM_PARTITION=ghx4-interactive bash scripts/submit.sh \
+      out=$( ( eval "export ${ENVS[$next]}"; SLURM_PARTITION="$PART" bash scripts/submit.sh \
                "${JOBF[$next]}" --parsable ${ARGS[$next]} ) 2>&1 | tail -1)
       id=${out%%;*}
       if [[ "$id" =~ ^[0-9]+$ ]]; then

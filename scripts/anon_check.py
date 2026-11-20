@@ -13,6 +13,10 @@ import sys
 PATTERNS = [
     "Dee-1862", "bhoomi", "deekshith", "drb6015", "psu.edu", "Penn State",
     "Yuchen", "cis240116p", "/jet/home/", "@gmail",
+    # GH200 cluster: user paths, partitions, allocations, host names
+    "/work/", "ghx4", "bjwh", "bjwg", "dtai-gh", "ncsa.edu", "hsn.cm",
+    # the package describes one cluster (H100 and GH200 nodes); never name or count clusters
+    "GH200 cluster", "H100 cluster", "DeltaAI", "Bridges",
 ]
 CLUSTER_RE = re.compile(
     r"/ocean/projects/[A-Za-z0-9_]+/[A-Za-z0-9_]+|/jet/home/[A-Za-z0-9_]+"

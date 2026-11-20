@@ -19,7 +19,7 @@ source "${SLURM_SUBMIT_DIR}/scripts/_env.sh"
 #   3) sq_clean: full WikiText-2 test PPL with SQ_GPTQ_DENSE=1, tag rebuilt
 #   4) compare with the paper, and with rebuilt_gptqmodel (same checkpoint loaded by gptqmodel)
 # SQ_GPTQ_DENSE=1 is set only for step 3 here.
-# Submit:  SLURM_PARTITION=ghx4-interactive DENSE_BITS="4 2" bash scripts/submit.sh \
+# Submit:  SLURM_PARTITION="$SLURM_INTERACTIVE_PARTITION" DENSE_BITS="4 2" bash scripts/submit.sh \
 #            scripts/tests/dense_gptq.sbatch --cpus-per-task=8
 set -uo pipefail   # not -e: report every cell even if one step fails
 FAIL=0             # exit 1 at the end if any requested cell has no dense copy (afterok chains)

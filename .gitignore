@@ -20,3 +20,14 @@ refusal_direction
 # local archives kept on disk, never tracked (sha256 in each MANIFEST.sha256)
 outputs/**/pieces/
 outputs/**/superseded/
+
+# secrets and job logs
+.env
+.env.*
+!.env.example
+*.out
+*.err
+outputs/**/*_smoke*.json
+# anonymous package (scripts/make_anon_package.sh writes these next to the repo; ignored if inside)
+safequant_anon/
+safequant_anon.zip
