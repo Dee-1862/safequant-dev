@@ -1,0 +1,858 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "aqlm2",
+    "variant": "paired",
+    "extra": {
+      "n_calib": 200,
+      "n_folds": 5,
+      "probe_type": "linear",
+      "seed": 42,
+      "paired_shuffle_seed": 42,
+      "mode": "paired real + shuffled",
+      "fp32_source": {
+        "computed_here": true,
+        "cache": "/work/hdd/bjwh/dbhoomireddy/sq_cache/x3_fp32/x3_fp32_pair_llama7b_334cee102beea747.json"
+      }
+    },
+    "n_calib": 200,
+    "n_folds": 5,
+    "probe_type": "linear",
+    "seed": 42,
+    "paired_shuffle_seed": 42,
+    "mode": "paired real + shuffled",
+    "fp32_source": {
+      "computed_here": true,
+      "cache": "/work/hdd/bjwh/dbhoomireddy/sq_cache/x3_fp32/x3_fp32_pair_llama7b_334cee102beea747.json"
+    }
+  },
+  "git_sha": "715255333e5649eb71f27e09359caa8d6547c836",
+  "n_layers": 32,
+  "quant": {
+    "real_per_layer": {
+      "0": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9800000000000001
+      },
+      "1": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9800000000000001
+      },
+      "2": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.99
+      },
+      "3": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "4": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "5": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "6": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "7": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "8": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "9": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "10": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "11": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "12": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "13": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "14": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "15": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "16": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "17": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "18": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "19": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "20": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "21": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "22": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "23": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "24": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "25": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "26": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.99,
+        "harmless_acc": 1.0
+      },
+      "27": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.99,
+        "harmless_acc": 1.0
+      },
+      "28": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.99,
+        "harmless_acc": 1.0
+      },
+      "29": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.99,
+        "harmless_acc": 1.0
+      },
+      "30": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.99,
+        "harmless_acc": 1.0
+      },
+      "31": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.99,
+        "harmless_acc": 0.99
+      }
+    },
+    "shuffled_per_layer": {
+      "0": {
+        "mean_acc": 0.5025,
+        "std_acc": 0.045689167206242665,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.55
+      },
+      "1": {
+        "mean_acc": 0.5175000000000001,
+        "std_acc": 0.046502688094345684,
+        "harmful_acc": 0.45500000000000007,
+        "harmless_acc": 0.5800000000000001
+      },
+      "2": {
+        "mean_acc": 0.5599999999999999,
+        "std_acc": 0.07132671308843554,
+        "harmful_acc": 0.53,
+        "harmless_acc": 0.5900000000000001
+      },
+      "3": {
+        "mean_acc": 0.5475,
+        "std_acc": 0.03741657386773941,
+        "harmful_acc": 0.5399999999999999,
+        "harmless_acc": 0.555
+      },
+      "4": {
+        "mean_acc": 0.5275000000000001,
+        "std_acc": 0.045689167206242665,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.5549999999999999
+      },
+      "5": {
+        "mean_acc": 0.5525,
+        "std_acc": 0.060930288034769714,
+        "harmful_acc": 0.535,
+        "harmless_acc": 0.5700000000000001
+      },
+      "6": {
+        "mean_acc": 0.5349999999999999,
+        "std_acc": 0.049623583103198025,
+        "harmful_acc": 0.5349999999999999,
+        "harmless_acc": 0.5349999999999999
+      },
+      "7": {
+        "mean_acc": 0.5475,
+        "std_acc": 0.044300112866673395,
+        "harmful_acc": 0.55,
+        "harmless_acc": 0.545
+      },
+      "8": {
+        "mean_acc": 0.535,
+        "std_acc": 0.03657184709581947,
+        "harmful_acc": 0.5200000000000001,
+        "harmless_acc": 0.55
+      },
+      "9": {
+        "mean_acc": 0.5349999999999999,
+        "std_acc": 0.0532681893816563,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.545
+      },
+      "10": {
+        "mean_acc": 0.525,
+        "std_acc": 0.051234753829798,
+        "harmful_acc": 0.5149999999999999,
+        "harmless_acc": 0.5349999999999999
+      },
+      "11": {
+        "mean_acc": 0.525,
+        "std_acc": 0.0262202212042538,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.525
+      },
+      "12": {
+        "mean_acc": 0.5225,
+        "std_acc": 0.021505813167606583,
+        "harmful_acc": 0.5199999999999999,
+        "harmless_acc": 0.525
+      },
+      "13": {
+        "mean_acc": 0.5325,
+        "std_acc": 0.039210967853395284,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.54
+      },
+      "14": {
+        "mean_acc": 0.5050000000000001,
+        "std_acc": 0.028062430400804587,
+        "harmful_acc": 0.5199999999999999,
+        "harmless_acc": 0.49000000000000005
+      },
+      "15": {
+        "mean_acc": 0.5,
+        "std_acc": 0.042573465914815985,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.5
+      },
+      "16": {
+        "mean_acc": 0.5125,
+        "std_acc": 0.03872983346207416,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.515
+      },
+      "17": {
+        "mean_acc": 0.5075000000000001,
+        "std_acc": 0.04650268809434569,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.5
+      },
+      "18": {
+        "mean_acc": 0.5325,
+        "std_acc": 0.07097534783289196,
+        "harmful_acc": 0.5200000000000001,
+        "harmless_acc": 0.5449999999999999
+      },
+      "19": {
+        "mean_acc": 0.5325,
+        "std_acc": 0.06354132513569419,
+        "harmful_acc": 0.5399999999999999,
+        "harmless_acc": 0.525
+      },
+      "20": {
+        "mean_acc": 0.5,
+        "std_acc": 0.04937104414532876,
+        "harmful_acc": 0.505,
+        "harmless_acc": 0.49499999999999994
+      },
+      "21": {
+        "mean_acc": 0.49250000000000005,
+        "std_acc": 0.0645174395028197,
+        "harmful_acc": 0.49499999999999994,
+        "harmless_acc": 0.49000000000000005
+      },
+      "22": {
+        "mean_acc": 0.4925,
+        "std_acc": 0.06547900426854397,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.485
+      },
+      "23": {
+        "mean_acc": 0.5174999999999998,
+        "std_acc": 0.06254998001598402,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.51
+      },
+      "24": {
+        "mean_acc": 0.505,
+        "std_acc": 0.04782781617427249,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.51
+      },
+      "25": {
+        "mean_acc": 0.49749999999999994,
+        "std_acc": 0.05024937810560446,
+        "harmful_acc": 0.49499999999999994,
+        "harmless_acc": 0.5
+      },
+      "26": {
+        "mean_acc": 0.5025000000000001,
+        "std_acc": 0.06294839156007087,
+        "harmful_acc": 0.5050000000000001,
+        "harmless_acc": 0.5
+      },
+      "27": {
+        "mean_acc": 0.49749999999999994,
+        "std_acc": 0.07262919523166975,
+        "harmful_acc": 0.5149999999999999,
+        "harmless_acc": 0.48
+      },
+      "28": {
+        "mean_acc": 0.4925,
+        "std_acc": 0.05220153254455273,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.505
+      },
+      "29": {
+        "mean_acc": 0.5025000000000001,
+        "std_acc": 0.05667892024377316,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.525
+      },
+      "30": {
+        "mean_acc": 0.495,
+        "std_acc": 0.04513867521316947,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.515
+      },
+      "31": {
+        "mean_acc": 0.495,
+        "std_acc": 0.052796780204857195,
+        "harmful_acc": 0.465,
+        "harmless_acc": 0.525
+      }
+    },
+    "summary": {
+      "real_mean_acc": 0.995390625,
+      "real_min_acc": 0.99,
+      "real_min_layer": 0,
+      "shuffled_mean_acc": 0.51703125,
+      "shuffled_max_acc": 0.5599999999999999,
+      "shuffled_max_layer": 2,
+      "selectivity_mean": 0.4783593749999999,
+      "selectivity_min_layer": 0.43499999999999994,
+      "selectivity_min_layer_idx": 2
+    }
+  },
+  "fp32": {
+    "real_per_layer": {
+      "0": {
+        "mean_acc": 0.9875,
+        "std_acc": 0.007905694150420955,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9800000000000001
+      },
+      "1": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9800000000000001
+      },
+      "2": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.99
+      },
+      "3": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "4": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "5": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "6": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "7": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "8": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "9": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "10": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "11": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "12": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "13": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "14": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "15": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "16": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "17": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "18": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "19": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "20": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.99,
+        "harmless_acc": 1.0
+      },
+      "21": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "22": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "23": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "24": {
+        "mean_acc": 0.9899999999999999,
+        "std_acc": 0.009354143466934856,
+        "harmful_acc": 0.985,
+        "harmless_acc": 0.9949999999999999
+      },
+      "25": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "26": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "27": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "28": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "29": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "30": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      },
+      "31": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.985,
+        "harmless_acc": 1.0
+      }
+    },
+    "shuffled_per_layer": {
+      "0": {
+        "mean_acc": 0.4875,
+        "std_acc": 0.054198708471697006,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.52
+      },
+      "1": {
+        "mean_acc": 0.525,
+        "std_acc": 0.049999999999999996,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.595
+      },
+      "2": {
+        "mean_acc": 0.5525,
+        "std_acc": 0.05208166663999917,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.5900000000000001
+      },
+      "3": {
+        "mean_acc": 0.5675000000000001,
+        "std_acc": 0.04582575694955842,
+        "harmful_acc": 0.5449999999999999,
+        "harmless_acc": 0.5900000000000001
+      },
+      "4": {
+        "mean_acc": 0.5325,
+        "std_acc": 0.05037360419902473,
+        "harmful_acc": 0.53,
+        "harmless_acc": 0.535
+      },
+      "5": {
+        "mean_acc": 0.5525,
+        "std_acc": 0.06490377492873582,
+        "harmful_acc": 0.5549999999999999,
+        "harmless_acc": 0.55
+      },
+      "6": {
+        "mean_acc": 0.53,
+        "std_acc": 0.05623610939600996,
+        "harmful_acc": 0.5349999999999999,
+        "harmless_acc": 0.525
+      },
+      "7": {
+        "mean_acc": 0.555,
+        "std_acc": 0.03999999999999999,
+        "harmful_acc": 0.575,
+        "harmless_acc": 0.5349999999999999
+      },
+      "8": {
+        "mean_acc": 0.5375,
+        "std_acc": 0.032596012026013255,
+        "harmful_acc": 0.5349999999999999,
+        "harmless_acc": 0.54
+      },
+      "9": {
+        "mean_acc": 0.54,
+        "std_acc": 0.04636809247747851,
+        "harmful_acc": 0.5349999999999999,
+        "harmless_acc": 0.545
+      },
+      "10": {
+        "mean_acc": 0.5425,
+        "std_acc": 0.048476798574163295,
+        "harmful_acc": 0.52,
+        "harmless_acc": 0.565
+      },
+      "11": {
+        "mean_acc": 0.525,
+        "std_acc": 0.02850438562747844,
+        "harmful_acc": 0.5250000000000001,
+        "harmless_acc": 0.525
+      },
+      "12": {
+        "mean_acc": 0.5125,
+        "std_acc": 0.020916500663351906,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.515
+      },
+      "13": {
+        "mean_acc": 0.5075000000000001,
+        "std_acc": 0.03840572873934306,
+        "harmful_acc": 0.495,
+        "harmless_acc": 0.52
+      },
+      "14": {
+        "mean_acc": 0.505,
+        "std_acc": 0.02573907535246749,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.53
+      },
+      "15": {
+        "mean_acc": 0.49250000000000005,
+        "std_acc": 0.04513867521316947,
+        "harmful_acc": 0.4800000000000001,
+        "harmless_acc": 0.5050000000000001
+      },
+      "16": {
+        "mean_acc": 0.5075000000000001,
+        "std_acc": 0.08426149773176358,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.515
+      },
+      "17": {
+        "mean_acc": 0.5,
+        "std_acc": 0.051234753829797974,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.5199999999999999
+      },
+      "18": {
+        "mean_acc": 0.52,
+        "std_acc": 0.0823862852664204,
+        "harmful_acc": 0.495,
+        "harmless_acc": 0.545
+      },
+      "19": {
+        "mean_acc": 0.5174999999999998,
+        "std_acc": 0.04974937185533099,
+        "harmful_acc": 0.495,
+        "harmless_acc": 0.5399999999999998
+      },
+      "20": {
+        "mean_acc": 0.5175000000000001,
+        "std_acc": 0.06547900426854397,
+        "harmful_acc": 0.4800000000000001,
+        "harmless_acc": 0.5549999999999999
+      },
+      "21": {
+        "mean_acc": 0.5199999999999999,
+        "std_acc": 0.06547900426854397,
+        "harmful_acc": 0.49000000000000005,
+        "harmless_acc": 0.55
+      },
+      "22": {
+        "mean_acc": 0.5199999999999999,
+        "std_acc": 0.07141428428542848,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.525
+      },
+      "23": {
+        "mean_acc": 0.515,
+        "std_acc": 0.06819090848492927,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.5199999999999999
+      },
+      "24": {
+        "mean_acc": 0.5175,
+        "std_acc": 0.055677643628300216,
+        "harmful_acc": 0.505,
+        "harmless_acc": 0.53
+      },
+      "25": {
+        "mean_acc": 0.51,
+        "std_acc": 0.06393355926272212,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.505
+      },
+      "26": {
+        "mean_acc": 0.5575,
+        "std_acc": 0.06782329983125268,
+        "harmful_acc": 0.56,
+        "harmless_acc": 0.5549999999999999
+      },
+      "27": {
+        "mean_acc": 0.5375,
+        "std_acc": 0.06846531968814577,
+        "harmful_acc": 0.5549999999999999,
+        "harmless_acc": 0.52
+      },
+      "28": {
+        "mean_acc": 0.5175000000000001,
+        "std_acc": 0.04847679857416328,
+        "harmful_acc": 0.5449999999999999,
+        "harmless_acc": 0.48999999999999994
+      },
+      "29": {
+        "mean_acc": 0.5175000000000001,
+        "std_acc": 0.0610327780786685,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.51
+      },
+      "30": {
+        "mean_acc": 0.5125,
+        "std_acc": 0.037914377220257756,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.525
+      },
+      "31": {
+        "mean_acc": 0.5075,
+        "std_acc": 0.07097534783289194,
+        "harmful_acc": 0.495,
+        "harmless_acc": 0.52
+      }
+    },
+    "summary": {
+      "real_mean_acc": 0.9942187499999999,
+      "real_min_acc": 0.9875,
+      "real_min_layer": 0,
+      "shuffled_mean_acc": 0.5237499999999999,
+      "shuffled_max_acc": 0.5675000000000001,
+      "shuffled_max_layer": 3,
+      "selectivity_mean": 0.47046875,
+      "selectivity_min_layer": 0.4249999999999998,
+      "selectivity_min_layer_idx": 3
+    }
+  },
+  "table1_check": {
+    "table1_file": "outputs/signal_geometry/probe_accuracy_llama_aqlm2.json",
+    "table1_a_min": 0.99,
+    "delta_real_a_min": 0.0
+  },
+  "summary": {
+    "quant_real_mean_acc": 0.995390625,
+    "quant_real_min_acc": 0.99,
+    "quant_real_min_layer": 0,
+    "quant_shuffled_mean_acc": 0.51703125,
+    "quant_shuffled_max_acc": 0.5599999999999999,
+    "quant_shuffled_max_layer": 2,
+    "quant_selectivity_mean": 0.4783593749999999,
+    "quant_selectivity_min_layer": 0.43499999999999994,
+    "quant_selectivity_min_layer_idx": 2,
+    "fp32_real_mean_acc": 0.9942187499999999,
+    "fp32_real_min_acc": 0.9875,
+    "fp32_real_min_layer": 0,
+    "fp32_shuffled_mean_acc": 0.5237499999999999,
+    "fp32_shuffled_max_acc": 0.5675000000000001,
+    "fp32_shuffled_max_layer": 3,
+    "fp32_selectivity_mean": 0.47046875,
+    "fp32_selectivity_min_layer": 0.4249999999999998,
+    "fp32_selectivity_min_layer_idx": 3
+  }
+}

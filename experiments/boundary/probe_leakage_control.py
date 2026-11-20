@@ -1,4 +1,5 @@
 # Probe leakage control: FP32 refusal probe vs surface-feature baseline (XSTest + HarmBench).
+# --quantizer runs the same probe on a quantized model (X2); default = FP32 as before.
 import argparse
 import gc
 from pathlib import Path
@@ -12,8 +13,8 @@ from core.datasets import (
     load_harmbench_prompts, load_harmless_prompts,
     load_wildjailbreak_prompts, load_xstest,
 )
-from core.manifest import RunConfig, save_result
-from core.model_loader import load_fp32
+from core.manifest import RunConfig, assert_new_result, save_result
+from core.model_loader import load_fp32, load_quantized
 from core.residuals import extract_last_token_residuals, get_inner
 from core.seeds import DEFAULT_SEED, set_global_seed
 
@@ -61,7 +62,26 @@ def main():
     ap.add_argument("--n_calib", type = int, default = 200)
     ap.add_argument("--n_transfer", type = int, default = 200)
     ap.add_argument("--token_pos", type = int, default = -1)
+    # X2: probe a quantized model instead of FP32 (default None = FP32, unchanged).
+    ap.add_argument("--quantizer", default = None)
+    # Optional output-name suffix (e.g. _smoke runs); opt-in only.
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
+
+    # Output name: FP32 default keeps probe_leakage_control_<model>.json; --quantizer
+    # writes probe_leakage_control_<model>_<quant>[_<tag>].json and never overwrites.
+    cfg = RunConfig(
+        model = args.model,
+        quantizer = args.quantizer or "aqlm2",
+        omit_quantizer = args.quantizer is None,
+        variant = args.tag,
+        extra = {"n_calib": args.n_calib, "n_transfer": args.n_transfer,
+                 "token_pos": args.token_pos, "seed": SEED,
+                 "surface_baseline": "tfidf_ngram_1_2",
+                 **({"probed_model": f"quantized:{args.quantizer}"} if args.quantizer else {})},
+    )
+    if args.quantizer or args.tag:
+        assert_new_result(_SCRIPT, cfg)
 
     # -- prompt sets --
     harmful_txt = [_as_text(x) for x in
@@ -74,8 +94,11 @@ def main():
     print(f"[data] wj harmful={len(harmful_txt)} harmless={len(harmless_txt)} "
           f"xstest safe={len(xs_safe)} unsafe={len(xs_unsafe)} harmbench={len(hb_txt)}")
 
-    # -- FP32 residuals for every set --
-    model, tok = load_fp32(args.model)
+    # -- residuals for every set: FP32 (default) or the quantized model (--quantizer) --
+    if args.quantizer:
+        model, tok = load_quantized(args.model, quantizer = args.quantizer)
+    else:
+        model, tok = load_fp32(args.model)
     device = next(model.parameters()).device
     layers = list(range(len(get_inner(model).layers)))
 
@@ -144,12 +167,6 @@ def main():
         "residual_per_layer": {str(L): per_layer[L] for L in layers},
         "surface_tfidf_baseline": surface,
     }
-    cfg = RunConfig(
-        model=args.model, omit_quantizer=True,
-        extra={"n_calib": args.n_calib, "n_transfer": args.n_transfer,
-               "token_pos": args.token_pos, "seed": SEED,
-               "surface_baseline": "tfidf_ngram_1_2"},
-    )
     path = save_result(_SCRIPT, cfg, data)
     print(f"Saved to {path}")
     print(f"[best L{best}] residual: XSTest-safe spec={b['xstest_safe_specificity']:.3f} "

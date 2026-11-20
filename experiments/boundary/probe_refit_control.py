@@ -1,10 +1,12 @@
 # Probe refit noise-floor control for probe-rotation screen.
 import argparse
 import gc
+import os
 from pathlib import Path
 
 import numpy as np
 import torch
+from joblib import Parallel, delayed
 from sklearn.linear_model import LogisticRegression
 
 from core.datasets import load_harmless_prompts, load_wildjailbreak_prompts
@@ -49,13 +51,29 @@ def _fit_w(h_list, s_list):
         - weight (ndarray): LogisticRegression coef_[0]
     """
     # Stack features and binary labels (harmful = 1)
-    X = np.stack([t.numpy() for t in h_list] + [t.numpy() for t in s_list])
+    X = np.stack([np.asarray(t) for t in h_list] + [np.asarray(t) for t in s_list])
     y = np.array([1] * len(h_list) + [0] * len(s_list))
 
     # Fit L2-regularized logistic regression
     clf = LogisticRegression(C = 1.0, max_iter = 2000, random_state = SEED)
     clf.fit(X, y)
     return clf.coef_[0]
+
+
+def _fit_pair(H, S, hA, hB, sA, sB):
+    """
+    Cosine between probes fit on two disjoint halves of one layer's residuals.
+
+    Inputs:
+        - H, S (ndarray): Harmful / harmless residuals for one layer, (n, d)
+        - hA, hB, sA, sB (ndarray): Index halves
+
+    Outputs:
+        - cos (float): cos(wA, wB); same values as fitting _fit_w on the tensor lists
+    """
+    wA = _fit_w(list(H[hA]), list(S[sA]))
+    wB = _fit_w(list(H[hB]), list(S[sB]))
+    return _cos(wA, wB)
 
 
 def main():
@@ -67,10 +85,14 @@ def main():
     # X4: number of independent random half-splits. Default 1 = the original
     # single-split control (identical numbers); e.g. --n_splits 100 for the 95th-percentile floor.
     ap.add_argument("--n_splits", type = int, default = 1)
+    # Opt-in output suffix (e.g. smoke runs: --tag smoke -> ..._splits100_smoke.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
 
     # Multi-split runs get their own filename and never overwrite the single-split result
     variant = f"splits{args.n_splits}" if args.n_splits != 1 else None
+    if args.tag:
+        variant = f"{variant}_{args.tag}" if variant else args.tag
     if variant:
         assert_new_result(
             _SCRIPT, RunConfig(model = args.model, omit_quantizer = True, variant = variant)
@@ -99,13 +121,21 @@ def main():
         hp, sp = rng.permutation(nh), rng.permutation(ns)
         splits.append((hp[: nh // 2], hp[nh // 2 :], sp[: ns // 2], sp[ns // 2 :]))
 
-    # Per-layer cosine between independent probe fits, for every split
+    # Per-layer cosine between independent probe fits, for every split. The fits are
+    # independent and deterministic (fixed random_state), so they run in parallel across
+    # the job's CPUs (SQ_FIT_JOBS, default = OMP_NUM_THREADS or all CPUs); results come
+    # back in submission order, identical to the serial loop.
+    H = {L: np.stack([t.numpy() for t in h[L]]) for L in layers}
+    S = {L: np.stack([t.numpy() for t in s[L]]) for L in layers}
+    n_jobs = int(os.environ.get("SQ_FIT_JOBS") or os.environ.get("OMP_NUM_THREADS") or os.cpu_count())
+    tasks = [(L, hA, hB, sA, sB) for hA, hB, sA, sB in splits for L in layers]
+    print(f"Fitting {2 * len(tasks)} probes on {n_jobs} workers", flush = True)
+    cos_vals = Parallel(n_jobs = n_jobs, verbose = 5)(
+        delayed(_fit_pair)(H[L], S[L], hA, hB, sA, sB) for L, hA, hB, sA, sB in tasks
+    )
     cos_by_split = {layer_idx: [] for layer_idx in layers}
-    for hA, hB, sA, sB in splits:
-        for layer_idx in layers:
-            wA = _fit_w([h[layer_idx][i] for i in hA], [s[layer_idx][i] for i in sA])
-            wB = _fit_w([h[layer_idx][i] for i in hB], [s[layer_idx][i] for i in sB])
-            cos_by_split[layer_idx].append(_cos(wA, wB))
+    for (L, *_), c in zip(tasks, cos_vals):
+        cos_by_split[L].append(c)
 
     # First split reproduces the original control's per-layer values
     cos_floor = {layer_idx: cos_by_split[layer_idx][0] for layer_idx in layers}

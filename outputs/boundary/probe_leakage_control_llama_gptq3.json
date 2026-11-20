@@ -1,0 +1,220 @@
+{
+  "manifest": {
+    "model": "llama7b",
+    "quantizer": "gptq3",
+    "extra": {
+      "n_calib": 200,
+      "n_transfer": 200,
+      "token_pos": -1,
+      "seed": 42,
+      "surface_baseline": "tfidf_ngram_1_2",
+      "probed_model": "quantized:gptq3"
+    },
+    "n_calib": 200,
+    "n_transfer": 200,
+    "token_pos": -1,
+    "seed": 42,
+    "surface_baseline": "tfidf_ngram_1_2",
+    "probed_model": "quantized:gptq3",
+    "load_info": {
+      "gptq_weights": "GPTQ-3 as dense fp16, dequantized by auto-gptq 0.7.1",
+      "gptq_bits": 3,
+      "env": {
+        "SQ_GPTQ_DENSE": "1"
+      },
+      "dense_dir": "/work/hdd/bjwh/dbhoomireddy/quantized_models/gptq_dense/llama7b-gptq3bit-g128",
+      "source_checkpoint": "/work/hdd/bjwh/dbhoomireddy/quantized_models/gptq/llama7b-gptq3bit-g128",
+      "dequant_versions": {
+        "python": "3.10.22",
+        "torch": "2.7.1+cu128",
+        "torch_cuda": "12.8",
+        "transformers": "4.44.2",
+        "auto_gptq": "0.7.1"
+      },
+      "dequant_checks": {
+        "logits_max_abs_diff": 0.0,
+        "autogptq_ppl_20_windows": 8.766383227710461
+      }
+    }
+  },
+  "git_sha": "1de906e93f3e0d7da4e97d31fa33fa09fcc31704",
+  "summary": {
+    "best_layer": 27,
+    "residual_xstest_safe_specificity": 0.988,
+    "residual_xstest_unsafe_recall": 0.63,
+    "residual_harmbench_transfer_recall": 0.925,
+    "surface_xstest_safe_specificity": 0.996,
+    "surface_xstest_unsafe_recall": 0.0,
+    "specificity_gap_residual_minus_surface": -0.008000000000000007,
+    "n_xstest_safe": 250,
+    "n_xstest_unsafe": 200
+  },
+  "residual_per_layer": {
+    "0": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "1": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "2": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "3": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "4": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "5": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "6": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "7": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "8": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "9": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.0
+    },
+    "10": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.035
+    },
+    "11": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.005,
+      "harmbench_transfer_recall": 0.335
+    },
+    "12": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.0,
+      "harmbench_transfer_recall": 0.36
+    },
+    "13": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.04,
+      "harmbench_transfer_recall": 0.545
+    },
+    "14": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.085,
+      "harmbench_transfer_recall": 0.57
+    },
+    "15": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.29,
+      "harmbench_transfer_recall": 0.775
+    },
+    "16": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.345,
+      "harmbench_transfer_recall": 0.88
+    },
+    "17": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.475,
+      "harmbench_transfer_recall": 0.895
+    },
+    "18": {
+      "xstest_safe_specificity": 1.0,
+      "xstest_unsafe_recall": 0.495,
+      "harmbench_transfer_recall": 0.93
+    },
+    "19": {
+      "xstest_safe_specificity": 0.996,
+      "xstest_unsafe_recall": 0.4,
+      "harmbench_transfer_recall": 0.93
+    },
+    "20": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.525,
+      "harmbench_transfer_recall": 0.935
+    },
+    "21": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.56,
+      "harmbench_transfer_recall": 0.935
+    },
+    "22": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.525,
+      "harmbench_transfer_recall": 0.95
+    },
+    "23": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.49,
+      "harmbench_transfer_recall": 0.95
+    },
+    "24": {
+      "xstest_safe_specificity": 0.996,
+      "xstest_unsafe_recall": 0.5,
+      "harmbench_transfer_recall": 0.945
+    },
+    "25": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.57,
+      "harmbench_transfer_recall": 0.945
+    },
+    "26": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.6,
+      "harmbench_transfer_recall": 0.94
+    },
+    "27": {
+      "xstest_safe_specificity": 0.988,
+      "xstest_unsafe_recall": 0.63,
+      "harmbench_transfer_recall": 0.925
+    },
+    "28": {
+      "xstest_safe_specificity": 0.988,
+      "xstest_unsafe_recall": 0.59,
+      "harmbench_transfer_recall": 0.925
+    },
+    "29": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.615,
+      "harmbench_transfer_recall": 0.935
+    },
+    "30": {
+      "xstest_safe_specificity": 0.996,
+      "xstest_unsafe_recall": 0.545,
+      "harmbench_transfer_recall": 0.89
+    },
+    "31": {
+      "xstest_safe_specificity": 0.992,
+      "xstest_unsafe_recall": 0.55,
+      "harmbench_transfer_recall": 0.945
+    }
+  },
+  "surface_tfidf_baseline": {
+    "xstest_safe_specificity": 0.996,
+    "xstest_unsafe_recall": 0.0,
+    "harmbench_transfer_recall": 0.0,
+    "n_features": 5272
+  }
+}

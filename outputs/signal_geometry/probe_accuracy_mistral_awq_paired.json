@@ -1,0 +1,858 @@
+{
+  "manifest": {
+    "model": "mistral7b-v02",
+    "quantizer": "awq",
+    "variant": "paired",
+    "extra": {
+      "n_calib": 200,
+      "n_folds": 5,
+      "probe_type": "linear",
+      "seed": 42,
+      "paired_shuffle_seed": 42,
+      "mode": "paired real + shuffled",
+      "fp32_source": {
+        "from_cache": "/work/hdd/bjwh/dbhoomireddy/sq_cache/x3_fp32/x3_fp32_pair_mistral7b-v02_fb0a150b905b3fde.json",
+        "computed_by_job": "3632118"
+      }
+    },
+    "n_calib": 200,
+    "n_folds": 5,
+    "probe_type": "linear",
+    "seed": 42,
+    "paired_shuffle_seed": 42,
+    "mode": "paired real + shuffled",
+    "fp32_source": {
+      "from_cache": "/work/hdd/bjwh/dbhoomireddy/sq_cache/x3_fp32/x3_fp32_pair_mistral7b-v02_fb0a150b905b3fde.json",
+      "computed_by_job": "3632118"
+    }
+  },
+  "git_sha": "715255333e5649eb71f27e09359caa8d6547c836",
+  "n_layers": 32,
+  "quant": {
+    "real_per_layer": {
+      "0": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.99
+      },
+      "1": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "2": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "3": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "4": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "5": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "6": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "7": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "8": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "9": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "10": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "11": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "12": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "13": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "14": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "15": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "16": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "17": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "18": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "19": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "20": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "21": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "22": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "23": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "24": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "25": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "26": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "27": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "28": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "29": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "30": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "31": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      }
+    },
+    "shuffled_per_layer": {
+      "0": {
+        "mean_acc": 0.47750000000000004,
+        "std_acc": 0.02783882181415011,
+        "harmful_acc": 0.27,
+        "harmless_acc": 0.6849999999999999
+      },
+      "1": {
+        "mean_acc": 0.5025000000000001,
+        "std_acc": 0.044300112866673375,
+        "harmful_acc": 0.4950000000000001,
+        "harmless_acc": 0.51
+      },
+      "2": {
+        "mean_acc": 0.5225,
+        "std_acc": 0.04138236339311712,
+        "harmful_acc": 0.47000000000000003,
+        "harmless_acc": 0.575
+      },
+      "3": {
+        "mean_acc": 0.5325,
+        "std_acc": 0.0645174395028197,
+        "harmful_acc": 0.4750000000000001,
+        "harmless_acc": 0.59
+      },
+      "4": {
+        "mean_acc": 0.5375,
+        "std_acc": 0.0770551750371122,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.6
+      },
+      "5": {
+        "mean_acc": 0.5475,
+        "std_acc": 0.0874642784226795,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.57
+      },
+      "6": {
+        "mean_acc": 0.5225,
+        "std_acc": 0.059895742753554714,
+        "harmful_acc": 0.49000000000000005,
+        "harmless_acc": 0.555
+      },
+      "7": {
+        "mean_acc": 0.515,
+        "std_acc": 0.047696960070847276,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.52
+      },
+      "8": {
+        "mean_acc": 0.53,
+        "std_acc": 0.08085480814398113,
+        "harmful_acc": 0.5349999999999999,
+        "harmless_acc": 0.525
+      },
+      "9": {
+        "mean_acc": 0.52,
+        "std_acc": 0.06204836822995427,
+        "harmful_acc": 0.525,
+        "harmless_acc": 0.5149999999999999
+      },
+      "10": {
+        "mean_acc": 0.5125,
+        "std_acc": 0.056457948953181084,
+        "harmful_acc": 0.5149999999999999,
+        "harmless_acc": 0.51
+      },
+      "11": {
+        "mean_acc": 0.5125,
+        "std_acc": 0.05863019699779286,
+        "harmful_acc": 0.505,
+        "harmless_acc": 0.5199999999999999
+      },
+      "12": {
+        "mean_acc": 0.5275000000000001,
+        "std_acc": 0.06194755846681935,
+        "harmful_acc": 0.52,
+        "harmless_acc": 0.535
+      },
+      "13": {
+        "mean_acc": 0.5225,
+        "std_acc": 0.03657184709581948,
+        "harmful_acc": 0.505,
+        "harmless_acc": 0.54
+      },
+      "14": {
+        "mean_acc": 0.505,
+        "std_acc": 0.037583240945932246,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.5
+      },
+      "15": {
+        "mean_acc": 0.5075,
+        "std_acc": 0.049749371855331,
+        "harmful_acc": 0.49499999999999994,
+        "harmless_acc": 0.52
+      },
+      "16": {
+        "mean_acc": 0.48250000000000004,
+        "std_acc": 0.03921096785339529,
+        "harmful_acc": 0.47000000000000003,
+        "harmless_acc": 0.495
+      },
+      "17": {
+        "mean_acc": 0.49749999999999994,
+        "std_acc": 0.038242646351945894,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.49499999999999994
+      },
+      "18": {
+        "mean_acc": 0.485,
+        "std_acc": 0.0508674748734395,
+        "harmful_acc": 0.485,
+        "harmless_acc": 0.485
+      },
+      "19": {
+        "mean_acc": 0.4725,
+        "std_acc": 0.04286607049870562,
+        "harmful_acc": 0.47000000000000003,
+        "harmless_acc": 0.475
+      },
+      "20": {
+        "mean_acc": 0.47750000000000004,
+        "std_acc": 0.04568916720624265,
+        "harmful_acc": 0.4800000000000001,
+        "harmless_acc": 0.475
+      },
+      "21": {
+        "mean_acc": 0.4875,
+        "std_acc": 0.03952847075210473,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.49499999999999994
+      },
+      "22": {
+        "mean_acc": 0.5,
+        "std_acc": 0.048088460154178364,
+        "harmful_acc": 0.49499999999999994,
+        "harmless_acc": 0.505
+      },
+      "23": {
+        "mean_acc": 0.4925,
+        "std_acc": 0.04513867521316947,
+        "harmful_acc": 0.4800000000000001,
+        "harmless_acc": 0.505
+      },
+      "24": {
+        "mean_acc": 0.48249999999999993,
+        "std_acc": 0.05787918451395112,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.49000000000000005
+      },
+      "25": {
+        "mean_acc": 0.47000000000000003,
+        "std_acc": 0.047827816174272494,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.485
+      },
+      "26": {
+        "mean_acc": 0.4625,
+        "std_acc": 0.04401704215414752,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.47000000000000003
+      },
+      "27": {
+        "mean_acc": 0.4925,
+        "std_acc": 0.03316624790355401,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.51
+      },
+      "28": {
+        "mean_acc": 0.4875,
+        "std_acc": 0.033541019662496833,
+        "harmful_acc": 0.485,
+        "harmless_acc": 0.48999999999999994
+      },
+      "29": {
+        "mean_acc": 0.47750000000000004,
+        "std_acc": 0.06393355926272212,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.475
+      },
+      "30": {
+        "mean_acc": 0.5,
+        "std_acc": 0.06937218462755804,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.49000000000000005
+      },
+      "31": {
+        "mean_acc": 0.4625,
+        "std_acc": 0.05062114182829146,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.41500000000000004
+      }
+    },
+    "summary": {
+      "real_mean_acc": 0.9967968749999999,
+      "real_min_acc": 0.99,
+      "real_min_layer": 1,
+      "shuffled_mean_acc": 0.50078125,
+      "shuffled_max_acc": 0.5475,
+      "shuffled_max_layer": 5,
+      "selectivity_mean": 0.49601562499999996,
+      "selectivity_min_layer": 0.44499999999999995,
+      "selectivity_min_layer_idx": 5
+    }
+  },
+  "fp32": {
+    "real_per_layer": {
+      "0": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.99
+      },
+      "1": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "2": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "3": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "4": {
+        "mean_acc": 0.99,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.985
+      },
+      "5": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "6": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "7": {
+        "mean_acc": 0.9924999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.99
+      },
+      "8": {
+        "mean_acc": 0.9949999999999999,
+        "std_acc": 0.006123724356957924,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 0.9949999999999999
+      },
+      "9": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "10": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "11": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "12": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "13": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 1.0,
+        "harmless_acc": 0.9949999999999999
+      },
+      "14": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "15": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "16": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "17": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "18": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "19": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "20": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "21": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "22": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "23": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "24": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "25": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "26": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "27": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "28": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "29": {
+        "mean_acc": 1.0,
+        "std_acc": 0.0,
+        "harmful_acc": 1.0,
+        "harmless_acc": 1.0
+      },
+      "30": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      },
+      "31": {
+        "mean_acc": 0.9974999999999999,
+        "std_acc": 0.004999999999999982,
+        "harmful_acc": 0.9949999999999999,
+        "harmless_acc": 1.0
+      }
+    },
+    "shuffled_per_layer": {
+      "0": {
+        "mean_acc": 0.475,
+        "std_acc": 0.027386127875258306,
+        "harmful_acc": 0.265,
+        "harmless_acc": 0.6849999999999999
+      },
+      "1": {
+        "mean_acc": 0.5025000000000001,
+        "std_acc": 0.044300112866673375,
+        "harmful_acc": 0.4950000000000001,
+        "harmless_acc": 0.51
+      },
+      "2": {
+        "mean_acc": 0.5125,
+        "std_acc": 0.04472135954999579,
+        "harmful_acc": 0.45999999999999996,
+        "harmless_acc": 0.5650000000000001
+      },
+      "3": {
+        "mean_acc": 0.5349999999999999,
+        "std_acc": 0.07516648189186453,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.595
+      },
+      "4": {
+        "mean_acc": 0.5375,
+        "std_acc": 0.06661456297237116,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.595
+      },
+      "5": {
+        "mean_acc": 0.5349999999999999,
+        "std_acc": 0.08565920849505906,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.555
+      },
+      "6": {
+        "mean_acc": 0.5349999999999999,
+        "std_acc": 0.06910137480542626,
+        "harmful_acc": 0.505,
+        "harmless_acc": 0.5650000000000001
+      },
+      "7": {
+        "mean_acc": 0.525,
+        "std_acc": 0.07115124735378853,
+        "harmful_acc": 0.52,
+        "harmless_acc": 0.53
+      },
+      "8": {
+        "mean_acc": 0.5325,
+        "std_acc": 0.07607562027351471,
+        "harmful_acc": 0.5349999999999999,
+        "harmless_acc": 0.53
+      },
+      "9": {
+        "mean_acc": 0.5149999999999999,
+        "std_acc": 0.05500000000000001,
+        "harmful_acc": 0.51,
+        "harmless_acc": 0.52
+      },
+      "10": {
+        "mean_acc": 0.5225000000000001,
+        "std_acc": 0.05442885264269312,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.5299999999999999
+      },
+      "11": {
+        "mean_acc": 0.5075000000000001,
+        "std_acc": 0.05733672470589858,
+        "harmful_acc": 0.505,
+        "harmless_acc": 0.51
+      },
+      "12": {
+        "mean_acc": 0.5175,
+        "std_acc": 0.057879184513951125,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.535
+      },
+      "13": {
+        "mean_acc": 0.5175,
+        "std_acc": 0.056236109396009974,
+        "harmful_acc": 0.5,
+        "harmless_acc": 0.5349999999999999
+      },
+      "14": {
+        "mean_acc": 0.49000000000000005,
+        "std_acc": 0.027838821814150098,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.5
+      },
+      "15": {
+        "mean_acc": 0.48249999999999993,
+        "std_acc": 0.04513867521316947,
+        "harmful_acc": 0.485,
+        "harmless_acc": 0.48
+      },
+      "16": {
+        "mean_acc": 0.48249999999999993,
+        "std_acc": 0.025739075352467493,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.51
+      },
+      "17": {
+        "mean_acc": 0.49499999999999994,
+        "std_acc": 0.021794494717703346,
+        "harmful_acc": 0.48,
+        "harmless_acc": 0.51
+      },
+      "18": {
+        "mean_acc": 0.4875,
+        "std_acc": 0.03259601202601323,
+        "harmful_acc": 0.47000000000000003,
+        "harmless_acc": 0.5050000000000001
+      },
+      "19": {
+        "mean_acc": 0.47750000000000004,
+        "std_acc": 0.03297726489568229,
+        "harmful_acc": 0.45499999999999996,
+        "harmless_acc": 0.5
+      },
+      "20": {
+        "mean_acc": 0.4925,
+        "std_acc": 0.04911720676097124,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.51
+      },
+      "21": {
+        "mean_acc": 0.485,
+        "std_acc": 0.048347699014534305,
+        "harmful_acc": 0.465,
+        "harmless_acc": 0.5050000000000001
+      },
+      "22": {
+        "mean_acc": 0.48999999999999994,
+        "std_acc": 0.03201562118716422,
+        "harmful_acc": 0.47000000000000003,
+        "harmless_acc": 0.51
+      },
+      "23": {
+        "mean_acc": 0.49000000000000005,
+        "std_acc": 0.03657184709581949,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.5050000000000001
+      },
+      "24": {
+        "mean_acc": 0.49000000000000005,
+        "std_acc": 0.049623583103198025,
+        "harmful_acc": 0.475,
+        "harmless_acc": 0.505
+      },
+      "25": {
+        "mean_acc": 0.46749999999999997,
+        "std_acc": 0.04000000000000001,
+        "harmful_acc": 0.43000000000000005,
+        "harmless_acc": 0.505
+      },
+      "26": {
+        "mean_acc": 0.46749999999999997,
+        "std_acc": 0.04847679857416328,
+        "harmful_acc": 0.44000000000000006,
+        "harmless_acc": 0.495
+      },
+      "27": {
+        "mean_acc": 0.48,
+        "std_acc": 0.02915475947422648,
+        "harmful_acc": 0.45999999999999996,
+        "harmless_acc": 0.5
+      },
+      "28": {
+        "mean_acc": 0.48,
+        "std_acc": 0.02806243040080457,
+        "harmful_acc": 0.4699999999999999,
+        "harmless_acc": 0.49000000000000005
+      },
+      "29": {
+        "mean_acc": 0.48500000000000004,
+        "std_acc": 0.04898979485566356,
+        "harmful_acc": 0.485,
+        "harmless_acc": 0.485
+      },
+      "30": {
+        "mean_acc": 0.48500000000000004,
+        "std_acc": 0.08077747210701754,
+        "harmful_acc": 0.5050000000000001,
+        "harmless_acc": 0.46499999999999997
+      },
+      "31": {
+        "mean_acc": 0.4875,
+        "std_acc": 0.04999999999999998,
+        "harmful_acc": 0.515,
+        "harmless_acc": 0.4600000000000001
+      }
+    },
+    "summary": {
+      "real_mean_acc": 0.9970312499999999,
+      "real_min_acc": 0.99,
+      "real_min_layer": 1,
+      "shuffled_mean_acc": 0.49953125,
+      "shuffled_max_acc": 0.5375,
+      "shuffled_max_layer": 4,
+      "selectivity_mean": 0.49749999999999994,
+      "selectivity_min_layer": 0.4525,
+      "selectivity_min_layer_idx": 4
+    }
+  },
+  "table1_check": {
+    "table1_file": "outputs/signal_geometry/probe_accuracy_mistral_awq.json",
+    "table1_a_min": 0.99,
+    "delta_real_a_min": 0.0
+  },
+  "summary": {
+    "quant_real_mean_acc": 0.9967968749999999,
+    "quant_real_min_acc": 0.99,
+    "quant_real_min_layer": 1,
+    "quant_shuffled_mean_acc": 0.50078125,
+    "quant_shuffled_max_acc": 0.5475,
+    "quant_shuffled_max_layer": 5,
+    "quant_selectivity_mean": 0.49601562499999996,
+    "quant_selectivity_min_layer": 0.44499999999999995,
+    "quant_selectivity_min_layer_idx": 5,
+    "fp32_real_mean_acc": 0.9970312499999999,
+    "fp32_real_min_acc": 0.99,
+    "fp32_real_min_layer": 1,
+    "fp32_shuffled_mean_acc": 0.49953125,
+    "fp32_shuffled_max_acc": 0.5375,
+    "fp32_shuffled_max_layer": 4,
+    "fp32_selectivity_mean": 0.49749999999999994,
+    "fp32_selectivity_min_layer": 0.4525,
+    "fp32_selectivity_min_layer_idx": 4
+  }
+}
