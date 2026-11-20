@@ -88,8 +88,11 @@ def main():
     # X5: draw n_eval prompts at random from the full pool with this seed (default: off,
     # the fixed first-n_eval set is used exactly as before).
     ap.add_argument("--subset_seed", type = int, default = None)
-    # Optional suffix for the output JSON (e.g. --tag x1_n200 -> headline_llama_gptq4_x1_n200.json)
+    # Optional suffix for the output JSON (e.g. --tag delta -> headline_llama_gptq4_delta.json)
     ap.add_argument("--tag", default = None)
+    # Smoke-test cap on XSTest (default None = all 450 prompts, unchanged): keeps the
+    # first n/2 safe and first n/2 unsafe prompts so both rates stay defined.
+    ap.add_argument("--n_xstest", type = int, default = None)
     args = ap.parse_args()
 
     # Seed and open the raw checkpoint path up front
@@ -104,6 +107,8 @@ def main():
     extra = {"n_eval": args.n_eval, "n_reasoning": args.n_reasoning, "n_boot": args.n_boot}
     if args.subset_seed is not None:
         extra["subset_seed"] = args.subset_seed
+    if args.n_xstest:
+        extra["n_xstest"] = args.n_xstest
     cfg = RunConfig(
         model = args.model,
         quantizer = qtz,
@@ -123,6 +128,10 @@ def main():
     behaviors = [_extract_behavior(it) for it in wj_items]
     arc_items = load_arc_challenge(n_samples = args.n_reasoning)
     xstest_items = load_xstest()
+    if args.n_xstest:
+        half = max(1, args.n_xstest // 2)
+        xstest_items = ([it for it in xstest_items if it["type"] == "safe"][:half]
+                        + [it for it in xstest_items if it["type"] != "safe"][:half])
 
     all_resp, all_arc, all_xs = {}, {}, {}
 

@@ -16,3 +16,7 @@ scripts/logs/*
 logs/
 outputs_pre_realrun_*/
 refusal_direction
+
+# local archives kept on disk, never tracked (sha256 in each MANIFEST.sha256)
+outputs/**/pieces/
+outputs/**/superseded/
