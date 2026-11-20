@@ -113,6 +113,76 @@ sbatch --account="$SLURM_ACCOUNT" scripts/headline/headline_eval_llama.sbatch
 
 Jobs source `scripts/_env.sh`, which loads `.env` when present.
 
+## Run order on NCSA Delta (reviewer runs)
+
+Do these in order, from the repo root on a Delta login node, after filling in `.env`
+(Delta block in `.env.example` / `docs/ENV.md`: `SLURM_ACCOUNT`, `SLURM_PARTITION`,
+`HF_HOME`, `QM_ROOT`, `CONDA_ENV`, `AGENV`, `CONDA_SH` or `MODULES`; optionally
+`SLURM_CPU_PARTITION` + `SLURM_CPU_ACCOUNT` for the setup job).
+
+1. **Make the conda envs** (once). Creates `sq_clean` at `$CONDA_ENV` and `sq_autogptq` at
+   `$AGENV` on the project filesystem, checks versions, saves `pip freeze` to `scripts/logs/`:
+   ```bash
+   bash scripts/delta_make_envs.sh
+   ```
+2. **Setup: download everything** (once; about 200 GB). Log in to Hugging Face first
+   (gated Llama/Mistral). Submits `scripts/tests/delta_setup.sbatch` on its own:
+   ```bash
+   huggingface-cli login
+   bash scripts/delta_queue.sh --dry-run          # check the whole plan; submits nothing
+   # GPU partition/account from .env:
+   bash scripts/submit.sh scripts/tests/delta_setup.sbatch
+   # or on the CPU partition (needs both CPU variables in .env; load .env into the shell first):
+   set -a; source .env; set +a
+   SLURM_ACCOUNT="$SLURM_CPU_ACCOUNT" SLURM_PARTITION="$SLURM_CPU_PARTITION" SQ_GPUS_PER_NODE=0 \
+     bash scripts/submit.sh scripts/tests/delta_setup.sbatch
+   ```
+   Wait for it to finish (`squeue -u $USER`); it fails loudly if any model or dataset is missing.
+3. **Build the GPTQ-4 checkpoint** (llama7b, sq_autogptq env; needed by X1 and its smoke
+   test). Submits only the build; does nothing if the checkpoint already exists:
+   ```bash
+   bash scripts/delta_queue.sh --gptq-only
+   ```
+   Wait for it to finish before step 4.
+
+   To rebuild every GPTQ cell instead (DeltaAI, no copied checkpoints), use `--gptq-all`
+   with the full queue in step 5, or `--gptq-only --gptq-all` for just the builds: one
+   build per missing llama7b {4,3}, qwen7b {4,3}, mistral7b-v02 {4}, phi3 {4,3}
+   checkpoint, each followed by a WikiText-2 PPL check against the paper value (tag
+   `rebuilt`, warns above 2%); X1 and the GPTQ half of X2 wait for them.
+   `GPTQ_BACKEND=gptqmodel` switches the builder, `GPTQ_CELLS="phi3:4"` narrows the list.
+   `--awq-ppl` adds a WikiText-2 PPL check per AWQ cell (public checkpoints, tag `delta`,
+   paper 7.55 / 7.85 / 6.07 / 6.77) and makes X2's AWQ cells wait for it: on aarch64
+   autoawq runs its Triton kernels instead of Bridges' `awq_ext`.
+   On aarch64, `delta_make_envs.sh autogptq` builds auto-gptq 0.7.1 from source on
+   torch 2.7.1+cu128; every checkpoint records its backend and versions in
+   `sq_build_info.json`.
+4. **Smoke test** (about 1 h): every reviewer job at `--n_eval 8 --n_reasoning 8`, first
+   cell/seed only, outputs suffixed `_smoke`. Check each `scripts/logs/smoke_*` log. This
+   is also the real CUDA check: `delta_make_envs.sh` runs on a login node with no GPU.
+   If a job fails with a CUDA driver error, reinstall torch for sq_clean with
+   `TORCH_INDEX=https://download.pytorch.org/whl/cu126 bash scripts/delta_make_envs.sh clean`
+   (see the script header) and rerun the smoke test with a new `SMOKE_TAG`.
+   ```bash
+   bash scripts/delta_queue.sh --smoke
+   ```
+5. **Full queue**, skipping the setup and build that already ran. Jobs are submitted in
+   priority order (X3, X4, X2, held-out, X1, Task 3, Task 4, X5) with Slurm dependencies;
+   the script prints every job id and log path:
+   ```bash
+   bash scripts/delta_queue.sh --skip-setup --skip-gptq
+   ```
+
+The reviewer runs use the Delta environment built in step 1, not the Bridges-2 environment
+behind the paper's original runs. Keep `scripts/logs/env_sq_clean_freeze.txt` and
+`env_sq_autogptq_freeze.txt` as the record, and say in the appendix that the reviewer runs
+used a separate environment. The X6 run-variance spread (rep1-rep3) is computed from Delta
+runs only; the paper run is listed beside it, not mixed in.
+
+Results appear in `python scripts/report_all.py` (section 5) and `PAPER_TABLES.md`
+(`python scripts/paper_values.py --md`) as each JSON lands; missing runs show as
+"missing". Localization intervals: `python scripts/localization_intervals.py`.
+
 ## Sanity check before any GPU run
 
 ```bash

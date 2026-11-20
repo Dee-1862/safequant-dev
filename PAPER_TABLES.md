@@ -270,7 +270,7 @@ Source: restoration_sweep_llama_{aqlm2,gptq4}.json (flags_by_cond)
 | write (PTQ untrained) | 4.0 | 63.5 | 47.0 | yes |
 | write (LR-QAT trained) | 4.0 | 2.5 | 47.0 | yes |
 
-## reviewer runs (X1, held-out, X3, X4, X5)
+## reviewer runs (X1, X2, held-out, X3, X4, X5, X6)
 
 Read only from the new result names; 'missing' until the GPU job lands.
 
@@ -278,6 +278,25 @@ Read only from the new result names; 'missing' until the GPU job lands.
 ### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)
 
 missing: `outputs/headline/headline_llama_gptq4_x1_n200.json`
+
+### X2: surface-feature control on the 14 coherent quantized cells
+
+| Cell | best layer | residual spec (XSTest-safe) | residual recall (XSTest-unsafe) | HarmBench transfer | surface recall (XSTest-unsafe) |
+|---|---:|---:|---:|---:|---:|
+| llama/awq | missing | `outputs/boundary/probe_leakage_control_llama_awq.json` | | | |
+| llama/gptq4 | missing | `outputs/boundary/probe_leakage_control_llama_gptq4.json` | | | |
+| llama/gptq3 | missing | `outputs/boundary/probe_leakage_control_llama_gptq3.json` | | | |
+| llama/aqlm2 | missing | `outputs/boundary/probe_leakage_control_llama_aqlm2.json` | | | |
+| qwen/awq | missing | `outputs/boundary/probe_leakage_control_qwen_awq.json` | | | |
+| qwen/gptq4 | missing | `outputs/boundary/probe_leakage_control_qwen_gptq4.json` | | | |
+| qwen/gptq3 | missing | `outputs/boundary/probe_leakage_control_qwen_gptq3.json` | | | |
+| mistral/awq | missing | `outputs/boundary/probe_leakage_control_mistral_awq.json` | | | |
+| mistral/gptq4 | missing | `outputs/boundary/probe_leakage_control_mistral_gptq4.json` | | | |
+| mistral/aqlm2 | missing | `outputs/boundary/probe_leakage_control_mistral_aqlm2.json` | | | |
+| phi3/awq | missing | `outputs/boundary/probe_leakage_control_phi3_awq.json` | | | |
+| phi3/gptq4 | missing | `outputs/boundary/probe_leakage_control_phi3_gptq4.json` | | | |
+| phi3/gptq3 | missing | `outputs/boundary/probe_leakage_control_phi3_gptq3.json` | | | |
+| phi3/aqlm2 | missing | `outputs/boundary/probe_leakage_control_phi3_aqlm2.json` | | | |
 
 ### Held-out AQLM-2 screen
 
@@ -321,3 +340,20 @@ Across seeds (present seeds only):
 |---|---|---:|---:|---:|---:|---:|
 | llama | missing | 0 | | | | |
 | phi3 | missing | 0 | | | | |
+
+### X6: same-prompt repeats (AQLM-2; rep1-rep3 on Delta)
+
+Spread = rep1-rep3 only (one environment). The paper run (Bridges) is listed separately and is not part of the mean +/- sd.
+
+| Cell | Run | quant ASR | +Write ASR | +Read ASR | +Both ASR | rho read % | rho write % |
+|---|---|---:|---:|---:|---:|---:|---:|
+| llama | rep1 | missing | `outputs/headline/headline_llama_aqlm2_rep1.json` | | | | |
+| llama | rep2 | missing | `outputs/headline/headline_llama_aqlm2_rep2.json` | | | | |
+| llama | rep3 | missing | `outputs/headline/headline_llama_aqlm2_rep3.json` | | | | |
+| llama | repeats mean +/- sd (0 of 3) | -- | -- | -- | -- | -- | -- |
+| llama | paper run (Bridges, not in spread) | 62.5 | 50.5 | 44.5 | 43.0 | 83.7 | 55.8 |
+| phi3 | rep1 | missing | `outputs/headline/headline_phi3_aqlm2_rep1.json` | | | | |
+| phi3 | rep2 | missing | `outputs/headline/headline_phi3_aqlm2_rep2.json` | | | | |
+| phi3 | rep3 | missing | `outputs/headline/headline_phi3_aqlm2_rep3.json` | | | | |
+| phi3 | repeats mean +/- sd (0 of 3) | -- | -- | -- | -- | -- | -- |
+| phi3 | paper run (Bridges, not in spread) | 59.5 | 49.5 | 44.5 | 32.0 | 75.0 | 50.0 |

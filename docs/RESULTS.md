@@ -1,5 +1,7 @@
 # Experiment results provenance
 
+Reviewer-run results (new files only): see [REVIEWER_RUNS.md](REVIEWER_RUNS.md).
+
 Table numbers live here only — experiment folders use claim names so renumbering does not require directory renames.
 
 Filename convention: `outputs/<claim_folder>/<stem>_<model>_<quantizer>[_variant].json` with short model tokens (`llama`, `phi3`, `mistral`, `qwen`). CLI accepts long aliases (`llama7b`, etc.).

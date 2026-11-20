@@ -1,11 +1,32 @@
-# Summaries for the reviewer-item runs (X1, held-out AQLM-2, X3, X4, X5).
+# Summaries for the reviewer-item runs (X1, X2, held-out AQLM-2, X3, X4, X5, X6).
 #
-# Reads ONLY the new result names, never the paper's existing artifacts:
-#   X1        outputs/headline/headline_llama_gptq4_x1_n200.json
+# Reads the new result names. The one exception is X6, which also READS (never
+# writes) the original Bridges headline_<model>_aqlm2.json and lists it as the "paper
+# run" (outside the repeat spread):
+#   X1        outputs/headline/headline_llama_gptq4_xstest.json
 #   held-out  outputs/headline/headline_<model>_aqlm2_heldout.json   (llama3-8b, else mistral-nemo)
-#   X3        outputs/signal_geometry/probe_accuracy_<model>_<quant>_shuffled.json
-#   X4        outputs/boundary/probe_refit_control_<model>_splits100.json
+#   X3        outputs/signal_geometry/probe_accuracy_<model>_<quant>_paired.json  (14 coherent cells;
+#             real + shuffled-label probe on the same activations; Table 1 a_min read from the
+#             untagged probe_accuracy_<model>_<quant>.json for the consistency check)
+#   collapsed outputs/signal_geometry/probe_accuracy_<model>_<quant>_paired_rebuilt.json,
+#             outputs/boundary/probe_leakage_control_<model>_<quant>_rebuilt.json,
+#             outputs/regime_sweep/arc_check_<model>_<quant>_rebuilt.json (else _rebuilt_gptqmodel)
+#             (5 collapsed cells on DeltaAI rebuilt dense checkpoints; reported separately)
+#   X4        outputs/boundary/probe_refit_control_<model>_splits1000.json if present, else _splits100.json
+#             (FP-vs-FP refit floor),
+#             tested against outputs/signal_geometry/probe_rotation_<model>_<quant>.json (observed
+#             FP-vs-quant probe cosines; Table 1/7 coswmed = their median over layers):
+#               split-median test: per split, median over layers of the refit cosine; empirical
+#                 p = (#split-medians <= observed coswmed + 1) / (n_splits + 1)
+#                 and z = (median of split-medians - coswmed) / SD(split-medians)
+#               per-layer test: floor = 5th percentile of that layer's refit cosine over splits;
+#                 count layers whose observed cosine is below floor - X4_FLOOR_MARGIN (rounding ties
+#                 in low-variance early layers do not count)
+#             The pooled 95th-percentile refit distance is descriptive only, not a test threshold.
 #   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
+#   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
+#   X6        outputs/headline/headline_<model>_aqlm2_rep{1,2,3}.json   (Delta repeats, same
+#             prompts) + headline_<model>_aqlm2.json (paper run, reported separately)
 # Every entry reports status "missing" (with the expected path) until its JSON exists.
 # Used by scripts/report_all.py (section 5) and scripts/paper_values.py ("reviewer_runs").
 import json
@@ -20,11 +41,33 @@ if str(ROOT) not in sys.path:
 OUT = ROOT / "outputs"
 
 HELDOUT_MODELS = ("llama3-8b", "mistral-nemo")
-X3_CELLS = (("llama", "aqlm2"), ("phi3", "aqlm2"))
-X4_MODELS = ("llama", "phi3")
+# X3: the same 14 coherent cells as X2 (matched real/shuffled pair per cell)
+X3_CELLS = (
+    ("llama", "awq"), ("llama", "gptq4"), ("llama", "gptq3"), ("llama", "aqlm2"),
+    ("qwen", "awq"), ("qwen", "gptq4"), ("qwen", "gptq3"),
+    ("mistral", "awq"), ("mistral", "gptq4"), ("mistral", "aqlm2"),
+    ("phi3", "awq"), ("phi3", "gptq4"), ("phi3", "gptq3"), ("phi3", "aqlm2"),
+)
+# Collapsed cells (DeltaAI rebuilds; never compared against Table 1's collapsed numbers)
+COLLAPSED_CELLS = (("llama", "gptq2"), ("qwen", "gptq2"), ("mistral", "gptq2"),
+                   ("phi3", "gptq2"), ("mistral", "gptq3"))
+X4_MODELS = ("llama", "phi3", "mistral", "qwen")
+# X4 tests: every Table 1 cell (qwen has no AQLM-2 cell)
+X4_QUANTS = ("aqlm2", "awq", "gptq4", "gptq3", "gptq2")
+X4_FLOOR_MARGIN = 0.002
 X5_CELLS = ("llama", "phi3")          # the two significant AQLM-2 cells
 X5_SEEDS = (1, 2, 3, 4, 5)
 CONDS = ("fp32", "QUANT", "write_restored", "read_restored", "both_restored")
+# X2: the 14 coherent Table 2 cells (quantized ARC >= 40); filename model tokens.
+# Keep in sync with scripts/boundary/probe_leakage_control_quant.sbatch.
+X2_CELLS = (
+    ("llama", "awq"), ("llama", "gptq4"), ("llama", "gptq3"), ("llama", "aqlm2"),
+    ("qwen", "awq"), ("qwen", "gptq4"), ("qwen", "gptq3"),
+    ("mistral", "awq"), ("mistral", "gptq4"), ("mistral", "aqlm2"),
+    ("phi3", "awq"), ("phi3", "gptq4"), ("phi3", "gptq3"), ("phi3", "aqlm2"),
+)
+X6_CELLS = ("llama", "phi3")
+X6_REPS = (("rep1", "_rep1"), ("rep2", "_rep2"), ("rep3", "_rep3"))   # all on Delta
 
 
 def _load(path):
@@ -93,7 +136,7 @@ def _paired(cells, variant):
 
 
 def x1():
-    path = OUT / "headline" / "headline_llama_gptq4_x1_n200.json"
+    path = OUT / "headline" / "headline_llama_gptq4_xstest.json"
     d = _load(path)
     if d is None:
         return _missing(path)
@@ -117,44 +160,147 @@ def heldout():
     return out
 
 
+def _x3_pair(path):
+    """
+    Matched real / shuffled probe pair (probe_accuracy --paired) for one cell.
+
+    Inputs:
+        - path (Path): probe_accuracy_<model>_<quant>_paired[_rebuilt].json
+
+    Outputs:
+        - res (dict): Accuracies, selectivity and the Table 1 consistency check, or a
+          missing record
+    """
+    d = _load(path)
+    if d is None:
+        return _missing(path)
+    q = d.get("quant", {}).get("summary", {})
+    t1 = d.get("table1_check", {})
+    return {
+        "status": "ok", "source": _rel(path),
+        "real_mean_acc": _r(q.get("real_mean_acc"), 3), "real_min_acc": _r(q.get("real_min_acc"), 3),
+        "real_min_layer": q.get("real_min_layer"),
+        "shuffled_mean_acc": _r(q.get("shuffled_mean_acc"), 3),
+        "shuffled_max_acc": _r(q.get("shuffled_max_acc"), 3),
+        "shuffled_max_layer": q.get("shuffled_max_layer"),
+        "selectivity_mean": _r(q.get("selectivity_mean"), 3),
+        "selectivity_min_layer": _r(q.get("selectivity_min_layer"), 3),
+        "table1_a_min": _r(t1.get("table1_a_min"), 3),
+        "delta_vs_table1_pt": _r(100 * t1["delta_real_a_min"], 1) if t1.get("delta_real_a_min") is not None else None,
+        "fp32_shuffled_mean_acc": _r(d.get("fp32", {}).get("summary", {}).get("shuffled_mean_acc"), 3),
+    }
+
+
 def x3():
+    return {f"{m}/{q}": _x3_pair(OUT / "signal_geometry" / f"probe_accuracy_{m}_{q}_paired.json")
+            for m, q in X3_CELLS}
+
+
+def collapsed():
+    """
+    X3 pair, X2 and ARC on the 5 collapsed cells, all on rebuilt dense checkpoints.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - out (dict): model/quant -> {x3, x2, arc}
+    """
     out = {}
-    for model, quant in X3_CELLS:
-        path = OUT / "signal_geometry" / f"probe_accuracy_{model}_{quant}_shuffled.json"
-        d = _load(path)
-        if d is None:
-            out[f"{model}/{quant}"] = _missing(path)
-            continue
-        res = {"status": "ok", "source": _rel(path)}
-        for side in ("fp32", "quant"):
-            accs = [v["mean_acc"] for v in d.get(f"{side}_probe_per_layer", {}).values()]
-            res[side] = {
-                "mean_acc": _r(statistics.mean(accs), 3) if accs else None,
-                "min_acc": _r(min(accs), 3) if accs else None,
-                "max_acc": _r(max(accs), 3) if accs else None,
-                "max_abs_dev_from_0.5": _r(max(abs(a - 0.5) for a in accs), 3) if accs else None,
-            }
-        out[f"{model}/{quant}"] = res
+    for m, q in COLLAPSED_CELLS:
+        res = {"x3": _x3_pair(OUT / "signal_geometry" / f"probe_accuracy_{m}_{q}_paired_rebuilt.json")}
+        p2 = OUT / "boundary" / f"probe_leakage_control_{m}_{q}_rebuilt.json"
+        d2 = _load(p2)
+        if d2 is None:
+            res["x2"] = _missing(p2)
+        else:
+            sm = d2.get("summary", {})
+            res["x2"] = {"status": "ok", "source": _rel(p2),
+                         "residual_xstest_safe_specificity": _r(sm.get("residual_xstest_safe_specificity"), 3),
+                         "residual_xstest_unsafe_recall": _r(sm.get("residual_xstest_unsafe_recall"), 3),
+                         "surface_xstest_unsafe_recall": _r(sm.get("surface_xstest_unsafe_recall"), 3)}
+        res["arc"] = {"status": "missing"}
+        for tag in ("rebuilt", "rebuilt_gptqmodel"):
+            pa = OUT / "regime_sweep" / f"arc_check_{m}_{q}_{tag}.json"
+            da = _load(pa)
+            if da is not None:
+                res["arc"] = {"status": "ok", "source": _rel(pa), "arc": _r(da.get("arc")),
+                              "ci95": [_r(v) for v in da.get("arc_wilson95") or []], "tag": tag}
+                break
+        out[f"{m}/{q}"] = res
     return out
 
 
+def _x4_test(cos_by_split, observed):
+    """
+    Compare one cell's observed FP-vs-quant probe cosines with the FP-vs-FP refit floor.
+
+    Inputs:
+        - cos_by_split (dict): layer -> list of refit cosines, one per split (X4)
+        - observed (dict): layer -> observed FP-vs-quant cosine (probe_rotation)
+
+    Outputs:
+        - res (dict): split-median distribution + empirical p, per-layer floor count
+    """
+    import numpy as np
+    layers = sorted(cos_by_split, key = int)
+    C = np.array([cos_by_split[L] for L in layers], dtype = np.float64)   # (layers, splits)
+    split_medians = np.median(C, axis = 0)
+    obs = np.array([observed[L] for L in layers], dtype = np.float64)
+    coswmed = float(np.median(obs))
+    floors = np.percentile(C, 5, axis = 1)
+    below = [int(L) for L, o, f in zip(layers, obs, floors) if o < f - X4_FLOOR_MARGIN]
+    n = len(split_medians)
+    n_le = int((split_medians <= coswmed).sum())
+    sd = float(np.std(split_medians, ddof = 1))
+    return {
+        "coswmed": _r(coswmed, 3),
+        "split_median_min": _r(float(split_medians.min()), 3),
+        "split_median_p5": _r(float(np.percentile(split_medians, 5)), 3),
+        "split_median_median": _r(float(np.median(split_medians)), 3),
+        "p_value": _r((n_le + 1) / (n + 1), 4),
+        "p_label": f"p < {1 / (n + 1):.1g} ({n} splits)" if n_le == 0 else f"p = {(n_le + 1) / (n + 1):.3g}",
+        "n_splits": n,
+        "split_median_sd": _r(sd, 4),
+        "z": _r((float(np.median(split_medians)) - coswmed) / sd, 1) if sd > 0 else None,
+        "floor_margin": X4_FLOOR_MARGIN,
+        "n_layers": len(layers),
+        "n_below_floor": len(below),
+        "layers_below_floor": below,
+    }
+
+
 def x4():
-    out = {}
+    out = {"floors": {}, "tests": {}}
     for model in X4_MODELS:
-        path = OUT / "boundary" / f"probe_refit_control_{model}_splits100.json"
+        # the 1000-split floor (empirical p down to 0.001) replaces the 100-split one once it exists
+        path = OUT / "boundary" / f"probe_refit_control_{model}_splits1000.json"
+        if not path.exists():
+            path = OUT / "boundary" / f"probe_refit_control_{model}_splits100.json"
         d = _load(path)
         if d is None:
-            out[model] = _missing(path)
+            out["floors"][model] = _missing(path)
             continue
         s = d.get("summary_splits", {})
-        out[model] = {
+        out["floors"][model] = {
             "status": "ok", "source": _rel(path),
             "n_splits": s.get("n_splits"),
+            # descriptive only (not a test threshold)
             "refit_distance_p95_pooled": _r(s.get("refit_distance_p95_pooled"), 3),
             "cos_floor_p5_pooled": _r(s.get("cos_floor_p5_pooled"), 3),
             "cos_median_pooled": _r(s.get("cos_median_pooled"), 3),
             "refit_distance_p95_per_layer_median": _r(s.get("refit_distance_p95_per_layer_median"), 3),
         }
+        for q in X4_QUANTS:
+            if model == "qwen" and q == "aqlm2":
+                continue
+            rpath = OUT / "signal_geometry" / f"probe_rotation_{model}_{q}.json"
+            r = _load(rpath)
+            if r is None:
+                continue
+            res = {"status": "ok", "floor_source": _rel(path), "observed_source": _rel(rpath)}
+            res.update(_x4_test(d["cos_by_split_per_layer"], r["cos_probe_weight_per_layer"]))
+            out["tests"][f"{model}/{q}"] = res
     return out
 
 
@@ -198,9 +344,109 @@ def x5():
     return out
 
 
+def x2():
+    """
+    X2 surface-feature control on the coherent quantized cells.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - out (dict): model/quant -> best layer and residual / surface probe scores
+    """
+    out = {}
+    for model, quant in X2_CELLS:
+        path = OUT / "boundary" / f"probe_leakage_control_{model}_{quant}.json"
+        d = _load(path)
+        if d is None:
+            out[f"{model}/{quant}"] = _missing(path)
+            continue
+        sm = d.get("summary", {})
+        out[f"{model}/{quant}"] = {
+            "status": "ok", "source": _rel(path),
+            "best_layer": sm.get("best_layer"),
+            "residual_xstest_safe_specificity": _r(sm.get("residual_xstest_safe_specificity"), 3),
+            "residual_xstest_unsafe_recall": _r(sm.get("residual_xstest_unsafe_recall"), 3),
+            "residual_harmbench_transfer_recall": _r(sm.get("residual_harmbench_transfer_recall"), 3),
+            "surface_xstest_unsafe_recall": _r(sm.get("surface_xstest_unsafe_recall"), 3),
+        }
+    return out
+
+
+def _rho(d, side):
+    """
+    Recovery ratio rho from a headline JSON.
+
+    Inputs:
+        - d (dict): Headline result
+        - side (str): read, write or both
+
+    Outputs:
+        - rho (float or None): 100 recovery / damage, None if undefined
+    """
+    dmg = d.get("damage_pp")
+    rec = (d.get("recovery_pp") or {}).get(side)
+    return None if not dmg or rec is None else 100.0 * rec / dmg
+
+
+X6_METRICS = ("quant_asr", "write_restored_asr", "read_restored_asr",
+              "both_restored_asr", "rho_read_pct", "rho_write_pct")
+
+
+def _x6_row(path):
+    """
+    One X6 row (quantized and restored ASRs, rho) from a headline JSON.
+
+    Inputs:
+        - path (Path): headline_<model>_aqlm2[_repK].json
+
+    Outputs:
+        - row (dict): ASRs and rho, or a missing record
+    """
+    d = _load(path)
+    if d is None:
+        return _missing(path)
+    asr = d.get("asr", {})
+    return {
+        "status": "ok", "source": _rel(path),
+        "quant_asr": _r(asr.get("aqlm2")),
+        "write_restored_asr": _r(asr.get("write_restored")),
+        "read_restored_asr": _r(asr.get("read_restored")),
+        "both_restored_asr": _r(asr.get("both_restored")),
+        "rho_read_pct": _r(_rho(d, "read")),
+        "rho_write_pct": _r(_rho(d, "write")),
+    }
+
+
+def x6():
+    """
+    Same-prompt repeats: rep1-rep3 (one environment) give the spread; the original
+    headline run is listed separately as the paper run and is not in the spread.
+
+    Inputs:
+        - None
+
+    Outputs:
+        - out (dict): model -> paper_run, reps, n_present, across_reps
+    """
+    out = {}
+    for model in X6_CELLS:
+        reps = {label: _x6_row(OUT / "headline" / f"headline_{model}_aqlm2{suffix}.json")
+                for label, suffix in X6_REPS}
+        ok = [r for r in reps.values() if r.get("status") == "ok"]
+        out[model] = {
+            "paper_run": _x6_row(OUT / "headline" / f"headline_{model}_aqlm2.json"),
+            "reps": reps,
+            "n_present": len(ok),
+            "across_reps": {m: _spread([r[m] for r in ok]) for m in X6_METRICS} if ok else None,
+        }
+    return out
+
+
 def collect():
     """All reviewer-run summaries in one dict (statuses say what is missing)."""
-    return {"x1": x1(), "heldout": heldout(), "x3": x3(), "x4": x4(), "x5": x5()}
+    return {"x1": x1(), "x2": x2(), "heldout": heldout(), "x3": x3(), "x4": x4(),
+            "x5": x5(), "x6": x6(), "collapsed": collapsed()}
 
 
 # ---------------------------------------------------------------- rendering --
@@ -214,7 +460,7 @@ def _ci(x):
 
 def to_markdown(rv):
     """Markdown block for PAPER_TABLES.md. Missing runs show as 'missing'."""
-    L = ["\n## reviewer runs (X1, held-out, X3, X4, X5)\n",
+    L = ["\n## reviewer runs (X1, X2, held-out, X3, X4, X5, X6)\n",
          "Read only from the new result names; 'missing' until the GPU job lands.\n"]
 
     L.append("\n### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)\n")
@@ -226,6 +472,19 @@ def to_markdown(rv):
         L.append("|---|---:|---:|---:|---|")
         for c, v in r["xstest_false_refusal"].items():
             L.append(f"| {c} | {_f(r['asr'][c])} | {_f(r['arc'][c])} | {_f(v['rate'])} | {_ci(v['ci95'])} |")
+
+    L.append("\n### X2: surface-feature control on the 14 coherent quantized cells\n")
+    L.append("| Cell | best layer | residual spec (XSTest-safe) | residual recall (XSTest-unsafe) "
+             "| HarmBench transfer | surface recall (XSTest-unsafe) |")
+    L.append("|---|---:|---:|---:|---:|---:|")
+    for k, r in rv["x2"].items():
+        if r["status"] != "ok":
+            L.append(f"| {k} | missing | `{r['expected']}` | | | |")
+            continue
+        L.append(f"| {k} | {_f(r['best_layer'])} | {_f(r['residual_xstest_safe_specificity'])} | "
+                 f"{_f(r['residual_xstest_unsafe_recall'])} | "
+                 f"{_f(r['residual_harmbench_transfer_recall'])} | "
+                 f"{_f(r['surface_xstest_unsafe_recall'])} |")
 
     L.append("\n### Held-out AQLM-2 screen\n")
     L.append("| Model | FP ASR/ARC | Quant ASR/ARC | dASR | 95% CI | p (McNemar) | Source |")
@@ -239,28 +498,43 @@ def to_markdown(rv):
                  f"{_f(r['asr']['aqlm2'])}/{_f(r['arc']['aqlm2'])} | {_f(ps.get('delta_asr'))} | "
                  f"{_ci(ps.get('ci95'))} | {_f(ps.get('p_mcnemar'))} | `{r['source']}` |")
 
-    L.append("\n### X3: shuffled-label probe control (expect ~0.5)\n")
-    L.append("| Cell | FP mean acc | FP min-max | Quant mean acc | Quant min-max | max abs dev from 0.5 |")
-    L.append("|---|---:|---|---:|---|---:|")
+    L.append("\n### X3: matched real / shuffled-label probe on the 14 coherent cells\n")
+    L.append("Same activations, layers, folds and regularisation for both fits (shuffle seed 42); "
+             "selectivity = real - shuffled from that pair. Table 1 a_min = the paper's real-label "
+             "run (consistency check, expect within ~1 pt).\n")
+    L.append("| Cell | real acc mean / min (layer) | shuffled acc mean / max (layer) | selectivity mean / min-layer "
+             "| Table 1 a_min | Delta vs Table 1 (pt) |")
+    L.append("|---|---|---|---|---:|---:|")
     for k, r in rv["x3"].items():
         if r["status"] != "ok":
             L.append(f"| {k} | missing | `{r['expected']}` | | | |")
             continue
-        fp, q = r["fp32"], r["quant"]
-        dev = max(x for x in (fp["max_abs_dev_from_0.5"], q["max_abs_dev_from_0.5"]) if x is not None)
-        L.append(f"| {k} | {_f(fp['mean_acc'])} | {_f(fp['min_acc'])}-{_f(fp['max_acc'])} | "
-                 f"{_f(q['mean_acc'])} | {_f(q['min_acc'])}-{_f(q['max_acc'])} | {_f(dev)} |")
+        L.append(f"| {k} | {_f(r['real_mean_acc'])} / {_f(r['real_min_acc'])} (L{_f(r['real_min_layer'])}) | "
+                 f"{_f(r['shuffled_mean_acc'])} / {_f(r['shuffled_max_acc'])} (L{_f(r['shuffled_max_layer'])}) | "
+                 f"{_f(r['selectivity_mean'])} / {_f(r['selectivity_min_layer'])} | "
+                 f"{_f(r['table1_a_min'])} | {_f(r['delta_vs_table1_pt'])} |")
 
     L.append("\n### X4: 100-split FP-vs-FP refit floor\n")
-    L.append("| Model | splits | refit distance p95 (pooled) | cos floor p5 | cos median | per-layer p95 (median) |")
+    L.append("Floor runs (pooled p95 is descriptive only, not a test threshold):\n")
+    L.append("| Model | splits | refit distance p95 (pooled) | cos p5 (pooled) | cos median | per-layer p95 (median) |")
     L.append("|---|---:|---:|---:|---:|---:|")
-    for m, r in rv["x4"].items():
+    for m, r in rv["x4"]["floors"].items():
         if r["status"] != "ok":
             L.append(f"| {m} | missing | `{r['expected']}` | | | |")
             continue
         L.append(f"| {m} | {_f(r['n_splits'])} | {_f(r['refit_distance_p95_pooled'])} | "
                  f"{_f(r['cos_floor_p5_pooled'])} | {_f(r['cos_median_pooled'])} | "
                  f"{_f(r['refit_distance_p95_per_layer_median'])} |")
+    L.append("\nTests per Table 1 cell. Split-median: median over layers of the refit cosine, one per "
+             "split; p = (#split-medians <= coswmed + 1) / (splits + 1). Per-layer: floor = 5th "
+             "percentile of that layer's refit cosine; count of layers with observed FP-vs-quant "
+             "cosine below floor - 0.002. z = (median split-median - coswmed) / SD(split-medians).\n")
+    L.append("| Cell | coswmed | split-median min / p5 / median (SD) | p | z | layers below floor |")
+    L.append("|---|---:|---:|---|---:|---:|")
+    for c, r in rv["x4"]["tests"].items():
+        L.append(f"| {c} | {_f(r['coswmed'])} | {_f(r['split_median_min'])} / {_f(r['split_median_p5'])} / "
+                 f"{_f(r['split_median_median'])} ({_f(r['split_median_sd'])}) | {r['p_label']} | {_f(r['z'])} | "
+                 f"{r['n_below_floor']} / {r['n_layers']} |")
 
     L.append("\n### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)\n")
     L.append("| Cell | seed | dASR (paired) | 95% CI | damage | read rec | write rec | both rec |")
@@ -288,6 +562,57 @@ def to_markdown(rv):
             if s:
                 L.append(f"| {m} | {name} | {s['n']} | {s['mean']} | {_f(s['sd'])} | "
                          f"{s['min']} | {s['max']} |")
+
+    L.append("\n### X6: same-prompt repeats (AQLM-2; rep1-rep3 on Delta)\n")
+    L.append("Spread = rep1-rep3 only (one environment). The paper run (Bridges) is listed "
+             "separately and is not part of the mean +/- sd.\n")
+    L.append("| Cell | Run | quant ASR | +Write ASR | +Read ASR | +Both ASR | rho read % | rho write % |")
+    L.append("|---|---|---:|---:|---:|---:|---:|---:|")
+
+    def row(m, label, r):
+        if r["status"] != "ok":
+            return f"| {m} | {label} | missing | `{r['expected']}` | | | | |"
+        return (f"| {m} | {label} | {_f(r['quant_asr'])} | {_f(r['write_restored_asr'])} | "
+                f"{_f(r['read_restored_asr'])} | {_f(r['both_restored_asr'])} | "
+                f"{_f(r['rho_read_pct'])} | {_f(r['rho_write_pct'])} |")
+
+    for m, block in rv["x6"].items():
+        for label, r in block["reps"].items():
+            L.append(row(m, label, r))
+        agg = block["across_reps"]
+        if agg:
+            def ms(k):
+                s = agg[k]
+                return "--" if not s else f"{s['mean']} +/- {_f(s['sd'])}"
+            L.append(f"| {m} | **repeats mean +/- sd ({block['n_present']} of 3)** | {ms('quant_asr')} | "
+                     f"{ms('write_restored_asr')} | {ms('read_restored_asr')} | "
+                     f"{ms('both_restored_asr')} | {ms('rho_read_pct')} | {ms('rho_write_pct')} |")
+        else:
+            L.append(f"| {m} | repeats mean +/- sd (0 of 3) | -- | -- | -- | -- | -- | -- |")
+        L.append(row(m, "paper run (Bridges, not in spread)", block["paper_run"]))
+    L.append("\n### Collapsed cells (rebuilt checkpoints)\n")
+    L.append("DeltaAI rebuilds on the dense GPTQ path, NOT the paper's Bridges checkpoints (the GPTQ-2 "
+             "rebuilds differ a lot). Selectivity comes only from each cell's own real/shuffled pair; "
+             "Table 1 a_min is shown for reference, a large gap is expected.\n")
+    L.append("| Cell (rebuilt) | ARC % [95% CI] | real acc mean / min | shuffled acc mean / max | selectivity mean "
+             "| XSTest spec / recall (residual) | surface recall | Table 1 a_min |")
+    L.append("|---|---|---|---|---:|---|---:|---:|")
+    for k, r in rv["collapsed"].items():
+        a, x3r, x2r = r["arc"], r["x3"], r["x2"]
+        arc = (f"{_f(a.get('arc'))} {_ci(a.get('ci95'))}" + ("" if a.get("tag") == "rebuilt" else f" ({a.get('tag')})")
+               if a["status"] == "ok" else "--")
+        if x3r["status"] == "ok":
+            p3 = (f"{_f(x3r['real_mean_acc'])} / {_f(x3r['real_min_acc'])} | "
+                  f"{_f(x3r['shuffled_mean_acc'])} / {_f(x3r['shuffled_max_acc'])} | {_f(x3r['selectivity_mean'])}")
+            t1 = _f(x3r["table1_a_min"])
+        else:
+            p3, t1 = "missing | | ", "--"
+        if x2r["status"] == "ok":
+            p2 = (f"{_f(x2r['residual_xstest_safe_specificity'])} / {_f(x2r['residual_xstest_unsafe_recall'])} | "
+                  f"{_f(x2r['surface_xstest_unsafe_recall'])}")
+        else:
+            p2 = "missing | "
+        L.append(f"| {k} | {arc} | {p3} | {p2} | {t1} |")
     return "\n".join(L)
 
 
