@@ -1,0 +1,46 @@
+# sq_clean (evaluation) environment: everything core/, experiments/ and config.py import.
+# Create it with scripts/make_envs.sh, which installs this file under a constraints
+# file plus the GPTQ/AWQ backends listed at the bottom.
+#
+# [rec]   = version recorded for the original sq_clean env (docs/LRQAT_REPAIR.md,
+#           docs/MODELS_QUANTIZATION.md, core/model_loader.py load shim)
+# [guess] = minor-level pin chosen to be compatible with the [rec] stack, NOT verified
+#           against the original env. Replace with a `conda env export` if available.
+
+# --- core stack ---------------------------------------------------------------
+torch==2.9.*                 # [rec]  config, core, experiments
+transformers==4.57.*         # [rec]  model/tokenizer loading, GPTQConfig, AWQ, AQLM
+bitsandbytes==0.49.*         # [rec]  HarmBench judge in 4-bit; NF4/int8 loaders
+optimum==2.2.0               # [rec]  GPTQ loading (core/model_loader.py imports it)
+accelerate==1.10.*           # [guess] device_map loading
+safetensors==0.6.*           # [guess]
+sentencepiece==0.2.*         # [guess] slow tokenizers (judge loads use_fast=False)
+protobuf==6.*                # [guess] sentencepiece tokenizer conversion; gptqmodel 5.7 needs >=6.32
+huggingface_hub==0.35.*      # [guess] transformers 4.57 needs <1.0; prefetch.py
+
+# --- data / stats ----------------------------------------------------------------
+datasets==4.2.*              # [guess] WildJailbreak, Alpaca, ARC, WikiText, C4
+pandas==2.3.*                # [guess] XSTest / HarmBench CSVs (core/datasets.py)
+numpy==2.2.*                 # [guess]
+scikit-learn==1.7.*          # [guess] probes (LogisticRegression n_jobs is deprecated in >=1.8)
+scipy==1.15.*                # [guess] 1.16 needs Python >=3.11; sq_clean is 3.10
+tqdm==4.67.*                 # [guess]
+
+# --- quantized-model kernels --------------------------------------------------------
+aqlm[gpu]==1.1.*             # [guess] 2-bit AQLM cells; experiments/trained_repair imports aqlm
+torchao==0.15.*              # gptqmodel 5.7 dependency (>=0.14.1). 0.15 is the release built
+                             # for torch 2.9; 0.16+ targets torch 2.10+ and fails to import
+                             # here (torch.nn.functional.ScalingType)
+
+# --- installed separately by scripts/make_envs.sh (not via -r) -----------------------
+# gptqmodel==5.7.0           GPTQ backend behind optimum (the original env recorded 7.1.0, but 6.0+
+#                            requires transformers>=5; 5.7.0 is the newest release that
+#                            accepts 4.57.*); BUILD_CUDA_EXT=0 (torch backend is
+#                            forced in core/model_loader.py), --no-build-isolation
+# autoawq==0.2.*     [guess] transformers' native AWQ loading; --no-deps so it cannot
+#                            downgrade transformers/torch
+# Not pip: experiments/trained_repair/qresafe_fold.py imports `src.aq` from an AQLM repo
+# checkout (set AQLM_REPO in .env).
+#
+# sq_autogptq (GPTQ generation only, scripts/quantize_gptq.py) is a separate env:
+#   auto-gptq==0.7.1  transformers==4.44.2  torch==2.2.2  numpy<2   (see make_envs.sh)

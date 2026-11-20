@@ -1,0 +1,515 @@
+# Model / tokenizer loaders for FP32 and common quantization backends.
+
+import os
+
+# Force gptqmodel to use pure-pytorch backend (no triton/exllama kernel issues)
+os.environ["GPTQMODEL_FORCE_BACKEND"] = "torch"
+# Disable torch.compile which causes PY_SSIZE_T_CLEAN errors on older torch
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
+
+import torch
+from datasets import load_dataset as _load_ds
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import GPTQConfig
+
+from config import MODELS, DEVICE, HF_HOME, QM_ROOT, QUANTIZED_CHECKPOINTS
+
+# What the last load used, when it differs from the default path (read by
+# core/manifest.save_result into every result's manifest as 'load_info').
+LOAD_INFO = {}
+
+
+# Optional cross-process load lock (SQ_LOAD_LOCK=<file>): scripts/probe_pool.sbatch sets it so
+# that pieces packed on one GPU load their models one at a time (host-memory peak of one load,
+# not four). Off when unset; reentrant within a process (load_quantized may call load_fp32).
+_LOCK_DEPTH = [0]
+
+
+def _with_load_lock(fn):
+    """
+    Serialize model loads across processes when SQ_LOAD_LOCK names a lock file.
+
+    Inputs:
+        - fn (callable): Loader to wrap (load_fp32 / load_quantized)
+
+    Outputs:
+        - wrapper (callable): Same signature; holds an exclusive flock on SQ_LOAD_LOCK
+          for the outermost call only (reentrant), no lock when the variable is unset
+    """
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*a, **kw):
+        path = os.environ.get("SQ_LOAD_LOCK")
+        if not path or _LOCK_DEPTH[0] > 0:
+            _LOCK_DEPTH[0] += 1
+            try:
+                return fn(*a, **kw)
+            finally:
+                _LOCK_DEPTH[0] -= 1
+        import fcntl
+        with open(path, "a") as fh:
+            fcntl.flock(fh, fcntl.LOCK_EX)
+            _LOCK_DEPTH[0] += 1
+            try:
+                return fn(*a, **kw)
+            finally:
+                _LOCK_DEPTH[0] -= 1
+                fcntl.flock(fh, fcntl.LOCK_UN)
+    return wrapper
+
+try:
+    from config import MODEL_REVISIONS
+except ImportError:
+    MODEL_REVISIONS = {}
+
+
+def _resolve_model_path(model_name):
+    """
+    Resolve a model alias to a HuggingFace model path.
+
+    Inputs:
+        - model_name (str): Short alias or HF model id
+
+    Outputs:
+        - model_path (str): Resolved HF path / id
+    """
+    return MODELS.get(model_name, model_name)
+
+
+def _use_remote_code(model_path):
+    """
+    Decide trust_remote_code; Phi-3 uses transformers-native modeling code.
+
+    Inputs:
+        - model_path (str): HF model path / id
+
+    Outputs:
+        - use_remote_code (bool): Whether to set trust_remote_code=True
+    """
+    # Phi-3 remote modeling is incompatible with newer transformers DynamicCache
+    p = str(model_path).lower()
+    return "phi-3" not in p and "phi3" not in p
+
+
+@_with_load_lock
+def load_fp32(model_name, device = None):
+    """
+    Load model in FP32 precision.
+
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
+    """
+    LOAD_INFO.clear()  # describes the most recent load only
+    if device is None:
+        device = DEVICE
+    model_path = _resolve_model_path(model_name)
+
+    print(f"Loading FP32 model: {model_name}")
+    print(f"  Path: {model_path}")
+    print(f"  Device: {device}")
+
+    # Optional revision pin to match quantized checkpoint provenance
+    rev = MODEL_REVISIONS.get(model_name)
+    if rev:
+        print(
+            f"  Revision pin: {rev[:12]} (FP weights matched to the quantizer's source)"
+        )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, cache_dir = HF_HOME, revision = rev
+    )
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        torch_dtype = torch.float32,
+        device_map = device,
+        trust_remote_code = _use_remote_code(model_path),
+        cache_dir = HF_HOME,
+        revision = rev,
+    )
+
+    print(
+        f"  OK Loaded ({sum(p.numel() for p in model.parameters()) / 1e9:.2f}B params)"
+    )
+    print(f"  Cache: {HF_HOME}")
+    return model, tokenizer
+
+
+@_with_load_lock
+def load_quantized(model_name, quantizer, device = None):
+    """
+    Unified loader that dispatches to the right quantizer backend.
+
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - quantizer (str): Quantizer key (fp32, awq, gptq4, gptq3, gptq2, aqlm2)
+        - device (str | None): Device map target (default: DEVICE)
+
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
+    """
+    LOAD_INFO.clear()  # describes the most recent load only
+    quantizer = quantizer.lower()
+
+    if quantizer == "fp32":
+        return load_fp32(model_name, device)
+    elif quantizer == "awq":
+        return _load_awq(model_name, device)
+    elif quantizer in ("gptq", "gptq4"):
+        return _load_gptq(model_name, device, bits = 4)
+    elif quantizer == "gptq3":
+        return _load_gptq(model_name, device, bits = 3)
+    elif quantizer == "gptq2":
+        return _load_gptq(model_name, device, bits = 2)
+    elif quantizer == "aqlm2":
+        return _load_aqlm(model_name, device, bits = 2)
+    else:
+        raise ValueError(
+            f"Unknown quantizer: '{quantizer}'. "
+            f"Choose from: fp32, awq, gptq4, gptq3, gptq2, aqlm2"
+        )
+
+
+def _load_awq(model_name, device = None):
+    """
+    Load a pre-quantized AWQ model via transformers native AWQ support.
+
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer
+    """
+    if device is None:
+        device = DEVICE
+
+    # Prefer an entry in QUANTIZED_CHECKPOINTS when registered
+    ckpt_key = (model_name, "awq")
+    if ckpt_key in QUANTIZED_CHECKPOINTS:
+        model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
+        print(f"Loading AWQ model: {model_name} -> {model_path}")
+    else:
+        model_path = _resolve_model_path(model_name)
+        print(f"Loading AWQ model: {model_path}")
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, cache_dir = HF_HOME,
+        trust_remote_code = _use_remote_code(model_path)
+    )
+    # transformers 4.57 renamed PytorchGELUTanh -> GELUTanh (same function:
+    # gelu(approximate="tanh")); autoawq 0.2.x still imports the old name at package
+    # import, which transformers' AWQ loading triggers. Alias only when missing.
+    import transformers.activations as _act
+    if not hasattr(_act, "PytorchGELUTanh") and hasattr(_act, "GELUTanh"):
+        _act.PytorchGELUTanh = _act.GELUTanh  # renamed in transformers 4.57; autoawq 0.2.x still imports the old name
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        device_map = device,
+        trust_remote_code = _use_remote_code(model_path),
+        cache_dir = HF_HOME,
+        torch_dtype = torch.float16,
+    )
+    model.eval()
+    print(f"  OK Loaded AWQ 4-bit model")
+    return model, tokenizer
+
+
+def _load_aqlm(model_name, device = None, bits = 2):
+    """
+    Load an AQLM-quantized model (SOTA for 2-bit).
+
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+        - bits (int): AQLM bitwidth
+
+    Outputs:
+        - model (torch.nn.Module): Loaded model
+        - tokenizer (Tokenizer): Matching tokenizer (from base model)
+    """
+    if device is None:
+        device = DEVICE
+
+    # Resolve checkpoint: registry, then local aqlm_cache, else error
+    bit_suffix = f"aqlm{bits}"
+    ckpt_key = (model_name, bit_suffix)
+    if ckpt_key in QUANTIZED_CHECKPOINTS:
+        model_path = QUANTIZED_CHECKPOINTS[ckpt_key]
+        print(f"Loading AQLM-{bits}bit model: {model_name} -> {model_path}")
+    else:
+        safe_name = model_name.replace("/", "_")
+        local_path = os.path.join(
+            HF_HOME, "aqlm_cache", f"{safe_name}-aqlm-{bits}bit"
+        )
+        if os.path.isdir(local_path) and os.path.exists(
+            os.path.join(local_path, "config.json")
+        ):
+            model_path = local_path
+            print(
+                f"Loading AQLM-{bits}bit model: {model_name} (cached at {local_path})"
+            )
+        else:
+            raise ValueError(
+                f"No pre-quantized AQLM checkpoint for ({model_name}, {bit_suffix}). "
+                f"AQLM requires pre-quantized checkpoints -- on-the-fly quantization "
+                f"takes hours. Add the checkpoint to config.QUANTIZED_CHECKPOINTS."
+            )
+
+    # Tokenizer from base model (AQLM repos often lack chat templates)
+    base_path = _resolve_model_path(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_path,
+        cache_dir = HF_HOME,
+        trust_remote_code = _use_remote_code(base_path),
+    )
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        device_map = device,
+        trust_remote_code = _use_remote_code(model_path),
+        cache_dir = HF_HOME,
+        torch_dtype = torch.float16,
+    )
+    model.eval()
+    print(f"  OK Loaded AQLM {bits}-bit model")
+    return model, tokenizer
+
+
+def _load_gptq(model_name, device = None, bits = 4):
+    """
+    Load a GPTQ-quantized model (pre-quantized or on-the-fly).
+
+    Inputs:
+        - model_name (str): Model alias or HF id
+        - device (str | None): Device map target (default: DEVICE)
+        - bits (int): Quantization bits (2, 3, 4, or 8)
+
+    Outputs:
+        - model (torch.nn.Module): Loaded / quantized model
+        - tokenizer (Tokenizer): Matching tokenizer
+    """
+    if device is None:
+        device = DEVICE
+
+    # --- optimum 2.2.0 / gptqmodel 7.1.0 load shim (act-order checkpoints) ---
+    # optimum's GPTQQuantizer defaults act_group_aware=True and passes it
+    # EXPLICITLY into gptqmodel's QuantizeConfig, which rejects act_group_aware=True
+    # together with desc_act=True -- i.e. every standard act-order GPTQ checkpoint.
+    # transformers' GPTQConfig.to_dict_optimum() drops the field, so it cannot be
+    # overridden through the config. Force it False here. act_group_aware is a
+    # quantization-TIME knob (it controls how groups are ORDERED while quantizing);
+    # the already-quantized weights load identically, so this changes no results.
+    # Idempotent; load-path only.
+    import optimum.gptq.quantizer as _oq
+    if not getattr(_oq.GPTQQuantizer, "_safequant_agaw_patch", False):
+        _orig_gptq_init = _oq.GPTQQuantizer.__init__
+
+        def _agaw_init(self, *a, **kw):
+            kw["act_group_aware"] = False
+            _orig_gptq_init(self, *a, **kw)
+
+        _oq.GPTQQuantizer.__init__ = _agaw_init
+        _oq.GPTQQuantizer._safequant_agaw_patch = True
+
+    # GPTQ via dense weights (opt-in): gptqmodel 5.7.0 unpacks 3-bit weights wrongly on
+    # this stack (PPL nan in fp16). scripts/gptq_dequant_dense.py writes the exact fp16
+    # weights auto-gptq 0.7.1 computes for the same checkpoint to
+    # $QM_ROOT/gptq_dense/<model>-gptq<bits>bit-g128, loaded here as a plain fp16 model.
+    #   SQ_GPTQ_DENSE=1   -> every GPTQ bit width (2/3/4) uses its dense copy (one path for all)
+    #   SQ_GPTQ3_DENSE=1  -> GPTQ-3 only (kept for the first verification run)
+    # Default off: the GPTQ path below is unchanged. A missing dense copy is an error, never a
+    # silent fallback to gptqmodel.
+    _dense_on = (os.environ.get("SQ_GPTQ_DENSE") == "1" and bits in (2, 3, 4)) or \
+                (os.environ.get("SQ_GPTQ3_DENSE") == "1" and bits == 3)
+    if _dense_on:
+        import json as _json
+        dense = os.path.join(QM_ROOT, "gptq_dense", f"{model_name}-gptq{bits}bit-g128")
+        if not os.path.exists(os.path.join(dense, "config.json")):
+            raise FileNotFoundError(f"dense GPTQ requested but no dense copy at {dense} "
+                                    f"(run scripts/gptq_dequant_dense.py --model {model_name} --bits {bits})")
+        print(f"Loading GPTQ-{bits} as dense fp16 (dequantized by auto-gptq): {model_name} -> {dense}")
+        tokenizer = AutoTokenizer.from_pretrained(dense)
+        model = AutoModelForCausalLM.from_pretrained(
+            dense, device_map = device, torch_dtype = torch.float16,
+        )
+        model.eval()
+        info_path = os.path.join(dense, "sq_dequant_info.json")
+        dq = _json.loads(open(info_path).read()) if os.path.exists(info_path) else {}
+        LOAD_INFO.clear()
+        LOAD_INFO.update({
+            "gptq_weights": f"GPTQ-{bits} as dense fp16, dequantized by auto-gptq 0.7.1",
+            "gptq_bits": bits,
+            "env": {k: os.environ[k] for k in ("SQ_GPTQ_DENSE", "SQ_GPTQ3_DENSE") if k in os.environ},
+            "dense_dir": dense,
+            "source_checkpoint": dq.get("source_checkpoint"),
+            "dequant_versions": dq.get("versions"),
+            "dequant_checks": {k: dq.get("checks", {}).get(k)
+                               for k in ("logits_max_abs_diff", "autogptq_ppl_20_windows")},
+        })
+        print(f"  OK Loaded GPTQ-{bits} dense copy")
+        return model, tokenizer
+
+    # Look up a registered pre-quantized checkpoint when bits map to a suffix
+    bit_suffix = {4: "gptq4", 3: "gptq3", 2: "gptq2"}.get(bits)
+    ckpt_key_alias = (model_name, bit_suffix) if bit_suffix else None
+    pre_quantized = None
+    if ckpt_key_alias and ckpt_key_alias in QUANTIZED_CHECKPOINTS:
+        pre_quantized = QUANTIZED_CHECKPOINTS[ckpt_key_alias]
+
+    if pre_quantized:
+        # Decoding Compressed Trust models use revision branches (e.g. "4bit_128g")
+        revision = None
+        if "compressed-llm" in pre_quantized:
+            revision = f"{bits}bit_128g"
+            print(
+                f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized} "
+                f"(rev: {revision})"
+            )
+        else:
+            print(f"Loading GPTQ-{bits}bit model: {model_name} -> {pre_quantized}")
+
+        # Tokenizer: base model for compressed-llm, else from the checkpoint
+        if "compressed-llm" in pre_quantized:
+            base_path = _resolve_model_path(model_name)
+            tokenizer = AutoTokenizer.from_pretrained(
+                base_path, cache_dir = HF_HOME, trust_remote_code = True
+            )
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(
+                pre_quantized,
+                cache_dir = HF_HOME,
+                trust_remote_code = _use_remote_code(pre_quantized),
+                revision = revision,
+            )
+
+        gptq_cfg = GPTQConfig(bits = bits, use_exllama = False)
+        model = AutoModelForCausalLM.from_pretrained(
+            pre_quantized,
+            quantization_config = gptq_cfg,
+            device_map = device,
+            trust_remote_code = _use_remote_code(pre_quantized),
+            cache_dir = HF_HOME,
+            torch_dtype = torch.float16,
+            revision = revision,
+        )
+        model.eval()
+        print(f"  OK Loaded GPTQ {bits}-bit (pre-quantized)")
+        return model, tokenizer
+
+    # Cached on-the-fly result, or quantize from scratch
+    model_path = _resolve_model_path(model_name)
+    safe_name = model_name.replace("/", "_")
+    cache_path = os.path.join(HF_HOME, "gptq_cache", f"{safe_name}-gptq-{bits}bit")
+
+    if os.path.isdir(cache_path) and os.path.exists(
+        os.path.join(cache_path, "config.json")
+    ):
+        print(f"Loading GPTQ-{bits}bit model: {model_name} (cached at {cache_path})")
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(
+                cache_path, trust_remote_code = True
+            )
+        except Exception as e:
+            print(
+                f"  cache-path tokenizer load failed ({type(e).__name__}); "
+                f"loading from base HF repo {model_path}"
+            )
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_path, trust_remote_code = True
+            )
+        gptq_cfg = GPTQConfig(bits = bits, use_exllama = False)
+        model = AutoModelForCausalLM.from_pretrained(
+            cache_path,
+            quantization_config = gptq_cfg,
+            device_map = device,
+            trust_remote_code = True,
+            torch_dtype = torch.float16,
+        )
+        model.eval()
+        print(f"  OK Loaded GPTQ {bits}-bit from cache")
+        return model, tokenizer
+
+    # Quantize from scratch with wikitext calibration strings
+    print(f"Loading GPTQ-{bits}bit model: {model_name} (on-the-fly quantization)")
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, cache_dir = HF_HOME, trust_remote_code = True
+    )
+    try:
+        _wiki = _load_ds(
+            "wikitext", "wikitext-2-raw-v1", split = "train", cache_dir = HF_HOME
+        )
+        calib_texts = [t for t in _wiki["text"] if len(t.strip()) > 100][:128]
+    except Exception:
+        _wiki = _load_ds("wikitext", "wikitext-2-raw-v1", split = "train")
+        calib_texts = [t for t in _wiki["text"] if len(t.strip()) > 100][:128]
+
+    gptq_config = GPTQConfig(
+        bits = bits,
+        dataset = calib_texts,
+        tokenizer = tokenizer,
+        group_size = 128,
+        use_exllama = False,
+    )
+    print(f"  Quantizing to {bits}-bit GPTQ (this may take a few minutes)...")
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        quantization_config = gptq_config,
+        device_map = device,
+        trust_remote_code = True,
+        cache_dir = HF_HOME,
+    )
+    model.eval()
+    print(f"  OK Quantized to GPTQ {bits}-bit on-the-fly")
+
+    # Best-effort local cache for future runs
+    try:
+        os.makedirs(cache_path, exist_ok = True)
+        model.save_pretrained(cache_path)
+        tokenizer.save_pretrained(cache_path)
+        print(f"  OK Saved to cache: {cache_path}")
+    except Exception as e:
+        print(f"  Warning: could not cache quantized model: {e}")
+
+    return model, tokenizer
+
+
+def get_weight(module, as_dtype = torch.float32):
+    """
+    Extract weight from a module, handling regular and quantized layouts.
+
+    Inputs:
+        - module (nn.Module): Linear or quantized linear module
+        - as_dtype (torch.dtype): Target dtype for the returned weight
+
+    Outputs:
+        - weight (torch.Tensor): Dense (out_features, in_features) weight
+    """
+    import torch.nn as nn
+
+    # Dimension attrs differ across quantizer wrappers
+    in_f = getattr(module, "in_features", None) or getattr(module, "infeatures", None)
+
+    # auto_gptq QuantLinear -- dequantize via identity forward
+    if hasattr(module, "qweight"):
+        device = module.qweight.device
+        identity = torch.eye(in_f, device = device, dtype = torch.float16)
+        with torch.no_grad():
+            weight = module(identity).T.float()
+        return weight.to(as_dtype)
+
+    # Unknown non-Linear module -- identity forward fall-back
+    if not isinstance(module, nn.Linear):
+        device = next(module.parameters()).device
+        identity = torch.eye(in_f, device = device, dtype = torch.float16)
+        with torch.no_grad():
+            weight = module(identity).T.float()
+        return weight.to(as_dtype)
+
+    # Dense nn.Linear
+    return module.weight.data.to(as_dtype)

@@ -1,0 +1,367 @@
+# SafeQuant Aggregated Results (paper values)
+
+Regenerate with `python scripts/aggregate_results.py > PAPER_RESULTS.md` from the repo root after `git pull`. Cells shown as `--` have no result file (experiment not run for that model/quantizer). All ASR/damage in percentage points; `damage_pp = quant_asr - fp32_asr` (positive = safety got WORSE under quantization).
+
+## Reproduction
+
+- **Models (FP32 base):** Llama-3.1-8B-Instruct (alias `llama7b`), Qwen2.5-7B-Instruct (`qwen7b`), Mistral-7B-Instruct-v0.2 (`mistral7b-v02`), Phi-3-mini-4k-instruct (`phi3`).
+- **Quantizers:** GPTQ 4/3/2-bit are SELF-GENERATED via AutoGPTQ (group_size=128, desc_act=True, sym=True, damp=0.1, WikiText-2 calibration, 128x2048-tok windows). AWQ 4-bit and AQLM 2-bit are PUBLIC downloads: AWQ = hugging-quants (llama) / Qwen-official / TheBloke (mistral) / Sreenington (phi3); AQLM = ISTA-DASLab.
+- **Env:** eval in conda `sq_clean` (transformers 4.57); GPTQ self-quant in `sq_autogptq` (auto-gptq 0.7.1, transformers 4.44.2, torch 2.2.2, numpy<2).
+- **Eval sets:** n_eval=200 harmful (ASR), ARC-easy (utility), XSTest-250 (false-refusal). Greedy, left-padded batched generation (byte-identical to unbatched).
+- **Qwen has no AQLM-2 cell by design (blank = --). Phi-3 AWQ restoration is N/A (Sreenington ships an unfused Mistral-arch checkpoint); its geometry cells are valid.**
+
+## Table 1: Refusal-direction geometry
+
+
+### 1a. Diff-in-means direction drift (cosine median, FP32 vs quant)
+
+Higher = direction preserved. `direction_drift_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 0.980 | 0.963 | 0.807 | -0.029 | 0.783 |
+| qwen | 0.976 | 0.968 | 0.844 | 0.234 | -- |
+| mistral | 0.991 | 0.898 | 0.010 | 0.031 | 0.811 |
+| phi3 | 0.991 | 0.975 | 0.900 | 0.249 | 0.935 |
+
+### 1b. Direction drift (cosine MIN over layers)
+
+Worst-layer cosine. `direction_drift_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 0.880 | 0.789 | 0.362 | -0.183 | 0.263 |
+| qwen | 0.950 | 0.925 | 0.728 | 0.040 | -- |
+| mistral | 0.988 | 0.549 | -0.062 | -0.034 | 0.487 |
+| phi3 | 0.956 | 0.940 | 0.731 | 0.150 | 0.801 |
+
+### 1c. Linear-probe rotation (cosine median of probe weight vectors)
+
+The readable/separating axis. `probe_rotation_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 0.964 | 0.948 | 0.780 | 0.087 | 0.781 |
+| qwen | 0.952 | 0.928 | 0.746 | 0.184 | -- |
+| mistral | 0.989 | 0.873 | -0.007 | 0.030 | 0.746 |
+| phi3 | 0.514 | 0.912 | 0.686 | 0.073 | 0.696 |
+
+### 1d. delta_med: median per-layer separation (quantized; decodability)
+
+Positive separation magnitude; FP32 reference ~5.1. Low = concept less separable. `direction_drift_*` per-layer separation_sigma.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 6.03 | 6.18 | 6.22 | 5.22 | 7.70 |
+| qwen | 6.90 | 6.74 | 6.90 | 6.55 | -- |
+| mistral | 5.83 | 5.99 | 3.50 | 7.16 | 5.85 |
+| phi3 | 5.11 | 5.11 | 5.30 | 2.95 | 5.41 |
+
+## Table 2: Linear separability of the safety concept
+
+
+### 2a. Probe accuracy (quant mean over layers)
+
+FP32 mean ~0.994-0.997 for all. `probe_accuracy_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 0.996 | 0.995 | 0.997 | 0.990 | 0.995 |
+| qwen | 0.996 | 0.997 | 0.997 | 0.984 | -- |
+| mistral | 0.997 | 0.996 | 0.978 | 0.990 | 0.997 |
+| phi3 | 0.995 | 0.996 | 0.995 | 0.983 | 0.997 |
+
+### 2b. Probe accuracy (quant MIN over layers)
+
+Worst-layer separability. `probe_accuracy_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 0.988 | 0.988 | 0.988 | 0.953 | 0.990 |
+| qwen | 0.992 | 0.993 | 0.995 | 0.850 | -- |
+| mistral | 0.990 | 0.990 | 0.968 | 0.980 | 0.992 |
+| phi3 | 0.988 | 0.972 | 0.975 | 0.912 | 0.972 |
+
+### 2c. # layers with >5pp accuracy drop
+
+0 everywhere except qwen/gptq2. `probe_accuracy_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 0 | 0 | 0 | 0 | 0 |
+| qwen | 0 | 0 | 0 | 2 | -- |
+| mistral | 0 | 0 | 0 | 0 | 0 |
+| phi3 | 0 | 0 | 0 | 3 | 0 |
+
+## Table 3: Damage and projection-restoration
+
+
+### 3a. Safety damage (damage_pp = quant_asr - fp32_asr)
+
+Positive = safety got WORSE. `restoration_sweep_*`.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | -4.5 | -15.0 | 4.5 | -24.0 | 23.0 |
+| qwen | 3.0 | -2.0 | 2.0 | -51.5 | -- |
+| mistral | 1.0 | -5.0 | -72.0 | -64.0 | -6.5 |
+| phi3 | -7.0 | 3.0 | -4.5 | -28.0 | 20.0 |
+
+### 3b. Quantized ASR (% harmful complied)
+
+`restoration_sweep_*` quantized_asr.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 36.5 | 26.0 | 45.5 | 17.0 | 64.0 |
+| qwen | 62.0 | 57.0 | 61.0 | 7.5 | -- |
+| mistral | 75.5 | 69.5 | 2.5 | 10.5 | 68.0 |
+| phi3 | 32.5 | 42.5 | 35.0 | 11.5 | 59.5 |
+
+### 3c. ASR after READ-projection restoration
+
+`restoration_sweep_*` asr_per_condition.read_restored. N/A = arch-mismatch (restoration undefined); -- = not run.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 11.0 | 37.5 | 42.5 | 31.0 | 44.5 |
+| qwen | 6.0 | 59.0 | 61.5 | 45.0 | -- |
+| mistral | 15.0 | 76.0 | 74.0 | 16.5 | 72.5 |
+| phi3 | N/A | 40.0 | 39.0 | 35.5 | 44.5 |
+
+### 3d. ASR after WRITE-projection restoration
+
+`restoration_sweep_*` asr_per_condition.write_restored.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 11.5 | 29.0 | 38.5 | 7.0 | 48.5 |
+| qwen | 6.5 | 56.5 | 61.5 | 13.0 | -- |
+| mistral | 5.0 | 73.5 | 1.0 | 58.5 | 72.5 |
+| phi3 | N/A | 42.5 | 32.0 | 2.5 | 49.5 |
+
+### 3e. ASR after BOTH restored
+
+`restoration_sweep_*` asr_per_condition.both_restored.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | 28.0 | 40.0 | 40.0 | 40.0 | 43.0 |
+| qwen | 21.0 | 58.5 | 58.5 | 58.5 | -- |
+| mistral | 15.0 | 74.0 | 74.0 | 74.0 | 76.0 |
+| phi3 | N/A | 39.5 | 39.5 | 39.5 | 32.0 |
+
+### 3f. swap_valid (activation-swap sanity gate)
+
+False = swap didn't localize; exclude that cell from restore claims.
+
+| model | awq | gptq4 | gptq3 | gptq2 | aqlm2 |
+|---|---|---|---|---|---|
+| llama | False | True | True | True | True |
+| qwen | False | True | True | False | -- |
+| mistral | False | True | True | True | True |
+| phi3 | False | True | True | True | True |
+
+### 3g. FP32 baseline ASR per model (reference)
+
+| model | fp32_asr |
+|---|---|
+| llama | 41.0 |
+| qwen | 59.0 |
+| mistral | 74.5 |
+| phi3 | 39.5 |
+
+## Section 5: Does displacement predict damage?
+
+- swap-valid cells with damage: **14**
+- corr(damage, 1 - diff-in-means cosmed) = **-0.818**  (n=14)
+- corr(damage, 1 - probe rotation)       = **-0.799**  (n=14)
+- NOTE: sign is confounded. GPTQ-2/3 cells show large displacement AND *negative* damage (safety improved via generic degradation), while AQLM/Phi-3 cells show positive damage at moderate displacement. Report the causal read-restoration result (Table 3c) as the primary evidence, not this correlation.
+
+## Table 6: Controls (param-matched / refit / cosmed)
+
+
+### llama/aqlm2
+
+- param_matched write_full=15.5 read_structured=16.0 read_random=12.2
+- probe refit floor=0.883 observed_rotation=0.781
+- cosmed_after_restore: **empty or corrupt** (re-run cosmed job)
+
+### phi3/aqlm2
+
+- param_matched write_full=10.0 read_structured=11.5 read_random=7.0
+- probe refit floor=0.828 observed_rotation=0.696
+- cosmed after restore: quant=0.935 read=0.932 write=0.938 both=0.981
+
+## Boundary: probe leakage (prose control)
+
+- **probe_leakage_control_llama**: {"best_layer": 31, "residual_xstest_safe_specificity": 0.988, "residual_xstest_unsafe_recall": 0.775, "residual_harmbench_transfer_recall": 0.97, "surface_xstest_safe_specificity": 0.996, "surface_xstest_unsafe_recall": 0.0, "specificity_gap_residual_minus_surface": -0.008000000000000007, "n_xstest_safe": 250, "n_xstest_unsafe": 200}
+- **probe_leakage_control_phi3**: {"best_layer": 25, "residual_xstest_safe_specificity": 0.768, "residual_xstest_unsafe_recall": 0.9, "residual_harmbench_transfer_recall": 0.99, "surface_xstest_safe_specificity": 0.996, "surface_xstest_unsafe_recall": 0.0, "specificity_gap_residual_minus_surface": -0.22799999999999998, "n_xstest_safe": 250, "n_xstest_unsafe": 200}
+
+## Boundary: probe refit (all cells)
+
+- **probe_refit_control_llama**: floor_median=0.883
+- **probe_refit_control_phi3**: floor_median=0.828
+
+## Signal: cosmed after restore
+
+- **cosmed_after_restore_llama_aqlm2**: EMPTY (re-run job)
+- **cosmed_after_restore_phi3_aqlm2**: {"cosmed_quant": 0.935440868139267, "cosmed_read_restored": 0.9315447211265564, "cosmed_write_restored": 0.9384523034095764, "cosmed_both_restored": 0.9813598990440369, "delta_read": -0.0038961470127105713, "delta_write": 0.0030114352703094482}
+
+## Regime: param matched restore
+
+- **param_matched_restore_llama_aqlm2**: recovery_pp={"write_full": 15.5, "read_matched_whole": 16.0, "read_matched_random_mean": 12.166666666666664}
+- **param_matched_restore_phi3_aqlm2**: recovery_pp={"write_full": 10.0, "read_matched_whole": 11.5, "read_matched_random_mean": 7.0}
+
+## Behavioral direction (Arditi ablation)
+
+| cell | baseline_asr | ablated_asr | delta_pp | layer | pos | operative |
+|---|---|---|---|---|---|---|
+| llama_aqlm2 | 62.5 | 75.5 | 13.0 | 23 | -1 | True |
+| llama_fp32 | 41.0 | 70.0 | 29.0 | 13 | -3 | True |
+
+## Boundary: activation swap (llama/aqlm2)
+
+
+## Localization (per-projection / depth-band recovery)
+
+- **depth_bands_llama_aqlm2_read** (damage 21.5): {"early": 9.0, "middle": 15.0, "late": 7.0}
+- **depth_bands_llama_aqlm2_write** (damage 21.5): {"early": -1.5, "middle": 12.0, "late": 4.5}
+- **depth_bands_phi3_aqlm2_read** (damage 20.0): {"early": 7.0, "middle": 8.0, "late": 3.5}
+- **depth_bands_phi3_aqlm2_write** (damage 20.0): {"early": 2.5, "middle": 13.5, "late": -1.0}
+- **per_projection_llama_aqlm2** (damage 21.5): {"self_attn.q_proj": 8.0, "self_attn.k_proj": 2.5, "self_attn.v_proj": 6.0, "self_attn.o_proj": 4.5, "mlp.gate_proj": 9.5, "mlp.up_proj": 9.5, "mlp.down_proj": 12.0}
+- **per_projection_llama_aqlm2_L11-22** (damage 21.5): {"self_attn.q_proj": 6.0, "self_attn.k_proj": 4.0, "self_attn.v_proj": 1.5, "self_attn.o_proj": 0.5, "mlp.gate_proj": 1.0, "mlp.up_proj": 4.0, "mlp.down_proj": 3.5}
+- **per_projection_phi3_aqlm2** (damage 20.0): {"self_attn.qkv_proj": 11.5, "self_attn.o_proj": -1.0, "mlp.gate_up_proj": 8.0, "mlp.down_proj": 11.5}
+- **per_projection_phi3_aqlm2_L11-22** (damage 20.0): {"self_attn.qkv_proj": 3.0, "self_attn.o_proj": -0.5, "mlp.gate_up_proj": 7.5, "mlp.down_proj": 7.0}
+
+## Targeted dequant (source-agnostic read-restore)
+
+
+## Trained repair (Q-Resafe DPO / LR-QAT)
+
+- **lrqat_llama_aqlm2_read_int2**: asr fp16=41.0 aqlm2=62.5 ptq=20.5 lrqat=15.5; arc ptq=24.0 lrqat=16.0; rho=2.19; eff_bits=2.12; collapse=True; role=read n_bits=2
+- **lrqat_llama_aqlm2_read_int4**: asr fp16=41.0 aqlm2=62.5 ptq=57.5 lrqat=4.5; arc ptq=56.0 lrqat=58.0; rho=2.70; eff_bits=4.12; collapse=False; role=read n_bits=4
+- **lrqat_llama_aqlm2_write_int2**: asr fp16=41.0 aqlm2=62.5 ptq=7.5 lrqat=4.5; arc ptq=22.0 lrqat=30.0; rho=2.70; eff_bits=2.12; collapse=True; role=write n_bits=2
+- **lrqat_llama_aqlm2_write_int4**: asr fp16=41.0 aqlm2=62.5 ptq=63.5 lrqat=2.5; arc ptq=56.0 lrqat=56.0; rho=2.79; eff_bits=4.12; collapse=False; role=write n_bits=4
+- **qresafe_dpo_llama_aqlm2_full**: {"mean_codes_changed": 8.938567978995187e-06, "fp_lora": {"asr": 0.0, "arc": 46.0, "xstest_fr": 100.0}, "folded": {"asr": 62.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_full_r1024**: {"mean_codes_changed": 7.4271644864763535e-06, "fp_lora": {"asr": 0.0, "arc": 49.0, "xstest_fr": 100.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_full_r128**: {"mean_codes_changed": 4.2787619999476845e-06, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 78.4}, "folded": {"asr": 63.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_full_r2048**: {"mean_codes_changed": 8.770397731236049e-06, "fp_lora": {"asr": 0.0, "arc": 46.0, "xstest_fr": 100.0}, "folded": {"asr": 63.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_full_r256**: {"mean_codes_changed": 5.017433847699847e-06, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 63.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_full_r512**: {"mean_codes_changed": 6.1499220984322685e-06, "fp_lora": {"asr": 0.0, "arc": 50.0, "xstest_fr": 100.0}, "folded": {"asr": 63.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_read**: {"mean_codes_changed": 1.373291015625e-05, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_read_r1024**: {"mean_codes_changed": 1.093447208404541e-05, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 63.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_read_r128**: {"mean_codes_changed": 6.386637687683106e-06, "fp_lora": {"asr": 2.5, "arc": 47.0, "xstest_fr": 38.0}, "folded": {"asr": 63.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_read_r2048**: {"mean_codes_changed": 1.3735890388488769e-05, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 62.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_read_r256**: {"mean_codes_changed": 7.5429677963256834e-06, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 93.2}, "folded": {"asr": 62.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_read_r512**: {"mean_codes_changed": 9.02712345123291e-06, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_write**: {"mean_codes_changed": 0.0, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 62.5, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_write_r1024**: {"mean_codes_changed": 0.0, "fp_lora": {"asr": 0.0, "arc": 49.0, "xstest_fr": 100.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_write_r128**: {"mean_codes_changed": 0.0, "fp_lora": {"asr": 5.0, "arc": 47.0, "xstest_fr": 22.4}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_write_r2048**: {"mean_codes_changed": 0.0, "fp_lora": {"asr": 0.0, "arc": 48.0, "xstest_fr": 100.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_write_r256**: {"mean_codes_changed": 0.0, "fp_lora": {"asr": 1.0, "arc": 48.0, "xstest_fr": 58.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_dpo_llama_aqlm2_write_r512**: {"mean_codes_changed": 0.0, "fp_lora": {"asr": 0.0, "arc": 49.0, "xstest_fr": 100.0}, "folded": {"asr": 64.0, "arc": 46.0, "xstest_fr": 9.6}}
+- **qresafe_pairs_llama_aqlm2_wj**: INCOMPLETE stub (keys=['meta', 'n_pairs', 'pairs']); job unfinished or crashed
+
+## Headline eval (full XSTest / ARC / McNemar)
+
+
+### headline_llama_aqlm2
+```json
+{
+  "damage_pp": 21.5,
+  "recovery_pp": {
+    "read": 18.0,
+    "write": 12.0,
+    "both": 19.5
+  },
+  "asr": {
+    "fp32": 41.0,
+    "aqlm2": 62.5,
+    "write_restored": 50.5,
+    "read_restored": 44.5,
+    "both_restored": 43.0
+  },
+  "arc": {
+    "fp32": 55.0,
+    "aqlm2": 46.0,
+    "write_restored": 46.0,
+    "read_restored": 52.0,
+    "both_restored": 54.0
+  },
+  "recovery_ci_95": {
+    "read": [
+      56.09342703596528,
+      112.828947368421
+    ],
+    "write": [
+      24.999999999999968,
+      88.24095022624431
+    ],
+    "both": [
+      66.66666666666666,
+      116.13278319579894
+    ],
+    "read_minus_write": [
+      -6.06534090909091,
+      66.66666666666666
+    ]
+  }
+}
+xstest false_refusal_rate: {"fp32": 6.0, "aqlm2": 9.6, "write_restored": 11.6, "read_restored": 5.2, "both_restored": 5.2}
+mcnemar p-values: {"aqlm2_vs_read": 2.568720337924735e-05, "aqlm2_vs_write": 0.0022325516199429227, "read_vs_write": 0.14089542359848076}
+```
+
+### headline_phi3_aqlm2
+```json
+{
+  "damage_pp": 20.0,
+  "recovery_pp": {
+    "read": 15.0,
+    "write": 10.0,
+    "both": 27.5
+  },
+  "asr": {
+    "fp32": 39.5,
+    "aqlm2": 59.5,
+    "write_restored": 49.5,
+    "read_restored": 44.5,
+    "both_restored": 32.0
+  },
+  "arc": {
+    "fp32": 54.0,
+    "aqlm2": 53.0,
+    "write_restored": 46.0,
+    "read_restored": 55.0,
+    "both_restored": 53.0
+  },
+  "recovery_ci_95": {
+    "read": [
+      43.47238542890717,
+      109.38256048387093
+    ],
+    "write": [
+      15.613162878787922,
+      79.49999999999993
+    ],
+    "both": [
+      104.43971631205675,
+      193.11457174638488
+    ],
+    "read_minus_write": [
+      -10.529115341545353,
+      64.52484742807322
+    ]
+  }
+}
+xstest false_refusal_rate: {"fp32": 36.8, "aqlm2": 15.2, "write_restored": 23.2, "read_restored": 20.4, "both_restored": 33.2}
+mcnemar p-values: {"aqlm2_vs_read": 0.00028711844966164033, "aqlm2_vs_write": 0.010454818321892184, "read_vs_write": 0.21160856876151612}
+```
+
+## Gaps / caveats (do NOT invent values for these)
+
+- Geometry grid COMPLETE (every model x quantizer present; qwen/aqlm2 absent by design).
+- Restoration N/A (documented arch mismatch, NOT a failure): phi3/awq. Their geometry cells are valid; blank restore columns are expected.
+- Incomplete trained-repair file(s): qresafe_pairs_llama_aqlm2_wj.
+- LR-QAT COLLAPSE (do not report low ASR as repair): lrqat_llama_aqlm2_read_int2, lrqat_llama_aqlm2_write_int2.
+- Cross-model mechanistic suite (Arditi ablation / activation-swap / localization / headline XSTest) is llama-only; not launched for qwen/mistral/phi3.

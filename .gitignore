@@ -1,0 +1,28 @@
+repos/
+_trash/
+.trash/
+__pycache__/
+scripts/outputs/*.pt
+outputs/**/*_raw.json
+.gyst/
+.ruff_cache/
+paper_refs/
+
+
+# cluster-side artifacts — never track (but keep the logs/ dir so SLURM can write)
+scripts/logs/*
+!scripts/logs/.gitkeep
+logs/
+outputs_pre_realrun_*/
+refusal_direction
+
+# local archives kept on disk, never tracked (sha256 in each MANIFEST.sha256)
+outputs/**/pieces/
+outputs/**/superseded/
+
+# secrets and job logs
+.env
+.env.*
+!.env.example
+*.out
+*.err
