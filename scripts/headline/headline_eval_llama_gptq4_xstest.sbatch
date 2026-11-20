@@ -54,7 +54,7 @@ if not p.exists():
     print(f"  !! {p} not found; cannot compare"); raise SystemExit(0)
 d = json.loads(p.read_text())
 asr, arc = d.get("asr", {}), d.get("arc", {})
-# Paper values (tab:regime, from restoration_sweep_llama_gptq4.json, n_eval 200, ARC on 50 items)
+# Paper values (tab:regime, from restoration_sweep_llama_gptq4.json, n_eval 200, ARC on 100 items)
 paper = {
     ("quant", "ASR"): ("gptq4", asr, 26.0), ("quant", "ARC"): ("gptq4", arc, 50.0),
     ("+R", "ASR"): ("read_restored", asr, 37.5), ("+R", "ARC"): ("read_restored", arc, 49.0),
@@ -72,9 +72,8 @@ for (cond, metric), (key, src, ref) in paper.items():
         warn.append(f"{cond} {metric} {got:.1f} vs {ref:.1f}")
 if warn:
     print("  WARNING: X1 differs from the paper by more than 2 points: " + "; ".join(warn))
-    print("  Note: X1 scores ARC on 100 items (--n_reasoning 100); the paper's GPTQ-4 ARC came")
-    print("  from restoration_sweep on 50 items, so ARC can move more than ASR. The checkpoint is")
-    print("  also rebuilt on Delta, so check it before using X1's XSTest next to Table 2.")
+    print("  Note: both runs score ARC on the same 100 items (--n_reasoning 100). The checkpoint")
+    print("  is rebuilt on Delta, so check it before using X1's XSTest next to Table 2.")
 else:
     print("  OK: quant and +R ASR/ARC within 2 points of the paper.")
 PY

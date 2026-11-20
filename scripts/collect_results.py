@@ -4,6 +4,9 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from reviewer_runs import is_archived, is_reviewer_file  # noqa: E402
+
 # Top-level fields worth surfacing across the different experiment schemas.
 INTERESTING = [
     "fp32_asr", "quantized_asr", "damage_pp", "swap_valid", "swap_delta_pp",
@@ -22,10 +25,15 @@ INTERESTING = [
 def main():
     # Optional filters: substrings a filename must contain (e.g. model tokens
     # qwen / mistral / phi3, or an experiment name). No args = dump everything.
-    filters = sys.argv[1:]
+    # Reviewer-run files (docs/REVIEWER_RUNS.md) are left out unless --reviewer is given;
+    # local archives (pieces, superseded) never.
+    args = sys.argv[1:]
+    with_reviewer = "--reviewer" in args
+    filters = [a for a in args if a != "--reviewer"]
     files = sorted(
         f for f in glob.glob("outputs/**/*.json", recursive=True)
-        if not f.endswith("_raw.json")
+        if not f.endswith("_raw.json") and not is_archived(f)
+        and (with_reviewer or not is_reviewer_file(f))
         and (not filters or any(x in Path(f).name for x in filters))
     )
     if not files:

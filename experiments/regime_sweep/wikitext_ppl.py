@@ -8,6 +8,7 @@
 import argparse
 import gc
 import json
+import math
 from pathlib import Path
 
 import torch
@@ -142,7 +143,8 @@ def main():
         del fp32_model
         gc.collect()
         torch.cuda.empty_cache()
-        _save(args.model, "fp32", args.seq_len, ppl_fp32, ppl_fp32, "ok", tag = args.tag)
+        _save(args.model, "fp32", args.seq_len, ppl_fp32, ppl_fp32,
+              "ok" if math.isfinite(ppl_fp32) else "nan", tag = args.tag)
         fp32_extra = {}
 
     # Each quantizer cell
@@ -152,7 +154,7 @@ def main():
             qm, tok = load_quantized(args.model, quantizer=q)
             ppl_q = measure_perplexity(qm, tok, text, seq_len=args.seq_len,
                                        max_chunks=args.max_chunks, desc=f"{args.model}/{q}")
-            status = "ok"
+            status = "ok" if math.isfinite(ppl_q) else "nan"   # a nan PPL is a failed load, not ok
             rel = f"  (x{ppl_q / ppl_fp32:.3f} vs fp32)" if ppl_fp32 else ""
             print(f"  {q} PPL = {ppl_q:.3f}{rel}")
             del qm

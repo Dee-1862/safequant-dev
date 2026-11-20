@@ -14,9 +14,13 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from scripts.reviewer_runs import is_archived, is_reviewer_file  # noqa: E402
+
 
 def latest(pat):
+    """Newest paper result matching pat (reviewer-run files and local archives excluded)."""
     fs = glob.glob("outputs/" + pat, recursive=True) + glob.glob("experiments/" + pat, recursive=True)
+    fs = [f for f in fs if not is_reviewer_file(f)]
     return max(fs, key=os.path.getmtime) if fs else None
 
 
@@ -26,7 +30,9 @@ def hr(t):
 
 # --- 1. Full-write scope audit -------------------------------------------------
 hr("1. FULL-WRITE SCOPE AUDIT  (param_matched, Llama/AQLM-2)")
-p = latest("**/param_matched_restore_llama_aqlm2*.json")
+# Pinned to the paper file (the _flags rerun is a reviewer run, see docs/REVIEWER_RUNS.md)
+p = "outputs/regime_sweep/param_matched_restore_llama_aqlm2.json"
+p = p if os.path.exists(p) else None
 if p:
     d = json.load(open(p))
     pb, rp, ac = d["param_budget"], d["recovery_pp"], d["asr_per_condition"]
@@ -45,7 +51,7 @@ hr("2. WIKITEXT-2 PPL  (continuous coherence, complements ARC)")
 rows, seen = [], set()
 for q in glob.glob("outputs/**/*.json", recursive=True) + glob.glob("experiments/**/*.json", recursive=True):
     rq = os.path.realpath(q)
-    if rq in seen:
+    if rq in seen or is_archived(q):
         continue
     try:
         dd = json.load(open(q))
@@ -54,16 +60,20 @@ for q in glob.glob("outputs/**/*.json", recursive=True) + glob.glob("experiments
     if "wikitext2_ppl" not in dd:
         continue
     seen.add(rq)
-    rows.append([dd.get("model"), dd.get("quantizer"), dd.get("wikitext2_ppl"),
-                 dd.get("ppl_ratio"), dd.get("status")])
+    tag = Path(q).stem.partition("wikitext2_ppl")[2].lstrip("_")   # from the file name
+    src = f"DeltaAI rerun ({tag})" if is_reviewer_file(q) else "paper"
+    ppl, status = dd.get("wikitext2_ppl"), dd.get("status")
+    if isinstance(ppl, float) and not np.isfinite(ppl):
+        status = "nan"   # older files say "ok" for a nan PPL: these are failed loads
+    rows.append([dd.get("model"), dd.get("quantizer"), ppl, dd.get("ppl_ratio"), status, src])
 order = {"fp32": 0, "awq": 1, "gptq4": 2, "aqlm2": 3, "gptq3": 4, "gptq2": 5}
-rows.sort(key=lambda r: (str(r[0]), order.get(r[1], 9)))
+rows.sort(key=lambda r: (str(r[0]), order.get(r[1], 9), r[5] != "paper", r[5]))
 fmt = lambda v: "" if v is None else (f"{v:.2f}" if isinstance(v, float) else str(v))
-print("  " + "  ".join(f"{h:>9}" for h in ["model", "quant", "ppl", "x_fp32", "status"]))
+print("  " + "  ".join(f"{h:>9}" for h in ["model", "quant", "ppl", "x_fp32", "status"]) + "  source")
 for r in rows:
-    print("  " + "  ".join(f"{fmt(v):>9}" for v in r))
-ok = sum(1 for r in rows if r[1] != "fp32" and r[4] == "ok")
-print(f"  --> {ok}/20 quant PPL cells OK")
+    print("  " + "  ".join(f"{fmt(v):>9}" for v in r[:5]) + f"  {r[5]}")
+ok = sum(1 for r in rows if r[1] != "fp32" and r[4] == "ok" and r[5] == "paper")
+print(f"  --> {ok}/20 quant PPL cells OK (paper files)")
 
 # --- 3. Paired McNemar studiable-set screen ------------------------------------
 hr("3. PAIRED dASR McNEMAR SCREEN  (studiable-set selection, Holm-adjusted)")

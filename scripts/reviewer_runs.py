@@ -17,7 +17,7 @@
 #             tested against outputs/signal_geometry/probe_rotation_<model>_<quant>.json (observed
 #             FP-vs-quant probe cosines; Table 1/7 coswmed = their median over layers):
 #               split-median test: per split, median over layers of the refit cosine; empirical
-#                 p = (#split-medians <= observed coswmed + 1) / (n_splits + 1)
+#                 p = (#{split-medians <= observed coswmed} + 1) / (n_splits + 1)
 #                 and z = (median of split-medians - coswmed) / SD(split-medians)
 #               per-layer test: floor = 5th percentile of that layer's refit cosine over splits;
 #                 count layers whose observed cosine is below floor - X4_FLOOR_MARGIN (rounding ties
@@ -25,11 +25,14 @@
 #             The pooled 95th-percentile refit distance is descriptive only, not a test threshold.
 #   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
 #   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
+#             + outputs/boundary/probe_leakage_control_mistral_fp32_delta.json (FP32 Mistral reference)
 #   X6        outputs/headline/headline_<model>_aqlm2_rep{1,2,3}.json   (Delta repeats, same
-#             prompts) + headline_<model>_aqlm2.json (paper run, reported separately)
+#             prompts) + the two paper runs, reported separately: headline_<model>_aqlm2.json and
+#             outputs/regime_sweep/restoration_sweep_<model>_aqlm2.json (Table 3)
 # Every entry reports status "missing" (with the expected path) until its JSON exists.
 # Used by scripts/report_all.py (section 5) and scripts/paper_values.py ("reviewer_runs").
 import json
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -41,13 +44,17 @@ if str(ROOT) not in sys.path:
 OUT = ROOT / "outputs"
 
 HELDOUT_MODELS = ("llama3-8b", "mistral-nemo")
-# X3: the same 14 coherent cells as X2 (matched real/shuffled pair per cell)
-X3_CELLS = (
+# The 14 coherent Table 2 cells (quantized ARC >= 40); filename model tokens. X2 and X3 use the
+# same cells (X3: matched real/shuffled pair per cell). Keep in sync with
+# scripts/boundary/probe_leakage_control_quant.sbatch.
+COHERENT_CELLS = (
     ("llama", "awq"), ("llama", "gptq4"), ("llama", "gptq3"), ("llama", "aqlm2"),
     ("qwen", "awq"), ("qwen", "gptq4"), ("qwen", "gptq3"),
     ("mistral", "awq"), ("mistral", "gptq4"), ("mistral", "aqlm2"),
     ("phi3", "awq"), ("phi3", "gptq4"), ("phi3", "gptq3"), ("phi3", "aqlm2"),
 )
+X2_CELLS = X3_CELLS = COHERENT_CELLS
+X2_FP32_REFS = (("mistral", "probe_leakage_control_mistral_fp32_delta.json"),)
 # Collapsed cells (DeltaAI rebuilds; never compared against Table 1's collapsed numbers)
 COLLAPSED_CELLS = (("llama", "gptq2"), ("qwen", "gptq2"), ("mistral", "gptq2"),
                    ("phi3", "gptq2"), ("mistral", "gptq3"))
@@ -58,16 +65,44 @@ X4_FLOOR_MARGIN = 0.002
 X5_CELLS = ("llama", "phi3")          # the two significant AQLM-2 cells
 X5_SEEDS = (1, 2, 3, 4, 5)
 CONDS = ("fp32", "QUANT", "write_restored", "read_restored", "both_restored")
-# X2: the 14 coherent Table 2 cells (quantized ARC >= 40); filename model tokens.
-# Keep in sync with scripts/boundary/probe_leakage_control_quant.sbatch.
-X2_CELLS = (
-    ("llama", "awq"), ("llama", "gptq4"), ("llama", "gptq3"), ("llama", "aqlm2"),
-    ("qwen", "awq"), ("qwen", "gptq4"), ("qwen", "gptq3"),
-    ("mistral", "awq"), ("mistral", "gptq4"), ("mistral", "aqlm2"),
-    ("phi3", "awq"), ("phi3", "gptq4"), ("phi3", "gptq3"), ("phi3", "aqlm2"),
-)
 X6_CELLS = ("llama", "phi3")
 X6_REPS = (("rep1", "_rep1"), ("rep2", "_rep2"), ("rep3", "_rep3"))   # all on Delta
+
+
+# Reviewer-run result files (new names only): paper tables (report_all.py, collect_results.py)
+# leave these out or label them; local archives (pieces, superseded) are never read.
+_REVIEWER_RE = re.compile(
+    r"_(?:delta|rebuilt|rebuilt_gptqmodel|flags|paired|paired_rebuilt|shuffled|splits\d+|heldout"
+    r"|xstest|rep\d+|subset\d+|smoke\w*)\.json$"
+    r"|^(?:arc_check|x2_activation_diag)_"
+    r"|^probe_leakage_control_[a-z0-9-]+_(?:aqlm2|awq|gptq\d)(?:_\w+)?\.json$")
+ARCHIVE_DIRS = ("pieces", "superseded")
+
+
+def is_archived(path):
+    """
+    Whether a path lies in a local archive folder (pieces, superseded; not in git).
+
+    Inputs:
+        - path (str or Path): File path
+
+    Outputs:
+        - archived (bool): True for outputs/**/pieces/ and outputs/**/superseded/
+    """
+    return any(part in ARCHIVE_DIRS for part in Path(path).parts)
+
+
+def is_reviewer_file(path):
+    """
+    Whether a result file belongs to the reviewer runs rather than the paper.
+
+    Inputs:
+        - path (str or Path): File path
+
+    Outputs:
+        - reviewer (bool): True for reviewer-run names (docs/REVIEWER_RUNS.md) and archives
+    """
+    return is_archived(path) or bool(_REVIEWER_RE.search(Path(path).name))
 
 
 def _load(path):
@@ -209,16 +244,7 @@ def collapsed():
     out = {}
     for m, q in COLLAPSED_CELLS:
         res = {"x3": _x3_pair(OUT / "signal_geometry" / f"probe_accuracy_{m}_{q}_paired_rebuilt.json")}
-        p2 = OUT / "boundary" / f"probe_leakage_control_{m}_{q}_rebuilt.json"
-        d2 = _load(p2)
-        if d2 is None:
-            res["x2"] = _missing(p2)
-        else:
-            sm = d2.get("summary", {})
-            res["x2"] = {"status": "ok", "source": _rel(p2),
-                         "residual_xstest_safe_specificity": _r(sm.get("residual_xstest_safe_specificity"), 3),
-                         "residual_xstest_unsafe_recall": _r(sm.get("residual_xstest_unsafe_recall"), 3),
-                         "surface_xstest_unsafe_recall": _r(sm.get("surface_xstest_unsafe_recall"), 3)}
+        res["x2"] = _x2_row(OUT / "boundary" / f"probe_leakage_control_{m}_{q}_rebuilt.json")
         res["arc"] = {"status": "missing"}
         for tag in ("rebuilt", "rebuilt_gptqmodel"):
             pa = OUT / "regime_sweep" / f"arc_check_{m}_{q}_{tag}.json"
@@ -344,6 +370,51 @@ def x5():
     return out
 
 
+def _best_layer(d):
+    """
+    X2 best layer, marked when it is an argmax tie (probe_leakage_control takes the first of
+    the tied layers, so a flat profile reports layer 0).
+
+    Inputs:
+        - d (dict): probe_leakage_control result
+
+    Outputs:
+        - label (str or None): e.g. "14", or "0 (tie, 32 of 32 layers)"
+    """
+    best = d.get("summary", {}).get("best_layer")
+    per = d.get("residual_per_layer") or {}
+    if best is None or not per:
+        return None if best is None else str(best)
+    bal = {L: 0.5 * (v["xstest_safe_specificity"] + v["xstest_unsafe_recall"]) for L, v in per.items()}
+    top = max(bal.values())
+    n_top = sum(1 for v in bal.values() if v == top)
+    return str(best) if n_top == 1 else f"{best} (tie, {n_top} of {len(bal)} layers)"
+
+
+def _x2_row(path):
+    """
+    One X2 row from a probe_leakage_control result.
+
+    Inputs:
+        - path (Path): Result file
+
+    Outputs:
+        - row (dict): Best layer and residual / surface probe scores, or a missing record
+    """
+    d = _load(path)
+    if d is None:
+        return _missing(path)
+    sm = d.get("summary", {})
+    return {
+        "status": "ok", "source": _rel(path),
+        "best_layer": _best_layer(d),
+        "residual_xstest_safe_specificity": _r(sm.get("residual_xstest_safe_specificity"), 3),
+        "residual_xstest_unsafe_recall": _r(sm.get("residual_xstest_unsafe_recall"), 3),
+        "residual_harmbench_transfer_recall": _r(sm.get("residual_harmbench_transfer_recall"), 3),
+        "surface_xstest_unsafe_recall": _r(sm.get("surface_xstest_unsafe_recall"), 3),
+    }
+
+
 def x2():
     """
     X2 surface-feature control on the coherent quantized cells.
@@ -354,22 +425,10 @@ def x2():
     Outputs:
         - out (dict): model/quant -> best layer and residual / surface probe scores
     """
-    out = {}
-    for model, quant in X2_CELLS:
-        path = OUT / "boundary" / f"probe_leakage_control_{model}_{quant}.json"
-        d = _load(path)
-        if d is None:
-            out[f"{model}/{quant}"] = _missing(path)
-            continue
-        sm = d.get("summary", {})
-        out[f"{model}/{quant}"] = {
-            "status": "ok", "source": _rel(path),
-            "best_layer": sm.get("best_layer"),
-            "residual_xstest_safe_specificity": _r(sm.get("residual_xstest_safe_specificity"), 3),
-            "residual_xstest_unsafe_recall": _r(sm.get("residual_xstest_unsafe_recall"), 3),
-            "residual_harmbench_transfer_recall": _r(sm.get("residual_harmbench_transfer_recall"), 3),
-            "surface_xstest_unsafe_recall": _r(sm.get("surface_xstest_unsafe_recall"), 3),
-        }
+    out = {f"{m}/{q}": _x2_row(OUT / "boundary" / f"probe_leakage_control_{m}_{q}.json")
+           for m, q in X2_CELLS}
+    for m, name in X2_FP32_REFS:
+        out[f"{m}/fp32 (reference)"] = _x2_row(OUT / "boundary" / name)
     return out
 
 
@@ -385,7 +444,7 @@ def _rho(d, side):
         - rho (float or None): 100 recovery / damage, None if undefined
     """
     dmg = d.get("damage_pp")
-    rec = (d.get("recovery_pp") or {}).get(side)
+    rec = (d.get("recovery_pp") or {}).get(side, d.get(f"{side}_recovery_pp"))
     return None if not dmg or rec is None else 100.0 * rec / dmg
 
 
@@ -406,7 +465,7 @@ def _x6_row(path):
     d = _load(path)
     if d is None:
         return _missing(path)
-    asr = d.get("asr", {})
+    asr = d.get("asr") or d.get("asr_per_condition") or {}   # headline / restoration_sweep schema
     return {
         "status": "ok", "source": _rel(path),
         "quant_asr": _r(asr.get("aqlm2")),
@@ -420,14 +479,15 @@ def _x6_row(path):
 
 def x6():
     """
-    Same-prompt repeats: rep1-rep3 (one environment) give the spread; the original
-    headline run is listed separately as the paper run and is not in the spread.
+    Same-prompt repeats: rep1-rep3 (one environment) give the spread; the two original runs
+    (headline, and the restoration sweep behind Table 3) are listed separately as paper runs
+    and are not in the spread.
 
     Inputs:
         - None
 
     Outputs:
-        - out (dict): model -> paper_run, reps, n_present, across_reps
+        - out (dict): model -> paper_run, paper_sweep, reps, n_present, across_reps
     """
     out = {}
     for model in X6_CELLS:
@@ -436,6 +496,7 @@ def x6():
         ok = [r for r in reps.values() if r.get("status") == "ok"]
         out[model] = {
             "paper_run": _x6_row(OUT / "headline" / f"headline_{model}_aqlm2.json"),
+            "paper_sweep": _x6_row(OUT / "regime_sweep" / f"restoration_sweep_{model}_aqlm2.json"),
             "reps": reps,
             "n_present": len(ok),
             "across_reps": {m: _spread([r[m] for r in ok]) for m in X6_METRICS} if ok else None,
@@ -463,17 +524,20 @@ def to_markdown(rv):
     L = ["\n## reviewer runs (X1, X2, held-out, X3, X4, X5, X6)\n",
          "Read only from the new result names; 'missing' until the GPU job lands.\n"]
 
-    L.append("\n### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)\n")
+    L.append("\n### X1: XSTest false refusal, Llama GPTQ-4\n")
     r = rv["x1"]
     if r["status"] != "ok":
         L.append(f"missing: `{r['expected']}`")
     else:
-        L.append("| Condition | ASR | ARC | XSTest FRR % | 95% CI |")
-        L.append("|---|---:|---:|---:|---|")
+        L.append("XSTest only (one condition per job, merged); the ASR / ARC check did not run.\n")
+        L.append("| Condition | XSTest FRR % | 95% CI |")
+        L.append("|---|---:|---|")
         for c, v in r["xstest_false_refusal"].items():
-            L.append(f"| {c} | {_f(r['asr'][c])} | {_f(r['arc'][c])} | {_f(v['rate'])} | {_ci(v['ci95'])} |")
+            L.append(f"| {c} | {_f(v['rate'])} | {_ci(v['ci95'])} |")
 
     L.append("\n### X2: surface-feature control on the 14 coherent quantized cells\n")
+    L.append("Best layer = argmax of balanced XSTest accuracy; \"tie\" means several layers share the "
+             "maximum and the first (layer 0) is reported.\n")
     L.append("| Cell | best layer | residual spec (XSTest-safe) | residual recall (XSTest-unsafe) "
              "| HarmBench transfer | surface recall (XSTest-unsafe) |")
     L.append("|---|---:|---:|---:|---:|---:|")
@@ -514,7 +578,8 @@ def to_markdown(rv):
                  f"{_f(r['selectivity_mean'])} / {_f(r['selectivity_min_layer'])} | "
                  f"{_f(r['table1_a_min'])} | {_f(r['delta_vs_table1_pt'])} |")
 
-    L.append("\n### X4: 100-split FP-vs-FP refit floor\n")
+    splits = sorted({r["n_splits"] for r in rv["x4"]["floors"].values() if r.get("status") == "ok"})
+    L.append(f"\n### X4: FP-vs-FP refit floor ({'/'.join(map(str, splits)) or '--'} splits)\n")
     L.append("Floor runs (pooled p95 is descriptive only, not a test threshold):\n")
     L.append("| Model | splits | refit distance p95 (pooled) | cos p5 (pooled) | cos median | per-layer p95 (median) |")
     L.append("|---|---:|---:|---:|---:|---:|")
@@ -526,7 +591,7 @@ def to_markdown(rv):
                  f"{_f(r['cos_floor_p5_pooled'])} | {_f(r['cos_median_pooled'])} | "
                  f"{_f(r['refit_distance_p95_per_layer_median'])} |")
     L.append("\nTests per Table 1 cell. Split-median: median over layers of the refit cosine, one per "
-             "split; p = (#split-medians <= coswmed + 1) / (splits + 1). Per-layer: floor = 5th "
+             "split; p = (#{split-medians <= coswmed} + 1) / (splits + 1). Per-layer: floor = 5th "
              "percentile of that layer's refit cosine; count of layers with observed FP-vs-quant "
              "cosine below floor - 0.002. z = (median split-median - coswmed) / SD(split-medians).\n")
     L.append("| Cell | coswmed | split-median min / p5 / median (SD) | p | z | layers below floor |")
@@ -564,8 +629,9 @@ def to_markdown(rv):
                          f"{s['min']} | {s['max']} |")
 
     L.append("\n### X6: same-prompt repeats (AQLM-2; rep1-rep3 on Delta)\n")
-    L.append("Spread = rep1-rep3 only (one environment). The paper run (Bridges) is listed "
-             "separately and is not part of the mean +/- sd.\n")
+    L.append("Spread = rep1-rep3 only (one environment). The two paper runs (Bridges: the headline "
+             "run and the restoration sweep behind Table 3) are listed separately and are not part of "
+             "the mean +/- sd.\n")
     L.append("| Cell | Run | quant ASR | +Write ASR | +Read ASR | +Both ASR | rho read % | rho write % |")
     L.append("|---|---|---:|---:|---:|---:|---:|---:|")
 
@@ -589,14 +655,15 @@ def to_markdown(rv):
                      f"{ms('both_restored_asr')} | {ms('rho_read_pct')} | {ms('rho_write_pct')} |")
         else:
             L.append(f"| {m} | repeats mean +/- sd (0 of 3) | -- | -- | -- | -- | -- | -- |")
-        L.append(row(m, "paper run (Bridges, not in spread)", block["paper_run"]))
+        L.append(row(m, "paper headline run (Bridges, not in spread)", block["paper_run"]))
+        L.append(row(m, "paper restoration sweep, Table 3 (Bridges, not in spread)", block["paper_sweep"]))
     L.append("\n### Collapsed cells (rebuilt checkpoints)\n")
     L.append("DeltaAI rebuilds on the dense GPTQ path, NOT the paper's Bridges checkpoints (the GPTQ-2 "
              "rebuilds differ a lot). Selectivity comes only from each cell's own real/shuffled pair; "
              "Table 1 a_min is shown for reference, a large gap is expected.\n")
     L.append("| Cell (rebuilt) | ARC % [95% CI] | real acc mean / min | shuffled acc mean / max | selectivity mean "
-             "| XSTest spec / recall (residual) | surface recall | Table 1 a_min |")
-    L.append("|---|---|---|---|---:|---|---:|---:|")
+             "| X2 best layer | XSTest spec / recall (residual) | surface recall | Table 1 a_min |")
+    L.append("|---|---|---|---|---:|---|---|---:|---:|")
     for k, r in rv["collapsed"].items():
         a, x3r, x2r = r["arc"], r["x3"], r["x2"]
         arc = (f"{_f(a.get('arc'))} {_ci(a.get('ci95'))}" + ("" if a.get("tag") == "rebuilt" else f" ({a.get('tag')})")
@@ -608,11 +675,15 @@ def to_markdown(rv):
         else:
             p3, t1 = "missing | | ", "--"
         if x2r["status"] == "ok":
-            p2 = (f"{_f(x2r['residual_xstest_safe_specificity'])} / {_f(x2r['residual_xstest_unsafe_recall'])} | "
+            p2 = (f"{_f(x2r['best_layer'])} | "
+                  f"{_f(x2r['residual_xstest_safe_specificity'])} / {_f(x2r['residual_xstest_unsafe_recall'])} | "
                   f"{_f(x2r['surface_xstest_unsafe_recall'])}")
         else:
-            p2 = "missing | "
+            p2 = "missing | | "
         L.append(f"| {k} | {arc} | {p3} | {p2} | {t1} |")
+    no_arc = [k for k, r in rv["collapsed"].items() if r["arc"]["status"] != "ok"]
+    if no_arc:
+        L.append(f"\n-- = no ARC run on the rebuilt checkpoint ({', '.join(no_arc)}).")
     return "\n".join(L)
 
 

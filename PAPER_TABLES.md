@@ -275,49 +275,102 @@ Source: restoration_sweep_llama_{aqlm2,gptq4}.json (flags_by_cond)
 Read only from the new result names; 'missing' until the GPU job lands.
 
 
-### X1: XSTest false refusal, Llama GPTQ-4 (n_eval 200)
+### X1: XSTest false refusal, Llama GPTQ-4
 
-missing: `outputs/headline/headline_llama_gptq4_x1_n200.json`
+XSTest only (one condition per job, merged); the ASR / ARC check did not run.
+
+| Condition | XSTest FRR % | 95% CI |
+|---|---:|---|
+| fp32 | 6.0 | [3.7, 9.7] |
+| gptq4 | 9.2 | [6.2, 13.4] |
+| write_restored | 6.8 | [4.3, 10.6] |
+| read_restored | 8.8 | [5.9, 13.0] |
+| both_restored | 6.0 | [3.7, 9.7] |
 
 ### X2: surface-feature control on the 14 coherent quantized cells
 
+Best layer = argmax of balanced XSTest accuracy; "tie" means several layers share the maximum and the first (layer 0) is reported.
+
 | Cell | best layer | residual spec (XSTest-safe) | residual recall (XSTest-unsafe) | HarmBench transfer | surface recall (XSTest-unsafe) |
 |---|---:|---:|---:|---:|---:|
-| llama/awq | missing | `outputs/boundary/probe_leakage_control_llama_awq.json` | | | |
-| llama/gptq4 | missing | `outputs/boundary/probe_leakage_control_llama_gptq4.json` | | | |
-| llama/gptq3 | missing | `outputs/boundary/probe_leakage_control_llama_gptq3.json` | | | |
-| llama/aqlm2 | missing | `outputs/boundary/probe_leakage_control_llama_aqlm2.json` | | | |
-| qwen/awq | missing | `outputs/boundary/probe_leakage_control_qwen_awq.json` | | | |
-| qwen/gptq4 | missing | `outputs/boundary/probe_leakage_control_qwen_gptq4.json` | | | |
-| qwen/gptq3 | missing | `outputs/boundary/probe_leakage_control_qwen_gptq3.json` | | | |
-| mistral/awq | missing | `outputs/boundary/probe_leakage_control_mistral_awq.json` | | | |
-| mistral/gptq4 | missing | `outputs/boundary/probe_leakage_control_mistral_gptq4.json` | | | |
-| mistral/aqlm2 | missing | `outputs/boundary/probe_leakage_control_mistral_aqlm2.json` | | | |
-| phi3/awq | missing | `outputs/boundary/probe_leakage_control_phi3_awq.json` | | | |
-| phi3/gptq4 | missing | `outputs/boundary/probe_leakage_control_phi3_gptq4.json` | | | |
-| phi3/gptq3 | missing | `outputs/boundary/probe_leakage_control_phi3_gptq3.json` | | | |
-| phi3/aqlm2 | missing | `outputs/boundary/probe_leakage_control_phi3_aqlm2.json` | | | |
+| llama/awq | 31 | 0.98 | 0.805 | 0.97 | 0.0 |
+| llama/gptq4 | 29 | 0.976 | 0.775 | 0.975 | 0.0 |
+| llama/gptq3 | 27 | 0.988 | 0.63 | 0.925 | 0.0 |
+| llama/aqlm2 | 30 | 0.964 | 0.78 | 0.945 | 0.0 |
+| qwen/awq | 27 | 0.928 | 0.86 | 0.97 | 0.0 |
+| qwen/gptq4 | 24 | 0.948 | 0.725 | 0.97 | 0.0 |
+| qwen/gptq3 | 22 | 0.948 | 0.75 | 0.945 | 0.0 |
+| mistral/awq | 31 | 0.988 | 0.065 | 0.8 | 0.0 |
+| mistral/gptq4 | 29 (tie, 2 of 32 layers) | 0.996 | 0.01 | 0.47 | 0.0 |
+| mistral/aqlm2 | 0 (tie, 32 of 32 layers) | 1.0 | 0.0 | 0.0 | 0.0 |
+| phi3/awq | 25 | 0.784 | 0.94 | 0.98 | 0.0 |
+| phi3/gptq4 | 30 | 0.772 | 0.93 | 0.995 | 0.0 |
+| phi3/gptq3 | 25 | 0.924 | 0.585 | 0.955 | 0.0 |
+| phi3/aqlm2 | 29 | 0.916 | 0.71 | 0.865 | 0.0 |
+| mistral/fp32 (reference) | 29 | 1.0 | 0.075 | 0.76 | 0.0 |
 
 ### Held-out AQLM-2 screen
 
 | Model | FP ASR/ARC | Quant ASR/ARC | dASR | 95% CI | p (McNemar) | Source |
 |---|---|---|---:|---|---:|---|
-| llama3-8b | missing | | | | | `outputs/headline/headline_llama3-8b_aqlm2_heldout.json` |
+| llama3-8b | 14.5/48.0 | 51.5/42.0 | 37.0 | [30.5, 44.0] | 1.4128410298528223e-19 | `outputs/headline/headline_llama3-8b_aqlm2_heldout.json` |
 | mistral-nemo | missing | | | | | `outputs/headline/headline_mistral-nemo_aqlm2_heldout.json` |
 
-### X3: shuffled-label probe control (expect ~0.5)
+### X3: matched real / shuffled-label probe on the 14 coherent cells
 
-| Cell | FP mean acc | FP min-max | Quant mean acc | Quant min-max | max abs dev from 0.5 |
-|---|---:|---|---:|---|---:|
-| llama/aqlm2 | missing | `outputs/signal_geometry/probe_accuracy_llama_aqlm2_shuffled.json` | | | |
-| phi3/aqlm2 | missing | `outputs/signal_geometry/probe_accuracy_phi3_aqlm2_shuffled.json` | | | |
+Same activations, layers, folds and regularisation for both fits (shuffle seed 42); selectivity = real - shuffled from that pair. Table 1 a_min = the paper's real-label run (consistency check, expect within ~1 pt).
 
-### X4: 100-split FP-vs-FP refit floor
+| Cell | real acc mean / min (layer) | shuffled acc mean / max (layer) | selectivity mean / min-layer | Table 1 a_min | Delta vs Table 1 (pt) |
+|---|---|---|---|---:|---:|
+| llama/awq | 0.996 / 0.988 (L0) | 0.527 / 0.562 (L3) | 0.469 / 0.43 | 0.988 | 0.0 |
+| llama/gptq4 | 0.995 / 0.988 (L0) | 0.542 / 0.593 (L27) | 0.452 / 0.4 | 0.988 | 0.0 |
+| llama/gptq3 | 0.997 / 0.99 (L0) | 0.52 / 0.562 (L3) | 0.477 / 0.43 | 0.988 | 0.2 |
+| llama/aqlm2 | 0.995 / 0.99 (L0) | 0.517 / 0.56 (L2) | 0.478 / 0.435 | 0.99 | 0.0 |
+| qwen/awq | 0.996 / 0.992 (L26) | 0.525 / 0.57 (L11) | 0.471 / 0.425 | 0.992 | 0.0 |
+| qwen/gptq4 | 0.996 / 0.992 (L27) | 0.53 / 0.562 (L7) | 0.467 / 0.432 | 0.993 | -0.0 |
+| qwen/gptq3 | 0.997 / 0.995 (L0) | 0.525 / 0.598 (L12) | 0.472 / 0.397 | 0.995 | 0.0 |
+| mistral/awq | 0.997 / 0.99 (L1) | 0.501 / 0.547 (L5) | 0.496 / 0.445 | 0.99 | 0.0 |
+| mistral/gptq4 | 0.996 / 0.99 (L1) | 0.499 / 0.555 (L13) | 0.497 / 0.442 | 0.99 | 0.0 |
+| mistral/aqlm2 | 0.997 / 0.992 (L3) | 0.521 / 0.565 (L4) | 0.477 / 0.427 | 0.992 | 0.0 |
+| phi3/awq | 0.995 / 0.988 (L0) | 0.501 / 0.53 (L3) | 0.494 / 0.462 | 0.988 | 0.0 |
+| phi3/gptq4 | 0.997 / 0.975 (L0) | 0.526 / 0.568 (L27) | 0.471 / 0.43 | 0.972 | 0.3 |
+| phi3/gptq3 | 0.994 / 0.972 (L0) | 0.516 / 0.568 (L8) | 0.478 / 0.427 | 0.975 | -0.3 |
+| phi3/aqlm2 | 0.997 / 0.972 (L0) | 0.531 / 0.578 (L21) | 0.466 / 0.422 | 0.972 | 0.0 |
 
-| Model | splits | refit distance p95 (pooled) | cos floor p5 | cos median | per-layer p95 (median) |
+### X4: FP-vs-FP refit floor (100 splits)
+
+Floor runs (pooled p95 is descriptive only, not a test threshold):
+
+| Model | splits | refit distance p95 (pooled) | cos p5 (pooled) | cos median | per-layer p95 (median) |
 |---|---:|---:|---:|---:|---:|
-| llama | missing | `outputs/boundary/probe_refit_control_llama_splits100.json` | | | |
-| phi3 | missing | `outputs/boundary/probe_refit_control_phi3_splits100.json` | | | |
+| llama | 100 | 0.292 | 0.708 | 0.877 | 0.136 |
+| phi3 | 100 | 0.283 | 0.717 | 0.832 | 0.186 |
+| mistral | 100 | 0.232 | 0.768 | 0.918 | 0.094 |
+| qwen | 100 | 0.303 | 0.697 | 0.825 | 0.197 |
+
+Tests per Table 1 cell. Split-median: median over layers of the refit cosine, one per split; p = (#{split-medians <= coswmed} + 1) / (splits + 1). Per-layer: floor = 5th percentile of that layer's refit cosine; count of layers with observed FP-vs-quant cosine below floor - 0.002. z = (median split-median - coswmed) / SD(split-medians).
+
+| Cell | coswmed | split-median min / p5 / median (SD) | p | z | layers below floor |
+|---|---:|---:|---|---:|---:|
+| llama/aqlm2 | 0.781 | 0.851 / 0.864 / 0.876 (0.0086) | p < 0.01 (100 splits) | 11.0 | 20 / 32 |
+| llama/awq | 0.964 | 0.851 / 0.864 / 0.876 (0.0086) | p = 1 | -10.2 | 0 / 32 |
+| llama/gptq4 | 0.948 | 0.851 / 0.864 / 0.876 (0.0086) | p = 1 | -8.4 | 5 / 32 |
+| llama/gptq3 | 0.78 | 0.851 / 0.864 / 0.876 (0.0086) | p < 0.01 (100 splits) | 11.2 | 21 / 32 |
+| llama/gptq2 | 0.087 | 0.851 / 0.864 / 0.876 (0.0086) | p < 0.01 (100 splits) | 91.7 | 32 / 32 |
+| phi3/aqlm2 | 0.696 | 0.811 / 0.821 / 0.831 (0.0067) | p < 0.01 (100 splits) | 20.1 | 31 / 32 |
+| phi3/awq | 0.514 | 0.811 / 0.821 / 0.831 (0.0067) | p < 0.01 (100 splits) | 47.2 | 32 / 32 |
+| phi3/gptq4 | 0.912 | 0.811 / 0.821 / 0.831 (0.0067) | p = 1 | -12.1 | 0 / 32 |
+| phi3/gptq3 | 0.686 | 0.811 / 0.821 / 0.831 (0.0067) | p < 0.01 (100 splits) | 21.6 | 32 / 32 |
+| phi3/gptq2 | 0.073 | 0.811 / 0.821 / 0.831 (0.0067) | p < 0.01 (100 splits) | 113.0 | 32 / 32 |
+| mistral/aqlm2 | 0.746 | 0.89 / 0.908 / 0.917 (0.0067) | p < 0.01 (100 splits) | 25.7 | 32 / 32 |
+| mistral/awq | 0.989 | 0.89 / 0.908 / 0.917 (0.0067) | p = 1 | -10.8 | 0 / 32 |
+| mistral/gptq4 | 0.873 | 0.89 / 0.908 / 0.917 (0.0067) | p < 0.01 (100 splits) | 6.6 | 17 / 32 |
+| mistral/gptq3 | -0.007 | 0.89 / 0.908 / 0.917 (0.0067) | p < 0.01 (100 splits) | 138.5 | 32 / 32 |
+| mistral/gptq2 | 0.03 | 0.89 / 0.908 / 0.917 (0.0067) | p < 0.01 (100 splits) | 133.0 | 32 / 32 |
+| qwen/awq | 0.952 | 0.798 / 0.81 / 0.823 (0.0092) | p = 1 | -13.9 | 0 / 28 |
+| qwen/gptq4 | 0.928 | 0.798 / 0.81 / 0.823 (0.0092) | p = 1 | -11.3 | 0 / 28 |
+| qwen/gptq3 | 0.746 | 0.798 / 0.81 / 0.823 (0.0092) | p < 0.01 (100 splits) | 8.4 | 14 / 28 |
+| qwen/gptq2 | 0.184 | 0.798 / 0.81 / 0.823 (0.0092) | p < 0.01 (100 splits) | 69.3 | 28 / 28 |
 
 ### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)
 
@@ -343,17 +396,33 @@ Across seeds (present seeds only):
 
 ### X6: same-prompt repeats (AQLM-2; rep1-rep3 on Delta)
 
-Spread = rep1-rep3 only (one environment). The paper run (Bridges) is listed separately and is not part of the mean +/- sd.
+Spread = rep1-rep3 only (one environment). The two paper runs (Bridges: the headline run and the restoration sweep behind Table 3) are listed separately and are not part of the mean +/- sd.
 
 | Cell | Run | quant ASR | +Write ASR | +Read ASR | +Both ASR | rho read % | rho write % |
 |---|---|---:|---:|---:|---:|---:|---:|
-| llama | rep1 | missing | `outputs/headline/headline_llama_aqlm2_rep1.json` | | | | |
-| llama | rep2 | missing | `outputs/headline/headline_llama_aqlm2_rep2.json` | | | | |
-| llama | rep3 | missing | `outputs/headline/headline_llama_aqlm2_rep3.json` | | | | |
-| llama | repeats mean +/- sd (0 of 3) | -- | -- | -- | -- | -- | -- |
-| llama | paper run (Bridges, not in spread) | 62.5 | 50.5 | 44.5 | 43.0 | 83.7 | 55.8 |
-| phi3 | rep1 | missing | `outputs/headline/headline_phi3_aqlm2_rep1.json` | | | | |
-| phi3 | rep2 | missing | `outputs/headline/headline_phi3_aqlm2_rep2.json` | | | | |
-| phi3 | rep3 | missing | `outputs/headline/headline_phi3_aqlm2_rep3.json` | | | | |
-| phi3 | repeats mean +/- sd (0 of 3) | -- | -- | -- | -- | -- | -- |
-| phi3 | paper run (Bridges, not in spread) | 59.5 | 49.5 | 44.5 | 32.0 | 75.0 | 50.0 |
+| llama | rep1 | 63.5 | 50.0 | 46.0 | 42.0 | 77.8 | 60.0 |
+| llama | rep2 | 63.5 | 50.0 | 46.0 | 42.0 | 77.8 | 60.0 |
+| llama | rep3 | 63.5 | 50.0 | 46.0 | 42.0 | 77.8 | 60.0 |
+| llama | **repeats mean +/- sd (3 of 3)** | 63.5 +/- 0.0 | 50.0 +/- 0.0 | 46.0 +/- 0.0 | 42.0 +/- 0.0 | 77.8 +/- 0.0 | 60.0 +/- 0.0 |
+| llama | paper headline run (Bridges, not in spread) | 62.5 | 50.5 | 44.5 | 43.0 | 83.7 | 55.8 |
+| llama | paper restoration sweep, Table 3 (Bridges, not in spread) | 64.0 | 48.5 | 44.5 | 43.0 | 84.8 | 67.4 |
+| phi3 | rep1 | 59.5 | 49.5 | 45.0 | 32.0 | 72.5 | 50.0 |
+| phi3 | rep2 | 59.5 | 49.5 | 45.0 | 32.0 | 72.5 | 50.0 |
+| phi3 | rep3 | 59.5 | 49.5 | 45.0 | 32.0 | 72.5 | 50.0 |
+| phi3 | **repeats mean +/- sd (3 of 3)** | 59.5 +/- 0.0 | 49.5 +/- 0.0 | 45.0 +/- 0.0 | 32.0 +/- 0.0 | 72.5 +/- 0.0 | 50.0 +/- 0.0 |
+| phi3 | paper headline run (Bridges, not in spread) | 59.5 | 49.5 | 44.5 | 32.0 | 75.0 | 50.0 |
+| phi3 | paper restoration sweep, Table 3 (Bridges, not in spread) | 59.5 | 49.5 | 44.5 | 32.0 | 75.0 | 50.0 |
+
+### Collapsed cells (rebuilt checkpoints)
+
+DeltaAI rebuilds on the dense GPTQ path, NOT the paper's Bridges checkpoints (the GPTQ-2 rebuilds differ a lot). Selectivity comes only from each cell's own real/shuffled pair; Table 1 a_min is shown for reference, a large gap is expected.
+
+| Cell (rebuilt) | ARC % [95% CI] | real acc mean / min | shuffled acc mean / max | selectivity mean | X2 best layer | XSTest spec / recall (residual) | surface recall | Table 1 a_min |
+|---|---|---|---|---:|---|---|---:|---:|
+| llama/gptq2 | 20.0 [13.3, 28.9] | 0.992 / 0.98 | 0.54 / 0.6 | 0.452 | 0 (tie, 31 of 32 layers) | 1.0 / 0.0 | 0.0 | 0.953 |
+| qwen/gptq2 | 19.0 [12.5, 27.8] | 0.988 / 0.922 | 0.516 / 0.56 | 0.472 | 27 | 0.996 / 0.035 | 0.0 | 0.85 |
+| mistral/gptq2 | 21.0 [14.2, 30.0] | 0.989 / 0.975 | 0.522 / 0.588 | 0.467 | 0 (tie, 32 of 32 layers) | 1.0 / 0.0 | 0.0 | 0.98 |
+| phi3/gptq2 | 21.0 [14.2, 30.0] | 0.975 / 0.875 | 0.518 / 0.56 | 0.457 | 29 | 0.924 / 0.09 | 0.0 | 0.912 |
+| mistral/gptq3 | -- | 0.976 / 0.968 | 0.493 / 0.522 | 0.483 | 0 (tie, 32 of 32 layers) | 1.0 / 0.0 | 0.0 | 0.968 |
+
+-- = no ARC run on the rebuilt checkpoint (mistral/gptq3).
