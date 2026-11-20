@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from core.datasets import load_arc_challenge, load_wildjailbreak_prompts
 from core.evaluation import _extract_behavior, classify_batch, generate_only
-from core.manifest import RunConfig, save_result
+from core.manifest import RunConfig, assert_new_result, save_result
 from core.model_loader import get_weight, load_fp32, load_quantized
 from core.residuals import get_inner
 from core.restoration import (
@@ -79,7 +79,12 @@ def main():
     ap.add_argument("--n_eval", type=int, default=200)
     ap.add_argument("--n_reasoning", type=int, default=50)
     ap.add_argument("--seeds", type=int, default=3)
+    # Opt-in output suffix for reruns (e.g. --tag flags -> ..._aqlm2_flags.json)
+    ap.add_argument("--tag", default = None)
     args = ap.parse_args()
+    if args.tag:
+        assert_new_result(_SCRIPT, RunConfig(model = args.model, quantizer = args.quantizer,
+                                             variant = args.tag))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     items = load_wildjailbreak_prompts(n_samples=args.n_eval, config="eval")
@@ -154,6 +159,9 @@ def main():
     flags = classify_batch(flatb, flatr, device=device)
     n = args.n_eval
     asr = {c: 100.0 * sum(flags[i * n:(i + 1) * n]) / n for i, c in enumerate(conds)}
+    # Per-prompt labels (same format as restoration_sweep) for paired intervals
+    flags_by_cond = {c: [int(bool(x)) for x in flags[i * n:(i + 1) * n]]
+                     for i, c in enumerate(conds)}
     rand = [asr[f"read_matched_random_s{s}"] for s in range(args.seeds)]
 
     # recovery = how much of the damage each restore removes (quant_asr - asr).
@@ -168,6 +176,9 @@ def main():
         "arc_per_condition": all_arc,
         "read_matched_random_asr_mean": float(np.mean(rand)),
         "read_matched_random_asr_std": float(np.std(rand)),
+        # Explicit per-seed values (also in asr_per_condition as read_matched_random_s<k>)
+        "read_matched_random_asr_per_seed": {f"s{s}": rand[s] for s in range(args.seeds)},
+        "flags_by_cond": flags_by_cond,
         "recovery_pp": {
             "write_full": asr["quant"] - asr["write_full"],
             "read_matched_whole": asr["quant"] - asr["read_matched_whole"],
@@ -175,7 +186,7 @@ def main():
         },
     }
     cfg = RunConfig(
-        model=args.model, quantizer=args.quantizer,
+        model = args.model, quantizer = args.quantizer, variant = args.tag,
         extra={"n_eval": args.n_eval, "n_reasoning": args.n_reasoning,
                "seeds": args.seeds, "seed": SEED},
     )
