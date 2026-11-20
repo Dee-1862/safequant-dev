@@ -272,7 +272,7 @@ Source: restoration_sweep_llama_{aqlm2,gptq4}.json (flags_by_cond)
 
 ## reviewer runs (X1, X2, held-out, X3, X4, X5, X6)
 
-Read only from the new result names; 'missing' until the GPU job lands.
+Read only from the new result names. "not run" marks items skipped on purpose.
 
 
 ### X1: XSTest false refusal, Llama GPTQ-4
@@ -314,7 +314,7 @@ Best layer = argmax of balanced XSTest accuracy; "tie" means several layers shar
 | Model | FP ASR/ARC | Quant ASR/ARC | dASR | 95% CI | p (McNemar) | Source |
 |---|---|---|---:|---|---:|---|
 | llama3-8b | 14.5/48.0 | 51.5/42.0 | 37.0 | [30.5, 44.0] | 1.4128410298528223e-19 | `outputs/headline/headline_llama3-8b_aqlm2_heldout.json` |
-| mistral-nemo | missing | | | | | `outputs/headline/headline_mistral-nemo_aqlm2_heldout.json` |
+| mistral-nemo | not run; llama3-8b used | | | | | |
 
 ### X3: matched real / shuffled-label probe on the 14 coherent cells
 
@@ -372,27 +372,10 @@ Tests per Table 1 cell. Split-median: median over layers of the refit cosine, on
 | qwen/gptq3 | 0.746 | 0.798 / 0.81 / 0.823 (0.0092) | p < 0.01 (100 splits) | 8.4 | 14 / 28 |
 | qwen/gptq2 | 0.184 | 0.798 / 0.81 / 0.823 (0.0092) | p < 0.01 (100 splits) | 69.3 | 28 / 28 |
 
-### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)
+### X5
 
-| Cell | seed | dASR (paired) | 95% CI | damage | read rec | write rec | both rec |
-|---|---:|---:|---|---:|---:|---:|---:|
-| llama | 1 | missing | `outputs/headline/headline_llama_aqlm2_subset1.json` | | | | |
-| llama | 2 | missing | `outputs/headline/headline_llama_aqlm2_subset2.json` | | | | |
-| llama | 3 | missing | `outputs/headline/headline_llama_aqlm2_subset3.json` | | | | |
-| llama | 4 | missing | `outputs/headline/headline_llama_aqlm2_subset4.json` | | | | |
-| llama | 5 | missing | `outputs/headline/headline_llama_aqlm2_subset5.json` | | | | |
-| phi3 | 1 | missing | `outputs/headline/headline_phi3_aqlm2_subset1.json` | | | | |
-| phi3 | 2 | missing | `outputs/headline/headline_phi3_aqlm2_subset2.json` | | | | |
-| phi3 | 3 | missing | `outputs/headline/headline_phi3_aqlm2_subset3.json` | | | | |
-| phi3 | 4 | missing | `outputs/headline/headline_phi3_aqlm2_subset4.json` | | | | |
-| phi3 | 5 | missing | `outputs/headline/headline_phi3_aqlm2_subset5.json` | | | | |
+X5 (random prompt subsets): not run; variance is covered by the repeated runs (X6) and the five random parameter-matched subsets (Table 7 reruns).
 
-Across seeds (present seeds only):
-
-| Cell | Metric | seeds | mean | sd | min | max |
-|---|---|---:|---:|---:|---:|---:|
-| llama | missing | 0 | | | | |
-| phi3 | missing | 0 | | | | |
 
 ### X6: same-prompt repeats (AQLM-2; rep1-rep3 on Delta)
 
@@ -425,4 +408,4 @@ DeltaAI rebuilds on the dense GPTQ path, NOT the paper's Bridges checkpoints (th
 | phi3/gptq2 | 21.0 [14.2, 30.0] | 0.975 / 0.875 | 0.518 / 0.56 | 0.457 | 29 | 0.924 / 0.09 | 0.0 | 0.912 |
 | mistral/gptq3 | -- | 0.976 / 0.968 | 0.493 / 0.522 | 0.483 | 0 (tie, 32 of 32 layers) | 1.0 / 0.0 | 0.0 | 0.968 |
 
--- = no ARC run on the rebuilt checkpoint (mistral/gptq3).
+-- = ARC not run on the rebuilt checkpoint (mistral/gptq3).

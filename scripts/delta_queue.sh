@@ -398,10 +398,11 @@ else
   done
   fi
 
+  # X5 was not run for the paper (docs/REVIEWER_RUNS.md); its job file is kept in scripts/diagnostics/
   if [[ $WAVE1 -eq 0 && $DROP_X5 -eq 0 ]]; then
   for m in llama7b phi3; do
     for k in 1 2 3 4 5; do
-      sub "X5 ${m} subset${k}" scripts/regime_sweep/subset_seeds_aqlm2.sbatch $D "$(tl "${EST[x5]}")" \
+      sub "X5 ${m} subset${k}" scripts/diagnostics/subset_seeds_aqlm2.sbatch $D "$(tl "${EST[x5]}")" \
         --export="ALL,CELLS=${m},SEEDS=${k}" --nice="${REPEAT_NICE:-500}"
     done
   done

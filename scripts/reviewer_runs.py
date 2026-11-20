@@ -4,7 +4,7 @@
 # writes) the original Bridges headline_<model>_aqlm2.json and lists it as the "paper
 # run" (outside the repeat spread):
 #   X1        outputs/headline/headline_llama_gptq4_xstest.json
-#   held-out  outputs/headline/headline_<model>_aqlm2_heldout.json   (llama3-8b, else mistral-nemo)
+#   held-out  outputs/headline/headline_llama3-8b_aqlm2_heldout.json   (mistral-nemo not run)
 #   X3        outputs/signal_geometry/probe_accuracy_<model>_<quant>_paired.json  (14 coherent cells;
 #             real + shuffled-label probe on the same activations; Table 1 a_min read from the
 #             untagged probe_accuracy_<model>_<quant>.json for the consistency check)
@@ -23,13 +23,14 @@
 #                 count layers whose observed cosine is below floor - X4_FLOOR_MARGIN (rounding ties
 #                 in low-variance early layers do not count)
 #             The pooled 95th-percentile refit distance is descriptive only, not a test threshold.
-#   X5        outputs/headline/headline_<model>_aqlm2_subset<k>.json   (k = 1..5)
+#   X5        not run (NOT_RUN below); the job file is in scripts/diagnostics/
 #   X2        outputs/boundary/probe_leakage_control_<model>_<quant>.json  (14 coherent cells)
 #             + outputs/boundary/probe_leakage_control_mistral_fp32_delta.json (FP32 Mistral reference)
 #   X6        outputs/headline/headline_<model>_aqlm2_rep{1,2,3}.json   (Delta repeats, same
 #             prompts) + the two paper runs, reported separately: headline_<model>_aqlm2.json and
 #             outputs/regime_sweep/restoration_sweep_<model>_aqlm2.json (Table 3)
-# Every entry reports status "missing" (with the expected path) until its JSON exists.
+# Items skipped on purpose report status "not run" with a one-line reason (NOT_RUN); any
+# other absent result reports status "missing" with the expected path.
 # Used by scripts/report_all.py (section 5) and scripts/paper_values.py ("reviewer_runs").
 import json
 import re
@@ -44,6 +45,13 @@ if str(ROOT) not in sys.path:
 OUT = ROOT / "outputs"
 
 HELDOUT_MODELS = ("llama3-8b", "mistral-nemo")
+# Items skipped on purpose: shown as one "not run" line instead of rows of "missing"
+NOT_RUN = {
+    "x5": ("X5 (random prompt subsets): not run; variance is covered by the repeated runs (X6) "
+           "and the five random parameter-matched subsets (Table 7 reruns)."),
+    "heldout/mistral-nemo": "not run; llama3-8b used",
+    "collapsed_arc/mistral/gptq3": "not run",
+}
 # The 14 coherent Table 2 cells (quantized ARC >= 40); filename model tokens. X2 and X3 use the
 # same cells (X3: matched real/shuffled pair per cell). Keep in sync with
 # scripts/boundary/probe_leakage_control_quant.sbatch.
@@ -62,8 +70,6 @@ X4_MODELS = ("llama", "phi3", "mistral", "qwen")
 # X4 tests: every Table 1 cell (qwen has no AQLM-2 cell)
 X4_QUANTS = ("aqlm2", "awq", "gptq4", "gptq3", "gptq2")
 X4_FLOOR_MARGIN = 0.002
-X5_CELLS = ("llama", "phi3")          # the two significant AQLM-2 cells
-X5_SEEDS = (1, 2, 3, 4, 5)
 CONDS = ("fp32", "QUANT", "write_restored", "read_restored", "both_restored")
 X6_CELLS = ("llama", "phi3")
 X6_REPS = (("rep1", "_rep1"), ("rep2", "_rep2"), ("rep3", "_rep3"))   # all on Delta
@@ -183,6 +189,9 @@ def x1():
 def heldout():
     out = {}
     for model in HELDOUT_MODELS:
+        if f"heldout/{model}" in NOT_RUN:
+            out[model] = {"status": "not run", "note": NOT_RUN[f"heldout/{model}"]}
+            continue
         path = OUT / "headline" / f"headline_{model}_aqlm2_heldout.json"
         d = _load(path)
         if d is None:
@@ -245,7 +254,8 @@ def collapsed():
     for m, q in COLLAPSED_CELLS:
         res = {"x3": _x3_pair(OUT / "signal_geometry" / f"probe_accuracy_{m}_{q}_paired_rebuilt.json")}
         res["x2"] = _x2_row(OUT / "boundary" / f"probe_leakage_control_{m}_{q}_rebuilt.json")
-        res["arc"] = {"status": "missing"}
+        res["arc"] = ({"status": "not run", "note": NOT_RUN[f"collapsed_arc/{m}/{q}"]}
+                      if f"collapsed_arc/{m}/{q}" in NOT_RUN else {"status": "missing"})
         for tag in ("rebuilt", "rebuilt_gptqmodel"):
             pa = OUT / "regime_sweep" / f"arc_check_{m}_{q}_{tag}.json"
             da = _load(pa)
@@ -343,31 +353,16 @@ def _spread(vals):
 
 
 def x5():
-    out = {}
-    for model in X5_CELLS:
-        seeds = {}
-        for k in X5_SEEDS:
-            path = OUT / "headline" / f"headline_{model}_aqlm2_subset{k}.json"
-            d = _load(path)
-            if d is None:
-                seeds[k] = _missing(path)
-                continue
-            res = _headline_summary(d, "aqlm2")
-            res["source"] = _rel(path)
-            res["paired_screen"] = _paired([(model, "aqlm2")], f"subset{k}").get(f"{model}/aqlm2")
-            seeds[k] = res
-        ok = [s for s in seeds.values() if s.get("status") == "ok"]
-        out[model] = {
-            "seeds": seeds,
-            "n_present": len(ok),
-            "across_seeds": {
-                "damage_pp": _spread([s["damage_pp"] for s in ok]),
-                "read_recovery_pp": _spread([s["recovery_pp"].get("read") for s in ok]),
-                "write_recovery_pp": _spread([s["recovery_pp"].get("write") for s in ok]),
-                "both_recovery_pp": _spread([s["recovery_pp"].get("both") for s in ok]),
-            } if ok else None,
-        }
-    return out
+    """
+    X5 was not run (see NOT_RUN).
+
+    Inputs:
+        - None
+
+    Outputs:
+        - res (dict): status "not run" and the reason
+    """
+    return {"status": "not run", "note": NOT_RUN["x5"]}
 
 
 def _best_layer(d):
@@ -522,7 +517,7 @@ def _ci(x):
 def to_markdown(rv):
     """Markdown block for PAPER_TABLES.md. Missing runs show as 'missing'."""
     L = ["\n## reviewer runs (X1, X2, held-out, X3, X4, X5, X6)\n",
-         "Read only from the new result names; 'missing' until the GPU job lands.\n"]
+         "Read only from the new result names. \"not run\" marks items skipped on purpose.\n"]
 
     L.append("\n### X1: XSTest false refusal, Llama GPTQ-4\n")
     r = rv["x1"]
@@ -554,6 +549,9 @@ def to_markdown(rv):
     L.append("| Model | FP ASR/ARC | Quant ASR/ARC | dASR | 95% CI | p (McNemar) | Source |")
     L.append("|---|---|---|---:|---|---:|---|")
     for m, r in rv["heldout"].items():
+        if r["status"] == "not run":
+            L.append(f"| {m} | {r['note']} | | | | | |")
+            continue
         if r["status"] != "ok":
             L.append(f"| {m} | missing | | | | | `{r['expected']}` |")
             continue
@@ -601,32 +599,7 @@ def to_markdown(rv):
                  f"{_f(r['split_median_median'])} ({_f(r['split_median_sd'])}) | {r['p_label']} | {_f(r['z'])} | "
                  f"{r['n_below_floor']} / {r['n_layers']} |")
 
-    L.append("\n### X5: 5 random prompt subsets (AQLM-2, n_eval 200 each)\n")
-    L.append("| Cell | seed | dASR (paired) | 95% CI | damage | read rec | write rec | both rec |")
-    L.append("|---|---:|---:|---|---:|---:|---:|---:|")
-    for m, block in rv["x5"].items():
-        for k, r in block["seeds"].items():
-            if r["status"] != "ok":
-                L.append(f"| {m} | {k} | missing | `{r['expected']}` | | | | |")
-                continue
-            ps = r.get("paired_screen") or {}
-            rec = r["recovery_pp"]
-            L.append(f"| {m} | {k} | {_f(ps.get('delta_asr'))} | {_ci(ps.get('ci95'))} | "
-                     f"{_f(r['damage_pp'])} | {_f(rec.get('read'))} | {_f(rec.get('write'))} | "
-                     f"{_f(rec.get('both'))} |")
-
-    L.append("\nAcross seeds (present seeds only):\n")
-    L.append("| Cell | Metric | seeds | mean | sd | min | max |")
-    L.append("|---|---|---:|---:|---:|---:|---:|")
-    for m, block in rv["x5"].items():
-        agg = block["across_seeds"]
-        if not agg:
-            L.append(f"| {m} | missing | 0 | | | | |")
-            continue
-        for name, s in agg.items():
-            if s:
-                L.append(f"| {m} | {name} | {s['n']} | {s['mean']} | {_f(s['sd'])} | "
-                         f"{s['min']} | {s['max']} |")
+    L.append(f"\n### X5\n\n{rv['x5']['note']}\n")
 
     L.append("\n### X6: same-prompt repeats (AQLM-2; rep1-rep3 on Delta)\n")
     L.append("Spread = rep1-rep3 only (one environment). The two paper runs (Bridges: the headline "
@@ -681,9 +654,9 @@ def to_markdown(rv):
         else:
             p2 = "missing | | "
         L.append(f"| {k} | {arc} | {p3} | {p2} | {t1} |")
-    no_arc = [k for k, r in rv["collapsed"].items() if r["arc"]["status"] != "ok"]
-    if no_arc:
-        L.append(f"\n-- = no ARC run on the rebuilt checkpoint ({', '.join(no_arc)}).")
+    not_run = [k for k, r in rv["collapsed"].items() if r["arc"]["status"] == "not run"]
+    if not_run:
+        L.append(f"\n-- = ARC not run on the rebuilt checkpoint ({', '.join(not_run)}).")
     return "\n".join(L)
 
 
